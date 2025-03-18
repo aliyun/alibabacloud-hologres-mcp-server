@@ -94,14 +94,29 @@ async def read_resource(uri: AnyUrl) -> str:
     table = parts[1]
     
     try:
-        conn = psycopg2.connect(
-            host=config["host"],
-            port=config["port"],
-            database=config["database"],
-            user=config["user"],
-            password=config["password"]
-        )
+        conn = psycopg2.connect(**config)
         cursor = conn.cursor()
+        
+        # 获取表注释
+        table_comment_query = """
+            SELECT
+                obj_description(c.oid) AS table_comment
+            FROM
+                pg_class c
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+            WHERE
+                n.nspname = %s
+                AND c.relname = %s;
+        """
+        cursor.execute(table_comment_query, (schema, table))
+        table_comment = cursor.fetchone()[0] or ""
+        
+        # 构建元数据信息字符串
+        metadata = ["=== Table Metadata ==="]
+        metadata.append(f"\nSchema: {schema}")
+        metadata.append(f"Table: {table}")
+        if table_comment:
+            metadata.append(f"Comment: {table_comment}")
         
         # 获取 Hologres 表属性
         properties_query = """
@@ -127,25 +142,49 @@ async def read_resource(uri: AnyUrl) -> str:
             metadata.append("\n=== Hologres Properties ===")
             for prop in properties_info:
                 _, _, key, value = prop
-                metadata.append(f"{key}: {value}")
+                metadata.append(f" {key}: {value}")
         
         # 获取表的列信息
         column_query = """
             SELECT 
-                column_name,
-                data_type,
-                character_maximum_length,
-                numeric_precision,
-                numeric_scale,
-                is_nullable
-            FROM information_schema.columns
-            WHERE table_schema = %s AND table_name = %s
-            ORDER BY ordinal_position;
+                c.column_name,
+                c.data_type,
+                c.character_maximum_length,
+                c.numeric_precision,
+                c.numeric_scale,
+                c.is_nullable
+            FROM information_schema.columns c
+            WHERE c.table_schema = %s AND c.table_name = %s
+            ORDER BY c.ordinal_position;
         """
         cursor.execute(column_query, (schema, table))
         columns_info = cursor.fetchall()
+
+        # 获取列注释信息
+        comments_query = """
+            SELECT 
+                att.attname AS column_name,
+                des.description AS column_comment
+            FROM 
+                pg_attribute att
+            JOIN 
+                pg_class cls ON att.attrelid = cls.oid
+            JOIN 
+                pg_namespace nsp ON cls.relnamespace = nsp.oid
+            LEFT JOIN 
+                pg_description des ON att.attrelid = des.objoid AND att.attnum = des.objsubid
+            WHERE 
+                nsp.nspname = %s
+                AND cls.relname = %s
+                AND att.attnum > 0 
+                AND NOT att.attisdropped
+            ORDER BY 
+                att.attnum;
+        """
+        cursor.execute(comments_query, (schema, table))
+        comments_info = {row[0]: row[1] for row in cursor.fetchall()}
         
-        # 添加列信息
+        # 添加列信息（现在包含注释）
         metadata.append("\n=== Columns ===")
         for col in columns_info:
             col_name, data_type, char_max_len, num_precision, num_scale, nullable = col
@@ -158,7 +197,9 @@ async def read_resource(uri: AnyUrl) -> str:
                 else:
                     type_info += f"({num_precision})"
             nullable_str = "NULL" if nullable == "YES" else "NOT NULL"
-            metadata.append(f"{col_name}: {type_info} {nullable_str}")
+            comment = comments_info.get(col_name, "")
+            comment_str = f" , Comment: {comment}" if comment else ""
+            metadata.append(f" ColumnName: {col_name} , DataType: {data_type} , Nullable: {nullable_str}{comment_str}")
         
         # 获取表数据
         cursor.execute(f'SELECT * FROM "{schema}"."{table}" LIMIT 10')
@@ -274,6 +315,19 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = []
             
             for schema, table in tables:
+                # 获取表注释
+                cursor.execute("""
+                    SELECT
+                        obj_description(c.oid) AS table_comment
+                    FROM
+                        pg_class c
+                        JOIN pg_namespace n ON c.relnamespace = n.oid
+                    WHERE
+                        n.nspname = %s
+                        AND c.relname = %s;
+                """, (schema, table))
+                table_comment = cursor.fetchone()[0] or ""
+
                 # 获取表属性
                 cursor.execute("""
                     SELECT property_key, property_value
@@ -282,7 +336,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     ORDER BY property_key;
                 """, (schema, table))
                 properties = cursor.fetchall()
-                
+
                 # 获取列信息
                 cursor.execute("""
                     SELECT column_name, data_type, is_nullable
@@ -291,19 +345,46 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     ORDER BY ordinal_position;
                 """, (schema, table))
                 columns = cursor.fetchall()
+
+                # 获取列注释信息
+                cursor.execute("""
+                    SELECT 
+                        att.attname AS column_name,
+                        des.description AS column_comment
+                    FROM 
+                        pg_attribute att
+                    JOIN 
+                        pg_class cls ON att.attrelid = cls.oid
+                    JOIN 
+                        pg_namespace nsp ON cls.relnamespace = nsp.oid
+                    LEFT JOIN 
+                        pg_description des ON att.attrelid = des.objoid AND att.attnum = des.objsubid
+                    WHERE 
+                        nsp.nspname = %s
+                        AND cls.relname = %s
+                        AND att.attnum > 0 
+                        AND NOT att.attisdropped
+                    ORDER BY 
+                        att.attnum;
+                """, (schema, table))
+                comments_info = {row[0]: row[1] for row in cursor.fetchall()}
                 
                 # 格式化输出
                 table_info = [f"\n=== {schema}.{table} ==="]
+                if table_comment:
+                    table_info.append(f"Comment: {table_comment}")
                 
                 if properties:
                     table_info.append("\nProperties:")
                     for key, value in properties:
-                        table_info.append(f"  {key}: {value}")
+                        table_info.append(f" {key}: {value}")
                 
                 table_info.append("\nColumns:")
                 for col_name, data_type, nullable in columns:
                     nullable_str = "NULL" if nullable == "YES" else "NOT NULL"
-                    table_info.append(f"  {col_name}: {data_type} {nullable_str}")
+                    comment = comments_info.get(col_name, "")
+                    comment_str = f" , Comment: {comment}" if comment else ""
+                    table_info.append(f"  ColumnName: {col_name} , DataType: {data_type} , Nullable: {nullable_str}{comment_str}")
                 
                 result.extend(table_info)
             
