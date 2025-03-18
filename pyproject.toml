@@ -1,0 +1,22 @@
+[project]
+name = "hologres-mcp-server"
+version = "0.1.0"
+description = "A MCP Server for Hologres"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+ "httpx>=0.28.1",
+ "mcp>=1.4.1",
+ "python-dotenv>=1.0.1",
+ "psycopg2>=2.9.5",
+]
+[[project.authors]]
+name = "TimothyDing"
+email = "ding_ye_timo@163.com"
+
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project.scripts]
+hologres-mcp-server = "hologres_mcp_server:main"
