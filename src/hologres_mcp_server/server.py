@@ -215,6 +215,20 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["limit"]
             }
+        ),
+        Tool(
+            name="list_tables",
+            description="List all tables and their metadata in the database",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "schema": {
+                        "type": "string",
+                        "description": "Optional schema name to filter tables",
+                        "default": ""
+                    }
+                }
+            }
         )
     ]
 
@@ -231,6 +245,75 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "query_log":
         limit = arguments.get("limit", 100)
         query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
+    elif name == "list_tables":
+        schema_filter = arguments.get("schema", "")
+        try:
+            conn = psycopg2.connect(**config)
+            cursor = conn.cursor()
+            
+            # 构建查询条件
+            schema_condition = ""
+            params = []
+            if schema_filter:
+                schema_condition = "AND table_schema = %s"
+                params = [schema_filter]
+            
+            # 查询所有表
+            cursor.execute(f"""
+                SELECT table_schema, table_name 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN (
+                    'pg_catalog', 'information_schema',
+                    'hologres', 'hologres_statistic',
+                    'hologres_streaming_mv'
+                ) {schema_condition}
+                ORDER BY table_schema, table_name;
+            """, params)
+            
+            tables = cursor.fetchall()
+            result = []
+            
+            for schema, table in tables:
+                # 获取表属性
+                cursor.execute("""
+                    SELECT property_key, property_value
+                    FROM hologres.hg_table_properties
+                    WHERE table_namespace = %s AND table_name = %s
+                    ORDER BY property_key;
+                """, (schema, table))
+                properties = cursor.fetchall()
+                
+                # 获取列信息
+                cursor.execute("""
+                    SELECT column_name, data_type, is_nullable
+                    FROM information_schema.columns
+                    WHERE table_schema = %s AND table_name = %s
+                    ORDER BY ordinal_position;
+                """, (schema, table))
+                columns = cursor.fetchall()
+                
+                # 格式化输出
+                table_info = [f"\n=== {schema}.{table} ==="]
+                
+                if properties:
+                    table_info.append("\nProperties:")
+                    for key, value in properties:
+                        table_info.append(f"  {key}: {value}")
+                
+                table_info.append("\nColumns:")
+                for col_name, data_type, nullable in columns:
+                    nullable_str = "NULL" if nullable == "YES" else "NOT NULL"
+                    table_info.append(f"  {col_name}: {data_type} {nullable_str}")
+                
+                result.extend(table_info)
+            
+            cursor.close()
+            conn.close()
+            return [TextContent(type="text", text="\n".join(result))]
+                
+        except Error as e:
+            logger.error(f"Error listing tables: {e}")
+            return [TextContent(type="text", text=f"Error listing tables: {str(e)}")]
     else:
         raise ValueError(f"Unknown tool: {name}")
     
