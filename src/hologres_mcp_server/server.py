@@ -94,6 +94,7 @@ async def read_resource(uri: AnyUrl) -> str:
     
     try:
         conn = psycopg2.connect(**config)
+        conn.autocommit = True  # 设置自动提交
         cursor = conn.cursor()
         
         path_parts = uri_str[12:].split('/')
@@ -121,7 +122,8 @@ async def read_resource(uri: AnyUrl) -> str:
                     nattrs,
                     tablekind,
                     fdwname
-                FROM hologres_statistic.hg_stats_missing 
+                FROM hologres_statistic.hg_stats_missing
+                WHERE schemaname NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
                 ORDER BY schemaname, tablename;
             """
             cursor.execute(query)
@@ -286,7 +288,6 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute SQL commands."""
     config = get_db_config()
-    # logger.info(f"Calling tool: {name} with arguments: {arguments}")
     
     if name == "execute_sql":
         query = arguments.get("query")
@@ -316,22 +317,27 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     
     try:
         conn = psycopg2.connect(**config)
+        conn.autocommit = True
         cursor = conn.cursor()
         
         # Execute the query
         cursor.execute(query)
         
-        # Get results
+        # 特殊处理 ANALYZE 命令
+        if name == "analyze_table":
+            return [TextContent(type="text", text=f"Successfully analyzed table {schema}.{table}")]
+        
+        # 处理其他有返回结果的查询
         columns = [desc[0] for desc in cursor.description]
         rows = cursor.fetchall()
         result = [",".join(map(str, row)) for row in rows]
-        cursor.close()
-        conn.close()
         return [TextContent(type="text", text="\n".join([",".join(columns)] + result))]
                 
     except Exception as e:
-        # logger.error(f"Error executing SQL '{query}': {e}")
         return [TextContent(type="text", text=f"Error executing query: {str(e)}")]
+    finally:
+        cursor.close()
+        conn.close()
 
 async def main():
     """Main entry point to run the MCP server."""
