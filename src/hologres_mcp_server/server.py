@@ -9,7 +9,7 @@ from pydantic import AnyUrl
 
 # 修改日志配置，只使用文件处理器
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('hologres_mcp_log.out')  # 只保留文件处理器
@@ -46,6 +46,12 @@ async def list_resources() -> list[Resource]:
             name="All Schemas",
             description="List all schemas in Hologres database",
             mimeType="text/plain"
+        ),
+        Resource(
+            uri="hologres:///hg_stats_missing",
+            name="Tables Missing Statistics",
+            description="List all tables that are missing statistics information",
+            mimeType="text/plain"
         )
     ]
 
@@ -58,6 +64,12 @@ async def list_resource_templates() -> list[ResourceTemplate]:
             uriTemplate="hologres:///{schema}/{table}/ddl",  # 修改这里
             name="Table DDL",
             description="Get the DDL script of a table in a specific schema",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///{schema}/{table}/statistic",  # 新增统计信息模板
+            name="Table Statistics",
+            description="Get statistics information of a table",
             mimeType="text/plain"
         ),
         ResourceTemplate(
@@ -98,6 +110,30 @@ async def read_resource(uri: AnyUrl) -> str:
             schemas = cursor.fetchall()
             return "\n".join([schema[0] for schema in schemas])
             
+        elif path_parts[0] == "hg_stats_missing":
+            # List tables missing statistics
+            query = """
+                SELECT 
+                    schemaname,
+                    tablename,
+                    nattrs,
+                    tablekind,
+                    fdwname
+                FROM hologres_statistic.hg_stats_missing 
+                ORDER BY schemaname, tablename;
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            if not rows:
+                return "No tables found with missing statistics"
+            
+            # 格式化输出结果
+            headers = ["Schema", "Table", "Num Attrs", "Table Kind", "FDW Name"]
+            result = ["\t".join(headers)]
+            for row in rows:
+                result.append("\t".join(map(str, row)))
+            return "\n".join(result)
+            
         elif len(path_parts) == 2 and path_parts[1] == "tables":
             # List tables in specific schema
             schema = path_parts[0]
@@ -121,6 +157,35 @@ async def read_resource(uri: AnyUrl) -> str:
             cursor.execute(query)
             ddl = cursor.fetchone()
             return ddl[0] if ddl and ddl[0] else f"No DDL found for {schema}.{table}"
+            
+        elif len(path_parts) == 3 and path_parts[2] == "statistic":
+            # Get table statistics
+            schema = path_parts[0]
+            table = path_parts[1]
+            query = """
+                SELECT 
+                    schema_name,
+                    table_name,
+                    schema_version,
+                    statistic_version,
+                    total_rows,
+                    analyze_timestamp
+                FROM hologres_statistic.hg_table_statistic
+                WHERE schema_name = %s
+                AND table_name = %s
+                ORDER BY analyze_timestamp DESC;
+            """
+            cursor.execute(query, (schema, table))
+            rows = cursor.fetchall()
+            if not rows:
+                return f"No statistics found for {schema}.{table}"
+            
+            # 格式化输出结果
+            headers = ["Schema", "Table", "Schema Version", "Stats Version", "Total Rows", "Analyze Time"]
+            result = ["\t".join(headers)]
+            for row in rows:
+                result.append("\t".join(map(str, row)))
+            return "\n".join(result)
             
         else:
             raise ValueError(f"Invalid resource URI format: {uri_str}")
@@ -168,8 +233,8 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="show_table_ddl",
-            description="Show DDL for a specific table in a schema",
+            name="analyze_table",
+            description="Analyze table to collect statistics information",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -183,6 +248,34 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["schema", "table"]
+            }
+        ),
+        Tool(
+            name="get_query_plan",
+            description="Get query plan for a SQL query",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The SQL query to analyze"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="get_execution_plan",
+            description="Get actual execution plan with runtime statistics for a SQL query",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The SQL query to analyze"
+                    }
+                },
+                "required": ["query"]
             }
         )
     ]
@@ -200,12 +293,22 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "query_log":
         limit = arguments.get("limit", 100)
         query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
-    elif name == "show_table_ddl":
+    elif name == "analyze_table":
         schema = arguments.get("schema")
         table = arguments.get("table")
         if not all([schema, table]):
             raise ValueError("Schema and table are required")
-        query = f"SELECT hg_dump_script('{schema}.{table}')"
+        query = f"ANALYZE {schema}.{table}"
+    elif name == "get_query_plan":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        query = f"EXPLAIN {query}"
+    elif name == "get_execution_plan":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        query = f"EXPLAIN ANALYZE {query}"
     else:
         raise ValueError(f"Unknown tool: {name}")
     

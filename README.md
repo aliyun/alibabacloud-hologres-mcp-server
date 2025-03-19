@@ -1,111 +1,105 @@
-# hologres_mcp_server MCP server
+# Starrocks Official MCP server
 
-A MCP Server for Hologres
+The StarRocks MCP Server acts as a bridge between AI assistants and StarRocks databases, allowing for direct SQL execution and database exploration without requiring complex setup or configuration.
 
-## Components
-
-### Resources
-
-The server implements a simple note storage system with:
-- Custom note:// URI scheme for accessing individual notes
-- Each note resource has a name, description and text/plain mimetype
-
-### Prompts
-
-The server provides a single prompt:
-- summarize-notes: Creates summaries of all stored notes
-  - Optional "style" argument to control detail level (brief/detailed)
-  - Generates prompt combining all current notes with style preference
-
-### Tools
-
-The server implements one tool:
-- add-note: Adds a new note to the server
-  - Takes "name" and "content" as required string arguments
-  - Updates server state and notifies clients of resource changes
 
 ## Configuration
 
-[TODO: Add configuration details specific to your implementation]
+MCP server config
 
-## Quickstart
-
-### Install
-
-#### Claude Desktop
-
-On MacOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
-
-<details>
-  <summary>Development/Unpublished Servers Configuration</summary>
-  ```
+```json
+{
   "mcpServers": {
-    "hologres_mcp_server": {
+    "mcp-server-starrocks": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-server-starrocks",
+        "mcp-server-starrocks"
+      ],
+      "env": {
+        "STARROCKS_HOST": "default localhost",
+        "STARROCKS_PORT": "default 9030",
+        "STARROCKS_USER": "default root",
+        "STARROCKS_PASSWORD": "default empty"
+      }
+    }
+  }
+}
+```
+
+If mcp-server-starrocks is not installed as python package(in dev env), can run using local dir 
+
+```json
+{
+  "mcpServers": {
+    "mcp-server-starrocks": {
       "command": "uv",
       "args": [
         "--directory",
-        "path/to/hologres_mcp_server",
+        "path/to/mcp-server-starrocks",
         "run",
-        "hologres_mcp_server"
-      ]
+        "mcp-server-starrocks"
+      ],
+      "env": {
+        "STARROCKS_HOST": "default localhost",
+        "STARROCKS_PORT": "default 9030",
+        "STARROCKS_USER": "default root",
+        "STARROCKS_PASSWORD": "default empty"
+      }
     }
   }
-  ```
-</details>
-
-<details>
-  <summary>Published Servers Configuration</summary>
-  ```
-  "mcpServers": {
-    "hologres_mcp_server": {
-      "command": "uvx",
-      "args": [
-        "hologres_mcp_server"
-      ]
-    }
-  }
-  ```
-</details>
-
-## Development
-
-### Building and Publishing
-
-To prepare the package for distribution:
-
-1. Sync dependencies and update lockfile:
-```bash
-uv sync
+}
 ```
 
-2. Build package distributions:
-```bash
-uv build
-```
+## Components
 
-This will create source and wheel distributions in the `dist/` directory.
+### Tools
 
-3. Publish to PyPI:
-```bash
-uv publish
-```
+* `read_query`
+  - Execute a SELECT query or commands that return a ResultSet
 
-Note: You'll need to set PyPI credentials via environment variables or command flags:
-- Token: `--token` or `UV_PUBLISH_TOKEN`
-- Or username/password: `--username`/`UV_PUBLISH_USERNAME` and `--password`/`UV_PUBLISH_PASSWORD`
+* `write_query`
+  - Execute an DDL/DML or other StarRocks command that do not have a ResultSet
 
-### Debugging
+### Resources
 
-Since MCP servers run over stdio, debugging can be challenging. For the best debugging
-experience, we strongly recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector).
+#### Direct Resources
 
+* `starrocks:///databases`
+  - Lists all databases in StarRocks
 
-You can launch the MCP Inspector via [`npm`](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) with this command:
+#### Resource Templates
 
-```bash
-npx @modelcontextprotocol/inspector uv --directory /Users/timothyding/Documents/hologres_mcp_server run hologres-mcp-server
-```
+* `starrocks:///{db}/{table}/schema`
+  - Gets the schema of a table using SHOW CREATE TABLE
 
+* `starrocks:///{db}/tables`
+  - Lists all tables in a specific database
 
-Upon launching, the Inspector will display a URL that you can access in your browser to begin debugging.
+* `proc:///{+path}`
+  - System internal information exposed by StarRocks similar to linux /proc
+  - Common paths include:
+    - `/frontends` - Shows the information of FE nodes
+    - `/backends` - Shows the information of BE nodes if this SR is non cloud native deployment
+    - `/compute_nodes` - Shows the information of CN nodes if this SR is cloud native deployment
+    - `/dbs` - Shows the information of databases
+    - `/dbs/<DB_ID>` - Shows the information of a database by database ID
+    - `/dbs/<DB_ID>/<TABLE_ID>` - Shows the information of tables by database ID
+    - `/dbs/<DB_ID>/<TABLE_ID>/partitions` - Shows the information of partitions by database ID and table ID
+    - `/transactions` - Shows the information of transactions by database
+    - `/transactions/<DB_ID>` - Shows the information of transactions by database ID
+    - `/transactions/<DB_ID>/running` - Shows the information of running transactions by database ID
+    - `/transactions/<DB_ID>/finished` - Shows the information of finished transactions by database ID
+    - `/jobs` - Shows the information of jobs
+    - `/statistic` - Shows the statistics of each database
+    - `/tasks` - Shows the total number of all generic tasks and the failed tasks
+    - `/cluster_balance` - Shows the load balance information
+    - `/routine_loads` - Shows the information of Routine Load
+    - `/colocation_group` - Shows the information of Colocate Join groups
+    - `/catalog` - Shows the information of catalogs
+
+### Prompts
+
+None
