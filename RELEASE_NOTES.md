@@ -1,89 +1,75 @@
-# Hologres MCP Server Release Notes
+# Release Notes
 
-## Version 0.1.0 (Initial Release)
+## 版本 0.1.0 (初始化版本)
 
-We are excited to announce the first release of the StarRocks MCP (Model Context Protocol) Server. This server enables AI assistants to interact directly with StarRocks databases, providing a seamless interface for executing queries and retrieving database information.
+### 描述
 
-### Description
+Hologres MCP Server 是 AI Agent 与 Hologres 数据库之间的通用接口。可以快速实现 AI Agent与 Hologres的无缝通信，帮助 AI Agent获取Hologres数据库的元数据，和执行SQL完成各类操作。
 
-The StarRocks MCP Server acts as a bridge between AI assistants and StarRocks databases, allowing for direct SQL execution and database exploration without requiring complex setup or configuration. This initial release provides essential functionality for database interaction while maintaining security and performance.
+### 主要功能
 
-### Features
+- **执行SQL**
+  - 在Hologers中执行SQL，包括 DDL、DML 和查询
+  - 执行ANALYZE命令，收集统计信息
 
-- **SQL Query Execution**
-  - `read_query` tool for executing SELECT queries and commands that return result sets
-  - `write_query` tool for executing DDL/DML statements and other StarRocks commands
-  - Proper error handling and connection management
+- **数据库元数据**
+  - 显示所有的Schema
+  - 显示Schema下所有的表
+  - 显示表的DDL
+  - 查看表的统计信息
 
-- **Database Exploration**
-  - List all databases in a StarRocks instance
-  - View table schemas using SHOW CREATE TABLE
-  - List all tables within a specific database
+- **系统信息**
+  - 查询 Query Log
+  - 查询缺失的统计信息
 
-- **System Information Access**
-  - Access to StarRocks internal system information via proc-like interface
-  - Visibility into FE nodes, BE nodes, CN nodes, databases, tables, partitions, transactions, jobs, and more
+### 依赖
 
-- **Flexible Configuration**
-  - Configurable connection parameters (host, port, user, password)
-  - Support for both package installation and local directory execution
-
-### Requirements
-
-- Python 3.13 or higher
-- Dependencies:
+- Python 3.13 或更高版本
+- 依赖
   - mcp >= 1.4.0
   - psycopg2 >= 2.9.5
 
-### Configuration
+### 配置
 
-The server must be configured through environment variables:
+MCP Server 必须配置以下环境变量，以连接 Hologres 实例
 
-- `STARROCKS_HOST` 
-- `STARROCKS_PORT` 
-- `STARROCKS_USER` 
-- `STARROCKS_PASSWORD` 
+- `HOLOGRES_HOST` 
+- `HOLOGRES_PORT` 
+- `HOLOGRES_USER` 
+- `HOLOGRES_PASSWORD` 
+- `HOLOGRES_DATABASE`
 
-### Installation
+### 安装
 
-The server can be installed as a Python package:
-
-```bash
-pip install mcp-server-starrocks
-```
-
-Or run directly from the source:
+可以使用如下安装包安装 MCP Server
 
 ```bash
-uv --directory path/to/mcp-server-starrocks run mcp-server-starrocks
+pip install /path/to/dist/hologres_mcp_server-0.1.0-py3-none-any.whl
 ```
 
-### MCP Integration
+### MCP 集成
 
-Add the following configuration to your MCP settings file:
+在 Client 端的 MCP 配置文件中增加如下配置，用以配置 MCP Server
 
 ```json
 {
   "mcpServers": {
-    "mcp-server-starrocks": {
+    "hologres-mcp-server": {
       "command": "uv",
       "args": [
+        "--directory",
+        "/path/to/hologres-mcp-server",
         "run",
-        "--with",
-        "mcp-server-starrocks",
-        "mcp-server-starrocks"
+        "hologres-mcp-server"
       ],
       "env": {
-        "STARROCKS_HOST": "localhost",
-        "STARROCKS_PORT": "9030",
-        "STARROCKS_USER": "root",
-        "STARROCKS_PASSWORD": ""
+        "HOLOGRES_HOST": "host",
+        "HOLOGRES_PORT": "port",
+        "HOLOGRES_USER": "access_id",
+        "HOLOGRES_PASSWORD": "access_key",
+        "HOLOGRES_DATABASE": "database"
       }
     }
   }
 }
 ```
-
----
-
-We welcome feedback and contributions to improve the StarRocks MCP Server. Please report any issues or suggestions through our GitHub repository.

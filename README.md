@@ -1,105 +1,60 @@
-# Starrocks Official MCP server
+# Hologres MCP Server
 
-The StarRocks MCP Server acts as a bridge between AI assistants and StarRocks databases, allowing for direct SQL execution and database exploration without requiring complex setup or configuration.
+Hologres MCP Server 是 AI Agent 与 Hologres 数据库之间的通用接口。可以快速实现 AI Agent与 Hologres的无缝通信，帮助 AI Agent获取Hologres数据库的元数据，和执行SQL完成各类操作。
 
+## 配置
 
-## Configuration
-
-MCP server config
-
-```json
-{
-  "mcpServers": {
-    "mcp-server-starrocks": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "mcp-server-starrocks",
-        "mcp-server-starrocks"
-      ],
-      "env": {
-        "STARROCKS_HOST": "default localhost",
-        "STARROCKS_PORT": "default 9030",
-        "STARROCKS_USER": "default root",
-        "STARROCKS_PASSWORD": "default empty"
-      }
-    }
-  }
-}
-```
-
-If mcp-server-starrocks is not installed as python package(in dev env), can run using local dir 
+MCP server 配置
 
 ```json
 {
   "mcpServers": {
-    "mcp-server-starrocks": {
+    "hologres-mcp-server": {
       "command": "uv",
       "args": [
         "--directory",
-        "path/to/mcp-server-starrocks",
+        "/path/to/hologres-mcp-server",
         "run",
-        "mcp-server-starrocks"
+        "hologres-mcp-server"
       ],
       "env": {
-        "STARROCKS_HOST": "default localhost",
-        "STARROCKS_PORT": "default 9030",
-        "STARROCKS_USER": "default root",
-        "STARROCKS_PASSWORD": "default empty"
+        "HOLOGRES_HOST": "host",
+        "HOLOGRES_PORT": "port",
+        "HOLOGRES_USER": "access_id",
+        "HOLOGRES_PASSWORD": "access_key",
+        "HOLOGRES_DATABASE": "database"
       }
     }
   }
 }
 ```
 
-## Components
+## 组件
 
 ### Tools
 
-* `read_query`
-  - Execute a SELECT query or commands that return a ResultSet
+* `excute_sql`: 在Hologres中执行查询
 
-* `write_query`
-  - Execute an DDL/DML or other StarRocks command that do not have a ResultSet
+* `query_log`: 显示查询日志
+
+* `analyze_table`: 收集表的统计信息
+
+* `get_query_plan`: 获取查询的查询计划
+
+* `get_execution_plan`: 获取查询的执行计划
 
 ### Resources
 
-#### Direct Resources
+#### Resources
 
-* `starrocks:///databases`
-  - Lists all databases in StarRocks
+* `hologres:///schemas`: 获取数据库中所有的 Schema
 
 #### Resource Templates
 
-* `starrocks:///{db}/{table}/schema`
-  - Gets the schema of a table using SHOW CREATE TABLE
+* `hologres:///{schema}/{table}/ddl`: 获取表的 DDL
 
-* `starrocks:///{db}/tables`
-  - Lists all tables in a specific database
-
-* `proc:///{+path}`
-  - System internal information exposed by StarRocks similar to linux /proc
-  - Common paths include:
-    - `/frontends` - Shows the information of FE nodes
-    - `/backends` - Shows the information of BE nodes if this SR is non cloud native deployment
-    - `/compute_nodes` - Shows the information of CN nodes if this SR is cloud native deployment
-    - `/dbs` - Shows the information of databases
-    - `/dbs/<DB_ID>` - Shows the information of a database by database ID
-    - `/dbs/<DB_ID>/<TABLE_ID>` - Shows the information of tables by database ID
-    - `/dbs/<DB_ID>/<TABLE_ID>/partitions` - Shows the information of partitions by database ID and table ID
-    - `/transactions` - Shows the information of transactions by database
-    - `/transactions/<DB_ID>` - Shows the information of transactions by database ID
-    - `/transactions/<DB_ID>/running` - Shows the information of running transactions by database ID
-    - `/transactions/<DB_ID>/finished` - Shows the information of finished transactions by database ID
-    - `/jobs` - Shows the information of jobs
-    - `/statistic` - Shows the statistics of each database
-    - `/tasks` - Shows the total number of all generic tasks and the failed tasks
-    - `/cluster_balance` - Shows the load balance information
-    - `/routine_loads` - Shows the information of Routine Load
-    - `/colocation_group` - Shows the information of Colocate Join groups
-    - `/catalog` - Shows the information of catalogs
+* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清淡
 
 ### Prompts
 
-None
+暂无

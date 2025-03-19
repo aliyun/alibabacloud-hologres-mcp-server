@@ -7,6 +7,7 @@ from mcp.server import Server
 from mcp.types import Resource, Tool, TextContent, ResourceTemplate
 from pydantic import AnyUrl
 
+"""
 # 修改日志配置，只使用文件处理器
 logging.basicConfig(
     level=logging.INFO,
@@ -15,7 +16,8 @@ logging.basicConfig(
         logging.FileHandler('hologres_mcp_log.out')  # 只保留文件处理器
     ]
 )
-logger = logging.getLogger("hologres_mcp_server")
+logger = logging.getLogger("hologres-mcp-server")
+"""
 
 def get_db_config():
     """Get database configuration from environment variables."""
@@ -27,19 +29,19 @@ def get_db_config():
         "database": os.getenv("HOLOGRES_DATABASE")
     }
     if not all([config["user"], config["password"], config["database"]]):
-        logger.error("Missing required database configuration. Please check environment variables:")
-        logger.error("HOLOGRES_USER, HOLOGRES_PASSWORD, and HOLOGRES_DATABASE are required")
+        # logger.error("Missing required database configuration. Please check environment variables:")
+        # logger.error("HOLOGRES_USER, HOLOGRES_PASSWORD, and HOLOGRES_DATABASE are required")
         raise ValueError("Missing required database configuration")
     
     return config
 
 # Initialize server
-app = Server("hologres_mcp_server")
+app = Server("hologres-mcp-server")
 
 @app.list_resources()
 async def list_resources() -> list[Resource]:
     """List basic Hologres resources."""
-    logger.info("Listing resources...")
+    # logger.info("Listing resources...")
     return [
         Resource(
             uri="hologres:///schemas",  # 修改这里，从 schema 改为 schemas
@@ -58,7 +60,7 @@ async def list_resources() -> list[Resource]:
 @app.list_resource_templates()
 async def list_resource_templates() -> list[ResourceTemplate]:
     """Define resource URI templates for dynamic resources."""
-    logger.info("Listing resource templates...")  # 添加日志记录
+    # logger.info("Listing resource templates...")  # 添加日志记录
     return [
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/{table}/ddl",  # 修改这里
@@ -85,7 +87,7 @@ async def read_resource(uri: AnyUrl) -> str:
     """Read resource content based on URI."""
     config = get_db_config()
     uri_str = str(uri)
-    logger.info(f"Reading resource: {uri_str}")
+    # logger.info(f"Reading resource: {uri_str}")
     
     if not uri_str.startswith("hologres:///"):  # 修改这里
         raise ValueError(f"Invalid URI scheme: {uri_str}")
@@ -191,7 +193,7 @@ async def read_resource(uri: AnyUrl) -> str:
             raise ValueError(f"Invalid resource URI format: {uri_str}")
             
     except Error as e:
-        logger.error(f"Database error reading resource {uri}: {str(e)}")
+        # logger.error(f"Database error reading resource {uri}: {str(e)}")
         raise RuntimeError(f"Database error: {str(e)}")
     finally:
         cursor.close()
@@ -200,7 +202,7 @@ async def read_resource(uri: AnyUrl) -> str:
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     """List available Hologres tools."""
-    logger.info("Listing tools...")
+    # logger.info("Listing tools...")
     return [
         Tool(
             name="execute_sql",
@@ -218,7 +220,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="query_log",
-            description="Query Hologres query log history",
+            description="Get Hologres query log history",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -284,7 +286,7 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute SQL commands."""
     config = get_db_config()
-    logger.info(f"Calling tool: {name} with arguments: {arguments}")
+    # logger.info(f"Calling tool: {name} with arguments: {arguments}")
     
     if name == "execute_sql":
         query = arguments.get("query")
@@ -328,16 +330,16 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text="\n".join([",".join(columns)] + result))]
                 
     except Exception as e:
-        logger.error(f"Error executing SQL '{query}': {e}")
+        # logger.error(f"Error executing SQL '{query}': {e}")
         return [TextContent(type="text", text=f"Error executing query: {str(e)}")]
 
 async def main():
     """Main entry point to run the MCP server."""
     from mcp.server.stdio import stdio_server
     
-    logger.info("Starting Hologres MCP server...")
+    # logger.info("Starting Hologres MCP server...")
     config = get_db_config()
-    logger.info(f"Database config: {config['host']}:{config['port']}/{config['database']} as {config['user']}")
+    # logger.info(f"Database config: {config['host']}:{config['port']}/{config['database']} as {config['user']}")
     
     async with stdio_server() as (read_stream, write_stream):
         try:
@@ -347,7 +349,7 @@ async def main():
                 app.create_initialization_options()
             )
         except Exception as e:
-            logger.error(f"Server error: {str(e)}", exc_info=True)
+            # logger.error(f"Server error: {str(e)}", exc_info=True)
             raise
 
 if __name__ == "__main__":
