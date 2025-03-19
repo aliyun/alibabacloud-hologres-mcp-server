@@ -49,11 +49,13 @@ MCP server 配置
 
 * `hologres:///schemas`: 获取数据库中所有的 Schema
 
+* `hologres:///hg_stats_missing`: 获取数据库中所有缺失统计信息的表
+
 #### Resource Templates
 
 * `hologres:///{schema}/{table}/ddl`: 获取表的 DDL
 
-* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清淡
+* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清单
 
 ### Prompts
 
