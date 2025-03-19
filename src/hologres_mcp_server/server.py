@@ -121,7 +121,8 @@ async def read_resource(uri: AnyUrl) -> str:
                     nattrs,
                     tablekind,
                     fdwname
-                FROM hologres_statistic.hg_stats_missing 
+                FROM hologres_statistic.hg_stats_missing
+                WHERE schemaname NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
                 ORDER BY schemaname, tablename;
             """
             cursor.execute(query)
