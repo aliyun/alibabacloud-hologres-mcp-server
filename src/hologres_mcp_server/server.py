@@ -4,15 +4,20 @@ import os
 import psycopg2
 from psycopg2 import Error
 from mcp.server import Server
-from mcp.types import Resource, Tool, TextContent
+from mcp.types import Resource, Tool, TextContent, ResourceTemplate
 from pydantic import AnyUrl
 
-# Configure logging
+"""
+# 修改日志配置，只使用文件处理器
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('hologres_mcp_log.out')  # 只保留文件处理器
+    ]
 )
-logger = logging.getLogger("hologres_mcp_server")
+logger = logging.getLogger("hologres-mcp-server")
+"""
 
 def get_db_config():
     """Get database configuration from environment variables."""
@@ -24,208 +29,180 @@ def get_db_config():
         "database": os.getenv("HOLOGRES_DATABASE")
     }
     if not all([config["user"], config["password"], config["database"]]):
-        logger.error("Missing required database configuration. Please check environment variables:")
-        logger.error("HOLOGRES_USER, HOLOGRES_PASSWORD, and HOLOGRES_DATABASE are required")
+        # logger.error("Missing required database configuration. Please check environment variables:")
+        # logger.error("HOLOGRES_USER, HOLOGRES_PASSWORD, and HOLOGRES_DATABASE are required")
         raise ValueError("Missing required database configuration")
     
     return config
 
 # Initialize server
-app = Server("hologres_mcp_server")
+app = Server("hologres-mcp-server")
 
 @app.list_resources()
 async def list_resources() -> list[Resource]:
-    """List Hologres tables as resources."""
-    config = get_db_config()
-    try:
-        conn = psycopg2.connect(
-            host=config["host"],
-            port=config["port"],
-            database=config["database"],
-            user=config["user"],
-            password=config["password"]
+    """List basic Hologres resources."""
+    # logger.info("Listing resources...")
+    return [
+        Resource(
+            uri="hologres:///schemas",  # 修改这里，从 schema 改为 schemas
+            name="All Schemas",
+            description="List all schemas in Hologres database",
+            mimeType="text/plain"
+        ),
+        Resource(
+            uri="hologres:///hg_stats_missing",
+            name="Tables Missing Statistics",
+            description="List all tables that are missing statistics information",
+            mimeType="text/plain"
         )
-        cursor = conn.cursor()
-        
-        # Query to list all tables across all schemas (excluding system schemas)
-        cursor.execute("""
-            SELECT table_schema, table_name 
-            FROM information_schema.tables 
-            WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-            ORDER BY table_schema, table_name;
-        """)
-        tables = cursor.fetchall()
-        logger.info(f"Found tables: {tables}")
-        
-        resources = []
-        for schema, table in tables:
-            resources.append(
-                Resource(
-                    uri=f"postgres://{schema}/{table}/data",
-                    name=f"Table: {schema}.{table}",
-                    mimeType="text/plain",
-                    description=f"Data in table: {schema}.{table}"
-                )
-            )
-        
-        cursor.close()
-        conn.close()
-        return resources
-        
-    except Error as e:
-        logger.error(f"Failed to list resources: {str(e)}")
-        return []
+    ]
+
+@app.list_resource_templates()
+async def list_resource_templates() -> list[ResourceTemplate]:
+    """Define resource URI templates for dynamic resources."""
+    # logger.info("Listing resource templates...")  # 添加日志记录
+    return [
+        ResourceTemplate(
+            uriTemplate="hologres:///{schema}/{table}/ddl",  # 修改这里
+            name="Table DDL",
+            description="Get the DDL script of a table in a specific schema",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///{schema}/{table}/statistic",  # 新增统计信息模板
+            name="Table Statistics",
+            description="Get statistics information of a table",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///{schema}/tables",  # 修改这里
+            name="Schema Tables",
+            description="List all tables in a specific schema",
+            mimeType="text/plain"
+        )
+    ]
 
 @app.read_resource()
 async def read_resource(uri: AnyUrl) -> str:
-    """Read table contents and metadata."""
+    """Read resource content based on URI."""
     config = get_db_config()
     uri_str = str(uri)
-    logger.info(f"Reading resource: {uri_str}")
+    # logger.info(f"Reading resource: {uri_str}")
     
-    if not uri_str.startswith("postgres://"):
+    if not uri_str.startswith("hologres:///"):  # 修改这里
         raise ValueError(f"Invalid URI scheme: {uri_str}")
-        
-    parts = uri_str[11:].split('/')
-    if len(parts) != 3:
-        raise ValueError(f"Invalid URI format. Expected: postgres://schema/table/data")
-    
-    schema = parts[0]
-    table = parts[1]
     
     try:
         conn = psycopg2.connect(**config)
         cursor = conn.cursor()
         
-        # 获取表注释
-        table_comment_query = """
-            SELECT
-                obj_description(c.oid) AS table_comment
-            FROM
-                pg_class c
-                JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE
-                n.nspname = %s
-                AND c.relname = %s;
-        """
-        cursor.execute(table_comment_query, (schema, table))
-        table_comment = cursor.fetchone()[0] or ""
+        path_parts = uri_str[12:].split('/')
         
-        # 构建元数据信息字符串
-        metadata = ["=== Table Metadata ==="]
-        metadata.append(f"\nSchema: {schema}")
-        metadata.append(f"Table: {table}")
-        if table_comment:
-            metadata.append(f"Comment: {table_comment}")
-        
-        # 获取 Hologres 表属性
-        properties_query = """
-            SELECT 
-                table_namespace,
-                table_name,
-                property_key,
-                property_value
-            FROM hologres.hg_table_properties
-            WHERE table_namespace = %s AND table_name = %s
-            ORDER BY property_key;
-        """
-        cursor.execute(properties_query, (schema, table))
-        properties_info = cursor.fetchall()
-        
-        # 构建元数据信息字符串
-        metadata = ["=== Table Metadata ==="]
-        metadata.append(f"\nSchema: {schema}")
-        metadata.append(f"Table: {table}")
-        
-        # 添加 Hologres 属性信息
-        if properties_info:
-            metadata.append("\n=== Hologres Properties ===")
-            for prop in properties_info:
-                _, _, key, value = prop
-                metadata.append(f" {key}: {value}")
-        
-        # 获取表的列信息
-        column_query = """
-            SELECT 
-                c.column_name,
-                c.data_type,
-                c.character_maximum_length,
-                c.numeric_precision,
-                c.numeric_scale,
-                c.is_nullable
-            FROM information_schema.columns c
-            WHERE c.table_schema = %s AND c.table_name = %s
-            ORDER BY c.ordinal_position;
-        """
-        cursor.execute(column_query, (schema, table))
-        columns_info = cursor.fetchall()
-
-        # 获取列注释信息
-        comments_query = """
-            SELECT 
-                att.attname AS column_name,
-                des.description AS column_comment
-            FROM 
-                pg_attribute att
-            JOIN 
-                pg_class cls ON att.attrelid = cls.oid
-            JOIN 
-                pg_namespace nsp ON cls.relnamespace = nsp.oid
-            LEFT JOIN 
-                pg_description des ON att.attrelid = des.objoid AND att.attnum = des.objsubid
-            WHERE 
-                nsp.nspname = %s
-                AND cls.relname = %s
-                AND att.attnum > 0 
-                AND NOT att.attisdropped
-            ORDER BY 
-                att.attnum;
-        """
-        cursor.execute(comments_query, (schema, table))
-        comments_info = {row[0]: row[1] for row in cursor.fetchall()}
-        
-        # 添加列信息（现在包含注释）
-        metadata.append("\n=== Columns ===")
-        for col in columns_info:
-            col_name, data_type, char_max_len, num_precision, num_scale, nullable = col
-            type_info = data_type
-            if char_max_len:
-                type_info += f"({char_max_len})"
-            elif num_precision:
-                if num_scale:
-                    type_info += f"({num_precision},{num_scale})"
-                else:
-                    type_info += f"({num_precision})"
-            nullable_str = "NULL" if nullable == "YES" else "NOT NULL"
-            comment = comments_info.get(col_name, "")
-            comment_str = f" , Comment: {comment}" if comment else ""
-            metadata.append(f" ColumnName: {col_name} , DataType: {data_type} , Nullable: {nullable_str}{comment_str}")
-        
-        # 获取表数据
-        cursor.execute(f'SELECT * FROM "{schema}"."{table}" LIMIT 10')
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        data = [",".join(map(str, row)) for row in rows]
-        
+        # Handle different resource types
+        if path_parts[0] == "schemas":  # 修改这里，从 schema 改为 schemas
+            # List all schemas
+            query = """
+                SELECT table_schema 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+                GROUP BY table_schema
+                ORDER BY table_schema;
+            """
+            cursor.execute(query)
+            schemas = cursor.fetchall()
+            return "\n".join([schema[0] for schema in schemas])
+            
+        elif path_parts[0] == "hg_stats_missing":
+            # List tables missing statistics
+            query = """
+                SELECT 
+                    schemaname,
+                    tablename,
+                    nattrs,
+                    tablekind,
+                    fdwname
+                FROM hologres_statistic.hg_stats_missing 
+                ORDER BY schemaname, tablename;
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            if not rows:
+                return "No tables found with missing statistics"
+            
+            # 格式化输出结果
+            headers = ["Schema", "Table", "Num Attrs", "Table Kind", "FDW Name"]
+            result = ["\t".join(headers)]
+            for row in rows:
+                result.append("\t".join(map(str, row)))
+            return "\n".join(result)
+            
+        elif len(path_parts) == 2 and path_parts[1] == "tables":
+            # List tables in specific schema
+            schema = path_parts[0]
+            query = """
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+                AND table_schema = %s
+                GROUP BY table_name
+                ORDER BY table_name;
+            """
+            cursor.execute(query, (schema,))
+            tables = cursor.fetchall()
+            return "\n".join([table[0] for table in tables])
+            
+        elif len(path_parts) == 3 and path_parts[2] == "ddl":
+            # Get table DDL
+            schema = path_parts[0]
+            table = path_parts[1]
+            query = f"SELECT hg_dump_script('{schema}.{table}')"
+            cursor.execute(query)
+            ddl = cursor.fetchone()
+            return ddl[0] if ddl and ddl[0] else f"No DDL found for {schema}.{table}"
+            
+        elif len(path_parts) == 3 and path_parts[2] == "statistic":
+            # Get table statistics
+            schema = path_parts[0]
+            table = path_parts[1]
+            query = """
+                SELECT 
+                    schema_name,
+                    table_name,
+                    schema_version,
+                    statistic_version,
+                    total_rows,
+                    analyze_timestamp
+                FROM hologres_statistic.hg_table_statistic
+                WHERE schema_name = %s
+                AND table_name = %s
+                ORDER BY analyze_timestamp DESC;
+            """
+            cursor.execute(query, (schema, table))
+            rows = cursor.fetchall()
+            if not rows:
+                return f"No statistics found for {schema}.{table}"
+            
+            # 格式化输出结果
+            headers = ["Schema", "Table", "Schema Version", "Stats Version", "Total Rows", "Analyze Time"]
+            result = ["\t".join(headers)]
+            for row in rows:
+                result.append("\t".join(map(str, row)))
+            return "\n".join(result)
+            
+        else:
+            raise ValueError(f"Invalid resource URI format: {uri_str}")
+            
+    except Error as e:
+        # logger.error(f"Database error reading resource {uri}: {str(e)}")
+        raise RuntimeError(f"Database error: {str(e)}")
+    finally:
         cursor.close()
         conn.close()
-        
-        # 组合元数据和数据
-        return "\n".join([
-            "\n".join(metadata),
-            "\n=== Table Sample Data 10 Rows ===",
-            ",".join(columns),
-            *data
-        ])
-                
-    except Error as e:
-        logger.error(f"Database error reading resource {uri}: {str(e)}")
-        raise RuntimeError(f"Database error: {str(e)}")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     """List available Hologres tools."""
-    logger.info("Listing tools...")
+    # logger.info("Listing tools...")
     return [
         Tool(
             name="execute_sql",
@@ -243,7 +220,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="query_log",
-            description="Query Hologres query log history",
+            description="Get Hologres query log history",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -258,17 +235,49 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="list_tables",
-            description="List all tables and their metadata in the database",
+            name="analyze_table",
+            description="Analyze table to collect statistics information",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "schema": {
                         "type": "string",
-                        "description": "Optional schema name to filter tables",
-                        "default": ""
+                        "description": "Schema name"
+                    },
+                    "table": {
+                        "type": "string",
+                        "description": "Table name"
                     }
-                }
+                },
+                "required": ["schema", "table"]
+            }
+        ),
+        Tool(
+            name="get_query_plan",
+            description="Get query plan for a SQL query",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The SQL query to analyze"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="get_execution_plan",
+            description="Get actual execution plan with runtime statistics for a SQL query",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The SQL query to analyze"
+                    }
+                },
+                "required": ["query"]
             }
         )
     ]
@@ -277,7 +286,7 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute SQL commands."""
     config = get_db_config()
-    logger.info(f"Calling tool: {name} with arguments: {arguments}")
+    # logger.info(f"Calling tool: {name} with arguments: {arguments}")
     
     if name == "execute_sql":
         query = arguments.get("query")
@@ -286,126 +295,27 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "query_log":
         limit = arguments.get("limit", 100)
         query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
-    elif name == "list_tables":
-        schema_filter = arguments.get("schema", "")
-        try:
-            conn = psycopg2.connect(**config)
-            cursor = conn.cursor()
-            
-            # 构建查询条件
-            schema_condition = ""
-            params = []
-            if schema_filter:
-                schema_condition = "AND table_schema = %s"
-                params = [schema_filter]
-            
-            # 查询所有表
-            cursor.execute(f"""
-                SELECT table_schema, table_name 
-                FROM information_schema.tables 
-                WHERE table_schema NOT IN (
-                    'pg_catalog', 'information_schema',
-                    'hologres', 'hologres_statistic',
-                    'hologres_streaming_mv'
-                ) {schema_condition}
-                ORDER BY table_schema, table_name;
-            """, params)
-            
-            tables = cursor.fetchall()
-            result = []
-            
-            for schema, table in tables:
-                # 获取表注释
-                cursor.execute("""
-                    SELECT
-                        obj_description(c.oid) AS table_comment
-                    FROM
-                        pg_class c
-                        JOIN pg_namespace n ON c.relnamespace = n.oid
-                    WHERE
-                        n.nspname = %s
-                        AND c.relname = %s;
-                """, (schema, table))
-                table_comment = cursor.fetchone()[0] or ""
-
-                # 获取表属性
-                cursor.execute("""
-                    SELECT property_key, property_value
-                    FROM hologres.hg_table_properties
-                    WHERE table_namespace = %s AND table_name = %s
-                    ORDER BY property_key;
-                """, (schema, table))
-                properties = cursor.fetchall()
-
-                # 获取列信息
-                cursor.execute("""
-                    SELECT column_name, data_type, is_nullable
-                    FROM information_schema.columns
-                    WHERE table_schema = %s AND table_name = %s
-                    ORDER BY ordinal_position;
-                """, (schema, table))
-                columns = cursor.fetchall()
-
-                # 获取列注释信息
-                cursor.execute("""
-                    SELECT 
-                        att.attname AS column_name,
-                        des.description AS column_comment
-                    FROM 
-                        pg_attribute att
-                    JOIN 
-                        pg_class cls ON att.attrelid = cls.oid
-                    JOIN 
-                        pg_namespace nsp ON cls.relnamespace = nsp.oid
-                    LEFT JOIN 
-                        pg_description des ON att.attrelid = des.objoid AND att.attnum = des.objsubid
-                    WHERE 
-                        nsp.nspname = %s
-                        AND cls.relname = %s
-                        AND att.attnum > 0 
-                        AND NOT att.attisdropped
-                    ORDER BY 
-                        att.attnum;
-                """, (schema, table))
-                comments_info = {row[0]: row[1] for row in cursor.fetchall()}
-                
-                # 格式化输出
-                table_info = [f"\n=== {schema}.{table} ==="]
-                if table_comment:
-                    table_info.append(f"Comment: {table_comment}")
-                
-                if properties:
-                    table_info.append("\nProperties:")
-                    for key, value in properties:
-                        table_info.append(f" {key}: {value}")
-                
-                table_info.append("\nColumns:")
-                for col_name, data_type, nullable in columns:
-                    nullable_str = "NULL" if nullable == "YES" else "NOT NULL"
-                    comment = comments_info.get(col_name, "")
-                    comment_str = f" , Comment: {comment}" if comment else ""
-                    table_info.append(f"  ColumnName: {col_name} , DataType: {data_type} , Nullable: {nullable_str}{comment_str}")
-                
-                result.extend(table_info)
-            
-            cursor.close()
-            conn.close()
-            return [TextContent(type="text", text="\n".join(result))]
-                
-        except Error as e:
-            logger.error(f"Error listing tables: {e}")
-            return [TextContent(type="text", text=f"Error listing tables: {str(e)}")]
+    elif name == "analyze_table":
+        schema = arguments.get("schema")
+        table = arguments.get("table")
+        if not all([schema, table]):
+            raise ValueError("Schema and table are required")
+        query = f"ANALYZE {schema}.{table}"
+    elif name == "get_query_plan":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        query = f"EXPLAIN {query}"
+    elif name == "get_execution_plan":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        query = f"EXPLAIN ANALYZE {query}"
     else:
         raise ValueError(f"Unknown tool: {name}")
     
     try:
-        conn = psycopg2.connect(
-            host=config["host"],
-            port=config["port"],
-            database=config["database"],
-            user=config["user"],
-            password=config["password"]
-        )
+        conn = psycopg2.connect(**config)
         cursor = conn.cursor()
         
         # Execute the query
@@ -420,16 +330,16 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text="\n".join([",".join(columns)] + result))]
                 
     except Exception as e:
-        logger.error(f"Error executing SQL '{query}': {e}")
+        # logger.error(f"Error executing SQL '{query}': {e}")
         return [TextContent(type="text", text=f"Error executing query: {str(e)}")]
 
 async def main():
     """Main entry point to run the MCP server."""
     from mcp.server.stdio import stdio_server
     
-    logger.info("Starting Hologres MCP server...")
+    # logger.info("Starting Hologres MCP server...")
     config = get_db_config()
-    logger.info(f"Database config: {config['host']}:{config['port']}/{config['database']} as {config['user']}")
+    # logger.info(f"Database config: {config['host']}:{config['port']}/{config['database']} as {config['user']}")
     
     async with stdio_server() as (read_stream, write_stream):
         try:
@@ -439,7 +349,7 @@ async def main():
                 app.create_initialization_options()
             )
         except Exception as e:
-            logger.error(f"Server error: {str(e)}", exc_info=True)
+            # logger.error(f"Server error: {str(e)}", exc_info=True)
             raise
 
 if __name__ == "__main__":

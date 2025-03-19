@@ -1,111 +1,62 @@
-# hologres_mcp_server MCP server
+# Hologres MCP Server
 
-A MCP Server for Hologres
+Hologres MCP Server 是 AI Agent 与 Hologres 数据库之间的通用接口。可以快速实现 AI Agent与 Hologres的无缝通信，帮助 AI Agent获取Hologres数据库的元数据，和执行SQL完成各类操作。
 
-## Components
+## 配置
 
-### Resources
+MCP server 配置
 
-The server implements a simple note storage system with:
-- Custom note:// URI scheme for accessing individual notes
-- Each note resource has a name, description and text/plain mimetype
-
-### Prompts
-
-The server provides a single prompt:
-- summarize-notes: Creates summaries of all stored notes
-  - Optional "style" argument to control detail level (brief/detailed)
-  - Generates prompt combining all current notes with style preference
-
-### Tools
-
-The server implements one tool:
-- add-note: Adds a new note to the server
-  - Takes "name" and "content" as required string arguments
-  - Updates server state and notifies clients of resource changes
-
-## Configuration
-
-[TODO: Add configuration details specific to your implementation]
-
-## Quickstart
-
-### Install
-
-#### Claude Desktop
-
-On MacOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
-
-<details>
-  <summary>Development/Unpublished Servers Configuration</summary>
-  ```
+```json
+{
   "mcpServers": {
-    "hologres_mcp_server": {
+    "hologres-mcp-server": {
       "command": "uv",
       "args": [
         "--directory",
-        "path/to/hologres_mcp_server",
+        "/path/to/hologres-mcp-server",
         "run",
-        "hologres_mcp_server"
-      ]
+        "hologres-mcp-server"
+      ],
+      "env": {
+        "HOLOGRES_HOST": "host",
+        "HOLOGRES_PORT": "port",
+        "HOLOGRES_USER": "access_id",
+        "HOLOGRES_PASSWORD": "access_key",
+        "HOLOGRES_DATABASE": "database"
+      }
     }
   }
-  ```
-</details>
-
-<details>
-  <summary>Published Servers Configuration</summary>
-  ```
-  "mcpServers": {
-    "hologres_mcp_server": {
-      "command": "uvx",
-      "args": [
-        "hologres_mcp_server"
-      ]
-    }
-  }
-  ```
-</details>
-
-## Development
-
-### Building and Publishing
-
-To prepare the package for distribution:
-
-1. Sync dependencies and update lockfile:
-```bash
-uv sync
+}
 ```
 
-2. Build package distributions:
-```bash
-uv build
-```
+## 组件
 
-This will create source and wheel distributions in the `dist/` directory.
+### Tools
 
-3. Publish to PyPI:
-```bash
-uv publish
-```
+* `excute_sql`: 在Hologres中执行查询
 
-Note: You'll need to set PyPI credentials via environment variables or command flags:
-- Token: `--token` or `UV_PUBLISH_TOKEN`
-- Or username/password: `--username`/`UV_PUBLISH_USERNAME` and `--password`/`UV_PUBLISH_PASSWORD`
+* `query_log`: 显示查询日志
 
-### Debugging
+* `analyze_table`: 收集表的统计信息
 
-Since MCP servers run over stdio, debugging can be challenging. For the best debugging
-experience, we strongly recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector).
+* `get_query_plan`: 获取查询的查询计划
 
+* `get_execution_plan`: 获取查询的执行计划
 
-You can launch the MCP Inspector via [`npm`](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) with this command:
+### Resources
 
-```bash
-npx @modelcontextprotocol/inspector uv --directory /Users/timothyding/Documents/hologres_mcp_server run hologres-mcp-server
-```
+#### Resources
 
+* `hologres:///schemas`: 获取数据库中所有的 Schema
 
-Upon launching, the Inspector will display a URL that you can access in your browser to begin debugging.
+* `hologres:///hg_stats_missing`: 获取数据库中所有缺失统计信息的表
+
+#### Resource Templates
+
+* `hologres:///{schema}/{table}/ddl`: 获取表的 DDL
+
+* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清单
+
+### Prompts
+
+暂无
