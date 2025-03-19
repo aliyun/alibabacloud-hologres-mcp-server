@@ -1,0 +1,287 @@
+2025-03-19 17:27:19,551 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:27:19,551 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:27:19,557 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:27:19,557 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:27:19,558 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:27:19,558 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:27:19,559 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:27:19,559 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:30:40,955 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:30:40,955 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:30:40,960 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:30:40,960 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:30:40,962 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:30:40,962 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:30:40,962 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:30:40,962 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:31:07,621 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:31:07,621 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:31:07,626 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:31:07,626 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:31:07,627 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:31:07,627 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:31:07,628 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:31:07,628 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:33:41,539 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:33:41,539 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:33:41,545 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:33:41,545 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:33:41,546 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:33:41,546 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:33:41,547 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:33:41,547 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:33:56,270 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:33:56,270 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:33:56,270 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:33:56,270 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:33:56,275 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:33:56,275 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102e6e850>
+2025-03-19 17:33:56,275 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:33:56,275 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:33:56,275 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:33:56,275 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:33:56,276 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102e6ee90>
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:33:56,277 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102cffbb0>
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:33:56,277 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:33:56,277 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:33:56,278 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:34:45,158 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102cffce0>
+2025-03-19 17:34:45,158 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:34:45,158 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:34:45,158 - hologres_mcp_server - INFO - Reading resource: postgresql:///schema
+2025-03-19 17:34:45,363 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:34:52,003 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102e99c70>
+2025-03-19 17:34:52,004 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:34:52,004 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:34:52,004 - hologres_mcp_server - INFO - Reading resource: postgresql:///public/tables
+2025-03-19 17:34:52,112 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:36:04,677 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:36:04,677 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:36:04,677 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:36:04,677 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:36:04,682 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:36:04,684 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1105325d0>
+2025-03-19 17:36:04,684 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:36:04,684 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:36:04,684 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:36:04,685 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x110532c10>
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:36:04,686 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1103bfbb0>
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:36:04,686 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:36:04,686 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:36:04,687 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:36:07,115 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:36:07,115 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:36:07,115 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:36:07,115 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:36:07,120 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:36:07,120 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1031125d0>
+2025-03-19 17:36:07,120 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:36:07,120 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:36:07,120 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:36:07,120 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:07,121 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x103112c10>
+2025-03-19 17:36:07,121 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:36:07,121 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:36:07,121 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:36:07,122 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:07,122 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x102f9fbb0>
+2025-03-19 17:36:07,122 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:36:07,122 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:36:07,122 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:36:07,123 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:36:09,402 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:36:09,402 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:36:09,403 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:36:09,403 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:36:09,407 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:36:09,407 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1047c25d0>
+2025-03-19 17:36:09,407 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:36:09,407 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:36:09,407 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:36:09,408 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:09,408 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1047c2c10>
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:36:09,409 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x10454fbb0>
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:36:09,409 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:36:09,409 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:36:09,410 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:42,043 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x10454fce0>
+2025-03-19 17:36:42,044 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:36:42,044 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:36:42,044 - hologres_mcp_server - INFO - Reading resource: postgresql:///schema
+2025-03-19 17:36:42,216 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:36:46,320 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1047edc70>
+2025-03-19 17:36:46,321 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:36:46,322 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:36:46,322 - hologres_mcp_server - INFO - Reading resource: postgresql:///public/tables
+2025-03-19 17:36:46,459 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:37:48,352 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x10456fbd0>
+2025-03-19 17:37:48,354 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:37:48,354 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:37:48,354 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'lineitem'}
+2025-03-19 17:37:48,643 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:46:57,785 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:46:57,785 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:46:57,785 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:46:57,785 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:46:57,791 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:46:57,792 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1034865d0>
+2025-03-19 17:46:57,792 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:46:57,792 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:46:57,792 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:46:57,792 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:46:57,793 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x103486c10>
+2025-03-19 17:46:57,793 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:46:57,793 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:46:57,793 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:46:57,793 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:46:57,794 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x103313bb0>
+2025-03-19 17:46:57,794 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:46:57,794 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:46:57,794 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:46:57,794 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:50:23,297 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:50:23,297 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:50:23,298 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:50:23,298 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:50:23,302 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:50:23,302 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1039665d0>
+2025-03-19 17:50:23,302 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:50:23,302 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:50:23,302 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:50:23,303 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:23,303 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x103966c10>
+2025-03-19 17:50:23,303 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:50:23,304 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x1037f3bb0>
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:50:23,304 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:50:23,304 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:25,886 - mcp.server.lowlevel.server - DEBUG - Initializing server 'hologres_mcp_server'
+2025-03-19 17:50:25,887 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2025-03-19 17:50:25,887 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourceTemplatesRequest
+2025-03-19 17:50:25,887 - mcp.server.lowlevel.server - DEBUG - Registering handler for ReadResourceRequest
+2025-03-19 17:50:25,887 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2025-03-19 17:50:25,887 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2025-03-19 17:50:25,887 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-03-19 17:50:25,887 - hologres_mcp_server - INFO - Starting Hologres MCP server...
+2025-03-19 17:50:25,887 - hologres_mcp_server - INFO - Database config: hgpostcn-cn-ic046fxsa0ao-cn-hangzhou.hologres.aliyuncs.com:80/tpch as LTAI5tLzRsDu6XSGkpg6fUUr
+2025-03-19 17:50:25,891 - mcp.server.lowlevel.server - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-03-19 17:50:25,891 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106f1a5d0>
+2025-03-19 17:50:25,891 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-03-19 17:50:25,891 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListToolsRequest
+2025-03-19 17:50:25,891 - hologres_mcp_server - INFO - Listing tools...
+2025-03-19 17:50:25,892 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:25,892 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106f1ac10>
+2025-03-19 17:50:25,892 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2025-03-19 17:50:25,892 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourcesRequest
+2025-03-19 17:50:25,892 - hologres_mcp_server - INFO - Listing resources...
+2025-03-19 17:50:25,893 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:25,893 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106da3bb0>
+2025-03-19 17:50:25,893 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourceTemplatesRequest
+2025-03-19 17:50:25,893 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ListResourceTemplatesRequest
+2025-03-19 17:50:25,893 - hologres_mcp_server - INFO - Listing resource templates...
+2025-03-19 17:50:25,893 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:50:57,791 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106da3ce0>
+2025-03-19 17:50:57,792 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:50:57,792 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:50:57,792 - hologres_mcp_server - INFO - Reading resource: hologres:///schemas
+2025-03-19 17:50:58,103 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:02,820 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106f45c70>
+2025-03-19 17:51:02,820 - mcp.server.lowlevel.server - INFO - Processing request of type ReadResourceRequest
+2025-03-19 17:51:02,820 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type ReadResourceRequest
+2025-03-19 17:51:02,820 - hologres_mcp_server - INFO - Reading resource: hologres:///public/tables
+2025-03-19 17:51:02,921 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:18,436 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106dc7bd0>
+2025-03-19 17:51:18,437 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:51:18,437 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:51:18,437 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'base_sales'}
+2025-03-19 17:51:18,725 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:26,201 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106dc79b0>
+2025-03-19 17:51:26,202 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:51:26,202 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:51:26,202 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'customer'}
+2025-03-19 17:51:26,563 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:37,178 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106eee350>
+2025-03-19 17:51:37,179 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:51:37,179 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:51:37,179 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'lineitem'}
+2025-03-19 17:51:37,476 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:45,456 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106eeda50>
+2025-03-19 17:51:45,456 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:51:45,456 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:51:45,456 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'orders'}
+2025-03-19 17:51:45,746 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:51:53,999 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106ed3200>
+2025-03-19 17:51:54,000 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:51:54,000 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:51:54,000 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'part'}
+2025-03-19 17:51:54,282 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:52:03,728 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106ed3b60>
+2025-03-19 17:52:03,729 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:52:03,729 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:52:03,729 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'partsupp'}
+2025-03-19 17:52:03,991 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:52:13,180 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106f6e350>
+2025-03-19 17:52:13,180 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:52:13,180 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:52:13,180 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'region'}
+2025-03-19 17:52:13,482 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:52:34,455 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106f6eb30>
+2025-03-19 17:52:34,455 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:52:34,455 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:52:34,455 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'sales_incremental'}
+2025-03-19 17:52:34,729 - mcp.server.lowlevel.server - DEBUG - Response sent
+2025-03-19 17:52:44,507 - mcp.server.lowlevel.server - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x106e5ac30>
+2025-03-19 17:52:44,508 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-03-19 17:52:44,508 - mcp.server.lowlevel.server - DEBUG - Dispatching request of type CallToolRequest
+2025-03-19 17:52:44,508 - hologres_mcp_server - INFO - Calling tool: show_table_ddl with arguments: {'schema': 'public', 'table': 'supplier'}
+2025-03-19 17:52:44,809 - mcp.server.lowlevel.server - DEBUG - Response sent
