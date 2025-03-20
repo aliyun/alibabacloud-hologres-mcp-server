@@ -35,8 +35,6 @@ MCP server 配置
 
 * `excute_sql`: 在Hologres中执行查询
 
-* `query_log`: 显示查询日志
-
 * `analyze_table`: 收集表的统计信息
 
 * `get_query_plan`: 获取查询的查询计划
@@ -49,13 +47,19 @@ MCP server 配置
 
 * `hologres:///schemas`: 获取数据库中所有的 Schema
 
-* `hologres:///hg_stats_missing`: 获取数据库中所有缺失统计信息的表
+* `hologres:///system_info/missing_stats_tables`: 获取数据库中所有缺失统计信息的表
 
 #### Resource Templates
 
 * `hologres:///{schema}/{table}/ddl`: 获取表的 DDL
 
 * `hologres:///{schema}/tables`: 显示 Schema 下所有表的清单
+
+* `hologres:///system_info/latest_query_log/{row_limits}`: 查看最近的查询日志
+
+* `hologres:///system_info/user_query_log/{user}`: 显示特定用户的查询日志
+
+* `hologres:///system_info/application_query_log/{application}`: 显示特定应用的查询日志
 
 ### Prompts
 

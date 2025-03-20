@@ -50,7 +50,7 @@ async def list_resources() -> list[Resource]:
             mimeType="text/plain"
         ),
         Resource(
-            uri="hologres:///hg_stats_missing",
+            uri="hologres:///system_info/missing_stats_tables",  # 修改这里，从 hg_stats_missing 改为 missing_stats_tables
             name="Tables Missing Statistics",
             description="List all tables that are missing statistics information",
             mimeType="text/plain"
@@ -78,6 +78,24 @@ async def list_resource_templates() -> list[ResourceTemplate]:
             uriTemplate="hologres:///{schema}/tables",  # 修改这里
             name="Schema Tables",
             description="List all tables in a specific schema",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///system_info/latest_query_log/{row_limits}",  # 修改这里，从 query_log 改为 latest_query_log
+            name="Query Log History",
+            description="Get recent query log history with specified number of rows",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///system_info/user_query_log/{user}",  # 新增用户查询日志模板
+            name="User Query Log",
+            description="Get query log history for a specific user",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="hologres:///system_info/application_query_log/{application}",  # 新增应用程序查询日志模板
+            name="Application Query Log",
+            description="Get query log history for a specific application",
             mimeType="text/plain"
         )
     ]
@@ -113,7 +131,7 @@ async def read_resource(uri: AnyUrl) -> str:
             schemas = cursor.fetchall()
             return "\n".join([schema[0] for schema in schemas])
             
-        elif path_parts[0] == "hg_stats_missing":
+        elif path_parts[0] == "system_info" and path_parts[1] == "missing_stats_tables":  # 修改这里，适配新的URI路径
             # List tables missing statistics
             query = """
                 SELECT 
@@ -136,6 +154,72 @@ async def read_resource(uri: AnyUrl) -> str:
             result = ["\t".join(headers)]
             for row in rows:
                 result.append("\t".join(map(str, row)))
+            return "\n".join(result)
+            
+        elif path_parts[0] == "system_info" and path_parts[1] == "latest_query_log" and len(path_parts) == 3:  # 修改这里，从 query_log 改为 latest_query_log
+            # 获取查询日志
+            try:
+                row_limits = int(path_parts[2])
+                if row_limits <= 0:
+                    return "Row limits must be a positive integer"
+            except ValueError:
+                return "Invalid row limits format, must be an integer"
+                
+            query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {row_limits}"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            if not rows:
+                return "No query logs found"
+            
+            # 格式化输出结果
+            columns = [desc[0] for desc in cursor.description]
+            result = ["\t".join(columns)]
+            for row in rows:
+                # 将所有值转换为字符串，并处理None值
+                formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                result.append("\t".join(formatted_row))
+            return "\n".join(result)
+            
+        elif path_parts[0] == "system_info" and path_parts[1] == "user_query_log" and len(path_parts) == 3:
+            # 获取指定用户的查询日志
+            user = path_parts[2]
+            if not user:
+                return "Username cannot be empty"
+                
+            query = "SELECT * FROM hologres.hg_query_log WHERE usename = %s ORDER BY query_start DESC"
+            cursor.execute(query, (user,))
+            rows = cursor.fetchall()
+            if not rows:
+                return f"No query logs found for user {user}"
+            
+            # 格式化输出结果
+            columns = [desc[0] for desc in cursor.description]
+            result = ["\t".join(columns)]
+            for row in rows:
+                # 将所有值转换为字符串，并处理None值
+                formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                result.append("\t".join(formatted_row))
+            return "\n".join(result)
+            
+        elif path_parts[0] == "system_info" and path_parts[1] == "application_query_log" and len(path_parts) == 3:
+            # 获取指定应用程序的查询日志
+            application = path_parts[2]
+            if not application:
+                return "Application name cannot be empty"
+                
+            query = "SELECT * FROM hologres.hg_query_log WHERE application_name = %s ORDER BY query_start DESC"
+            cursor.execute(query, (application,))
+            rows = cursor.fetchall()
+            if not rows:
+                return f"No query logs found for application {application}"
+            
+            # 格式化输出结果
+            columns = [desc[0] for desc in cursor.description]
+            result = ["\t".join(columns)]
+            for row in rows:
+                # 将所有值转换为字符串，并处理None值
+                formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                result.append("\t".join(formatted_row))
             return "\n".join(result)
             
         elif len(path_parts) == 2 and path_parts[1] == "tables":
@@ -220,22 +304,7 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        Tool(
-            name="query_log",
-            description="Get Hologres query log history",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "limit": {
-                        "type": "integer",
-                        "description": "Number of log entries to return",
-                        "minimum": 1,
-                        "default": 100
-                    }
-                },
-                "required": ["limit"]
-            }
-        ),
+        # 移除了 query_log 工具
         Tool(
             name="analyze_table",
             description="Analyze table to collect statistics information",
@@ -293,9 +362,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
-    elif name == "query_log":
-        limit = arguments.get("limit", 100)
-        query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
+    # 移除了 query_log 的处理逻辑
     elif name == "analyze_table":
         schema = arguments.get("schema")
         table = arguments.get("table")
