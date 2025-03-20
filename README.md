@@ -51,9 +51,11 @@ MCP server 配置
 
 #### Resource Templates
 
+* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清单
+
 * `hologres:///{schema}/{table}/ddl`: 获取表的 DDL
 
-* `hologres:///{schema}/tables`: 显示 Schema 下所有表的清单
+* `hologres:///{schema}/{table}/statistic`: 显示表已经采集的统计信息
 
 * `hologres:///system_info/latest_query_log/{row_limits}`: 查看最近的查询日志
 

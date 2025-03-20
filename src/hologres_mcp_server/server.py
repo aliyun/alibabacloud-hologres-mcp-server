@@ -38,6 +38,7 @@ def get_db_config():
 # Initialize server
 app = Server("hologres-mcp-server")
 
+# 定义 Resources
 @app.list_resources()
 async def list_resources() -> list[Resource]:
     """List basic Hologres resources."""
@@ -285,6 +286,7 @@ async def read_resource(uri: AnyUrl) -> str:
         cursor.close()
         conn.close()
 
+# 定义 Tools
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     """List available Hologres tools."""
