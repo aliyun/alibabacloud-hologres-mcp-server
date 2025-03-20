@@ -50,7 +50,7 @@ async def list_resources() -> list[Resource]:
             mimeType="text/plain"
         ),
         Resource(
-            uri="hologres:///hg_stats_missing",
+            uri="hologres:///system_info/hg_stats_missing",  # 修改这里，从 hg_stats_missing 改为 system_info/hg_stats_missing
             name="Tables Missing Statistics",
             description="List all tables that are missing statistics information",
             mimeType="text/plain"
@@ -113,7 +113,7 @@ async def read_resource(uri: AnyUrl) -> str:
             schemas = cursor.fetchall()
             return "\n".join([schema[0] for schema in schemas])
             
-        elif path_parts[0] == "hg_stats_missing":
+        elif path_parts[0] == "system_info" and path_parts[1] == "hg_stats_missing":  # 修改这里，适配新的URI路径
             # List tables missing statistics
             query = """
                 SELECT 
