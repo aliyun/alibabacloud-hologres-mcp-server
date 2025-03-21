@@ -42,61 +42,66 @@ app = Server("hologres-mcp-server")
 @app.list_resources()
 async def list_resources() -> list[Resource]:
     """List basic Hologres resources."""
-    # logger.info("Listing resources...")
     return [
         Resource(
-            uri="hologres:///schemas",  # 修改这里，从 schema 改为 schemas
+            uri="hologres:///schemas",
             name="All Schemas",
             description="List all schemas in Hologres database",
-            mimeType="text/plain"
-        ),
-        Resource(
-            uri="hologres:///system_info/missing_stats_tables",  # 修改这里，从 hg_stats_missing 改为 missing_stats_tables
-            name="Tables Missing Statistics",
-            description="List all tables that are missing statistics information",
             mimeType="text/plain"
         )
     ]
 
+HOLO_SYSTEM_DESC = '''
+System information in Hologres, following are some common system_paths:
+
+'missing_stats_tables'    Shows the tables that are missing statistics.
+'stat_activity'    Shows the information of current running queries.
+'''
+
 @app.list_resource_templates()
 async def list_resource_templates() -> list[ResourceTemplate]:
     """Define resource URI templates for dynamic resources."""
-    # logger.info("Listing resource templates...")  # 添加日志记录
     return [
         ResourceTemplate(
-            uriTemplate="hologres:///{schema}/{table}/ddl",  # 修改这里
+            uriTemplate="hologres:///{schema}/{table}/ddl",
             name="Table DDL",
             description="Get the DDL script of a table in a specific schema",
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///{schema}/{table}/statistic",  # 新增统计信息模板
+            uriTemplate="hologres:///{schema}/{table}/statistic",
             name="Table Statistics",
             description="Get statistics information of a table",
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///{schema}/tables",  # 修改这里
+            uriTemplate="hologres:///{schema}/tables",
             name="Schema Tables",
             description="List all tables in a specific schema",
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///system_info/latest_query_log/{row_limits}",  # 修改这里，从 query_log 改为 latest_query_log
+            uriTemplate="system:///query_log/latest/{row_limits}",
             name="Query Log History",
             description="Get recent query log history with specified number of rows",
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///system_info/user_query_log/{user}",  # 新增用户查询日志模板
+            uriTemplate="system:///query_log/user/{user_name}",
             name="User Query Log",
             description="Get query log history for a specific user",
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///system_info/application_query_log/{application}",  # 新增应用程序查询日志模板
+            uriTemplate="system:///query_log/application/{application_name}",
             name="Application Query Log",
             description="Get query log history for a specific application",
+            mimeType="text/plain"
+        ),
+        ResourceTemplate(
+            uriTemplate="system:///{system_path}",
+            name="System internal Information",
+            description=HOLO_SYSTEM_DESC,
             mimeType="text/plain"
         )
     ]
@@ -106,181 +111,173 @@ async def read_resource(uri: AnyUrl) -> str:
     """Read resource content based on URI."""
     config = get_db_config()
     uri_str = str(uri)
-    # logger.info(f"Reading resource: {uri_str}")
     
-    if not uri_str.startswith("hologres:///"):  # 修改这里
+    if not (uri_str.startswith("hologres:///") or uri_str.startswith("system:///")):
         raise ValueError(f"Invalid URI scheme: {uri_str}")
     
     try:
         conn = psycopg2.connect(**config)
-        conn.autocommit = True  # 设置自动提交
+        conn.autocommit = True
         cursor = conn.cursor()
         
-        path_parts = uri_str[12:].split('/')
+        # Handle hologres:/// URIs
+        if uri_str.startswith("hologres:///"):
+            path_parts = uri_str[12:].split('/')
+            
+            if path_parts[0] == "schemas":
+                # List all schemas
+                query = """
+                    SELECT table_schema 
+                    FROM information_schema.tables 
+                    WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+                    GROUP BY table_schema
+                    ORDER BY table_schema;
+                """
+                cursor.execute(query)
+                schemas = cursor.fetchall()
+                return "\n".join([schema[0] for schema in schemas])
+                
+            elif len(path_parts) == 2 and path_parts[1] == "tables":
+                # List tables in specific schema
+                schema = path_parts[0]
+                query = """
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+                    AND table_schema = %s
+                    GROUP BY table_name
+                    ORDER BY table_name;
+                """
+                cursor.execute(query, (schema,))
+                tables = cursor.fetchall()
+                return "\n".join([table[0] for table in tables])
+                
+            elif len(path_parts) == 3 and path_parts[2] == "ddl":
+                # Get table DDL
+                schema = path_parts[0]
+                table = path_parts[1]
+                query = f"SELECT hg_dump_script('{schema}.{table}')"
+                cursor.execute(query)
+                ddl = cursor.fetchone()
+                return ddl[0] if ddl and ddl[0] else f"No DDL found for {schema}.{table}"
+                
+            elif len(path_parts) == 3 and path_parts[2] == "statistic":
+                # Get table statistics
+                schema = path_parts[0]
+                table = path_parts[1]
+                query = """
+                    SELECT 
+                        schema_name,
+                        table_name,
+                        schema_version,
+                        statistic_version,
+                        total_rows,
+                        analyze_timestamp
+                    FROM hologres_statistic.hg_table_statistic
+                    WHERE schema_name = %s
+                    AND table_name = %s
+                    ORDER BY analyze_timestamp DESC;
+                """
+                cursor.execute(query, (schema, table))
+                rows = cursor.fetchall()
+                if not rows:
+                    return f"No statistics found for {schema}.{table}"
+                
+                headers = ["Schema", "Table", "Schema Version", "Stats Version", "Total Rows", "Analyze Time"]
+                result = ["\t".join(headers)]
+                for row in rows:
+                    result.append("\t".join(map(str, row)))
+                return "\n".join(result)
+                
+        # Handle system:/// URIs
+        elif uri_str.startswith("system:///"):
+            path_parts = uri_str[10:].split('/')
+            
+            if path_parts[0] == "missing_stats_tables":
+                # Shows the tables that are missing statistics.
+                query = """
+                    SELECT 
+                        *
+                    FROM hologres_statistic.hg_stats_missing
+                    WHERE schemaname NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+                    ORDER BY schemaname, tablename;
+                """
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                if not rows:
+                    return "No tables found with missing statistics"
+                
+                columns = [desc[0] for desc in cursor.description]
+                result = ["\t".join(columns)]
+                for row in rows:
+                    formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                    result.append("\t".join(formatted_row))
+                return "\n".join(result)
+
+            elif path_parts[0] == "stat_activity":
+                # Shows the information of current running queries.
+                query = """
+                    SELECT
+                        *
+                    FROM
+                        hg_stat_activity
+                    ORDER BY pid;
+                """
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                if not rows:
+                    return "No queries found with current running status"
+                
+                columns = [desc[0] for desc in cursor.description]
+                result = ["\t".join(columns)]
+                for row in rows:
+                    formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                    result.append("\t".join(formatted_row))
+                return "\n".join(result)
+                
+            elif path_parts[0] == "query_log":
+                if path_parts[1] == "latest" and len(path_parts) == 3:
+                    try:
+                        row_limits = int(path_parts[2])
+                        if row_limits <= 0:
+                            return "Row limits must be a positive integer"
+                    except ValueError:
+                        return "Invalid row limits format, must be an integer"
+                    
+                    query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {row_limits}"
+                    cursor.execute(query)
+                    
+                elif path_parts[1] == "user" and len(path_parts) == 3:
+                    user_name = path_parts[2]
+                    if not user_name:
+                        return "Username cannot be empty"
+                    query = "SELECT * FROM hologres.hg_query_log WHERE usename = %s ORDER BY query_start DESC"
+                    cursor.execute(query, (user_name,))
+                    
+                elif path_parts[1] == "application" and len(path_parts) == 3:
+                    application_name = path_parts[2]
+                    if not application_name:
+                        return "Application name cannot be empty"
+                    query = "SELECT * FROM hologres.hg_query_log WHERE application_name = %s ORDER BY query_start DESC"
+                    cursor.execute(query, (application_name,))
+                
+                else:
+                    raise ValueError(f"Invalid query log URI format: {uri_str}")                    
+                
+                rows = cursor.fetchall()
+                if not rows:
+                    return "No query logs found"
+                
+                columns = [desc[0] for desc in cursor.description]
+                result = ["\t".join(columns)]
+                for row in rows:
+                    formatted_row = [str(val) if val is not None else "NULL" for val in row]
+                    result.append("\t".join(formatted_row))
+                return "\n".join(result)
         
-        # Handle different resource types
-        if path_parts[0] == "schemas":  # 修改这里，从 schema 改为 schemas
-            # List all schemas
-            query = """
-                SELECT table_schema 
-                FROM information_schema.tables 
-                WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-                GROUP BY table_schema
-                ORDER BY table_schema;
-            """
-            cursor.execute(query)
-            schemas = cursor.fetchall()
-            return "\n".join([schema[0] for schema in schemas])
-            
-        elif path_parts[0] == "system_info" and path_parts[1] == "missing_stats_tables":  # 修改这里，适配新的URI路径
-            # List tables missing statistics
-            query = """
-                SELECT 
-                    schemaname,
-                    tablename,
-                    nattrs,
-                    tablekind,
-                    fdwname
-                FROM hologres_statistic.hg_stats_missing
-                WHERE schemaname NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-                ORDER BY schemaname, tablename;
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            if not rows:
-                return "No tables found with missing statistics"
-            
-            # 格式化输出结果
-            headers = ["Schema", "Table", "Num Attrs", "Table Kind", "FDW Name"]
-            result = ["\t".join(headers)]
-            for row in rows:
-                result.append("\t".join(map(str, row)))
-            return "\n".join(result)
-            
-        elif path_parts[0] == "system_info" and path_parts[1] == "latest_query_log" and len(path_parts) == 3:  # 修改这里，从 query_log 改为 latest_query_log
-            # 获取查询日志
-            try:
-                row_limits = int(path_parts[2])
-                if row_limits <= 0:
-                    return "Row limits must be a positive integer"
-            except ValueError:
-                return "Invalid row limits format, must be an integer"
-                
-            query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {row_limits}"
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            if not rows:
-                return "No query logs found"
-            
-            # 格式化输出结果
-            columns = [desc[0] for desc in cursor.description]
-            result = ["\t".join(columns)]
-            for row in rows:
-                # 将所有值转换为字符串，并处理None值
-                formatted_row = [str(val) if val is not None else "NULL" for val in row]
-                result.append("\t".join(formatted_row))
-            return "\n".join(result)
-            
-        elif path_parts[0] == "system_info" and path_parts[1] == "user_query_log" and len(path_parts) == 3:
-            # 获取指定用户的查询日志
-            user = path_parts[2]
-            if not user:
-                return "Username cannot be empty"
-                
-            query = "SELECT * FROM hologres.hg_query_log WHERE usename = %s ORDER BY query_start DESC"
-            cursor.execute(query, (user,))
-            rows = cursor.fetchall()
-            if not rows:
-                return f"No query logs found for user {user}"
-            
-            # 格式化输出结果
-            columns = [desc[0] for desc in cursor.description]
-            result = ["\t".join(columns)]
-            for row in rows:
-                # 将所有值转换为字符串，并处理None值
-                formatted_row = [str(val) if val is not None else "NULL" for val in row]
-                result.append("\t".join(formatted_row))
-            return "\n".join(result)
-            
-        elif path_parts[0] == "system_info" and path_parts[1] == "application_query_log" and len(path_parts) == 3:
-            # 获取指定应用程序的查询日志
-            application = path_parts[2]
-            if not application:
-                return "Application name cannot be empty"
-                
-            query = "SELECT * FROM hologres.hg_query_log WHERE application_name = %s ORDER BY query_start DESC"
-            cursor.execute(query, (application,))
-            rows = cursor.fetchall()
-            if not rows:
-                return f"No query logs found for application {application}"
-            
-            # 格式化输出结果
-            columns = [desc[0] for desc in cursor.description]
-            result = ["\t".join(columns)]
-            for row in rows:
-                # 将所有值转换为字符串，并处理None值
-                formatted_row = [str(val) if val is not None else "NULL" for val in row]
-                result.append("\t".join(formatted_row))
-            return "\n".join(result)
-            
-        elif len(path_parts) == 2 and path_parts[1] == "tables":
-            # List tables in specific schema
-            schema = path_parts[0]
-            query = """
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-                AND table_schema = %s
-                GROUP BY table_name
-                ORDER BY table_name;
-            """
-            cursor.execute(query, (schema,))
-            tables = cursor.fetchall()
-            return "\n".join([table[0] for table in tables])
-            
-        elif len(path_parts) == 3 and path_parts[2] == "ddl":
-            # Get table DDL
-            schema = path_parts[0]
-            table = path_parts[1]
-            query = f"SELECT hg_dump_script('{schema}.{table}')"
-            cursor.execute(query)
-            ddl = cursor.fetchone()
-            return ddl[0] if ddl and ddl[0] else f"No DDL found for {schema}.{table}"
-            
-        elif len(path_parts) == 3 and path_parts[2] == "statistic":
-            # Get table statistics
-            schema = path_parts[0]
-            table = path_parts[1]
-            query = """
-                SELECT 
-                    schema_name,
-                    table_name,
-                    schema_version,
-                    statistic_version,
-                    total_rows,
-                    analyze_timestamp
-                FROM hologres_statistic.hg_table_statistic
-                WHERE schema_name = %s
-                AND table_name = %s
-                ORDER BY analyze_timestamp DESC;
-            """
-            cursor.execute(query, (schema, table))
-            rows = cursor.fetchall()
-            if not rows:
-                return f"No statistics found for {schema}.{table}"
-            
-            # 格式化输出结果
-            headers = ["Schema", "Table", "Schema Version", "Stats Version", "Total Rows", "Analyze Time"]
-            result = ["\t".join(headers)]
-            for row in rows:
-                result.append("\t".join(map(str, row)))
-            return "\n".join(result)
-            
-        else:
-            raise ValueError(f"Invalid resource URI format: {uri_str}")
+        raise ValueError(f"Invalid resource URI format: {uri_str}")
             
     except Error as e:
-        # logger.error(f"Database error reading resource {uri}: {str(e)}")
         raise RuntimeError(f"Database error: {str(e)}")
     finally:
         cursor.close()
