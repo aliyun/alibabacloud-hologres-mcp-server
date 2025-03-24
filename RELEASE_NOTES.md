@@ -1,4 +1,9 @@
 # Release Notes
+## Version 0.1.3
+### Enhancement
+The URI of the resource template has been refactored to enable the large language model (LLM) to use it more concisely.
+
+
 ## Version 0.1.2 (Initial Release)
 ### Description
 Hologres MCP Server serves as a universal interface between AI Agents and Hologres databases. It enables rapid implementation of seamless communication between AI Agents and Hologres, helping AI Agents retrieve Hologres database metadata and execute SQL for various operations.

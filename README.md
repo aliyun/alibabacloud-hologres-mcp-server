@@ -88,10 +88,13 @@ Add the following configuration to the MCP client configuration file:
 
 * `system:///query_log/application/{application_name}`: Get specific application's query logs
 
-* `system:///{system_path}`: 
+* `system:///{+system_path}`: 
   System paths include:
   * missing_stats_tables - Shows the tables that are missing statistics.
   * stat_activity - Shows the information of current running queries.
+  * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.
+  * query_log/user/<user_name> - Get query log history for a specific user.
+  * query_log/application/<application_name> - Get query log history for a specific application.
 
 ### Prompts
 None at this time

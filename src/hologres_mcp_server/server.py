@@ -19,6 +19,8 @@ logging.basicConfig(
 logger = logging.getLogger("hologres-mcp-server")
 """
 
+SERVER_VERSION = "0.1.3"
+
 def get_db_config():
     """Get database configuration from environment variables."""
     config = {
@@ -26,7 +28,8 @@ def get_db_config():
         "port": os.getenv("HOLOGRES_PORT", "5432"),
         "user": os.getenv("HOLOGRES_USER"),
         "password": os.getenv("HOLOGRES_PASSWORD"),
-        "database": os.getenv("HOLOGRES_DATABASE")
+        "database": os.getenv("HOLOGRES_DATABASE"),
+        "application_name": f"hologres-mcp-server-{SERVER_VERSION}"
     }
     if not all([config["user"], config["password"], config["database"]]):
         # logger.error("Missing required database configuration. Please check environment variables:")
@@ -56,6 +59,9 @@ System information in Hologres, following are some common system_paths:
 
 'missing_stats_tables'    Shows the tables that are missing statistics.
 'stat_activity'    Shows the information of current running queries.
+'query_log/latest/<row_limits>'    Get recent query log history with specified number of rows.
+'query_log/user/<user_name>'    Get query log history for a specific user.
+'query_log/application/<application_name>'    Get query log history for a specific application.
 '''
 
 @app.list_resource_templates()
@@ -81,25 +87,7 @@ async def list_resource_templates() -> list[ResourceTemplate]:
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="system:///query_log/latest/{row_limits}",
-            name="Query Log History",
-            description="Get recent query log history with specified number of rows",
-            mimeType="text/plain"
-        ),
-        ResourceTemplate(
-            uriTemplate="system:///query_log/user/{user_name}",
-            name="User Query Log",
-            description="Get query log history for a specific user",
-            mimeType="text/plain"
-        ),
-        ResourceTemplate(
-            uriTemplate="system:///query_log/application/{application_name}",
-            name="Application Query Log",
-            description="Get query log history for a specific application",
-            mimeType="text/plain"
-        ),
-        ResourceTemplate(
-            uriTemplate="system:///{system_path}",
+            uriTemplate="system:///{+system_path}",
             name="System internal Information",
             description=HOLO_SYSTEM_DESC,
             mimeType="text/plain"
