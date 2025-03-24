@@ -304,7 +304,7 @@ async def list_tools() -> list[Tool]:
         ),
         # 移除了 query_log 工具
         Tool(
-            name="analyze_table",
+            name="gather_table_statistics",
             description="Analyze table to collect statistics information",
             inputSchema={
                 "type": "object",
@@ -361,7 +361,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         if not query:
             raise ValueError("Query is required")
     # 移除了 query_log 的处理逻辑
-    elif name == "analyze_table":
+    elif name == "gather_table_statistics":
         schema = arguments.get("schema")
         table = arguments.get("table")
         if not all([schema, table]):
@@ -389,7 +389,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         cursor.execute(query)
         
         # 特殊处理 ANALYZE 命令
-        if name == "analyze_table":
+        if name == "gather_table_statistics":
             return [TextContent(type="text", text=f"Successfully analyzed table {schema}.{table}")]
         
         # 处理其他有返回结果的查询

@@ -65,7 +65,7 @@ Add the following configuration to the MCP client configuration file:
 ### Tools
 * `execute_sql`: Execute queries in Hologres
 
-* `analyze_table`: Collect table statistics
+* `gather_table_statistics`: Collect table statistics
 
 * `get_query_plan`: Get query plan
 
@@ -92,3 +92,4 @@ Add the following configuration to the MCP client configuration file:
 
 ### Prompts
 None at this time
+
