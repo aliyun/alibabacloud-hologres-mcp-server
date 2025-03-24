@@ -229,43 +229,40 @@ async def read_resource(uri: AnyUrl) -> str:
                         row_limits = int(path_parts[2])
                         if row_limits <= 0:
                             return "Row limits must be a positive integer"
-                        except ValueError:
-                            return "Invalid row limits format, must be an integer"
-                        
                         query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {row_limits}"
                         cursor.execute(query)
-                        
-                    elif path_parts[1] == "user" and len(path_parts) == 4:
-                        user_name = path_parts[2]
-                        if not user_name:
-                            return "Username cannot be empty"
-                        try:
-                            row_limits = int(path_parts[3])
-                            if row_limits <= 0:
-                                return "Row limits must be a positive integer"
-                        except ValueError:
-                            return "Invalid row limits format, must be an integer"
-                            
+                    except ValueError:
+                        return "Invalid row limits format, must be an integer"
+                    
+                elif path_parts[1] == "user" and len(path_parts) == 4:
+                    user_name = path_parts[2]
+                    if not user_name:
+                        return "Username cannot be empty"
+                    try:
+                        row_limits = int(path_parts[3])
+                        if row_limits <= 0:
+                            return "Row limits must be a positive integer"
                         query = "SELECT * FROM hologres.hg_query_log WHERE usename = %s ORDER BY query_start DESC LIMIT %s"
                         cursor.execute(query, (user_name, row_limits))
+                    except ValueError:
+                        return "Invalid row limits format, must be an integer"
                         
-                    elif path_parts[1] == "application" and len(path_parts) == 4:
-                        application_name = path_parts[2]
-                        if not application_name:
-                            return "Application name cannot be empty"
-                        try:
-                            row_limits = int(path_parts[3])
-                            if row_limits <= 0:
-                                return "Row limits must be a positive integer"
-                        except ValueError:
-                            return "Invalid row limits format, must be an integer"
-                            
+                elif path_parts[1] == "application" and len(path_parts) == 4:
+                    application_name = path_parts[2]
+                    if not application_name:
+                        return "Application name cannot be empty"
+                    try:
+                        row_limits = int(path_parts[3])
+                        if row_limits <= 0:
+                            return "Row limits must be a positive integer"
                         query = "SELECT * FROM hologres.hg_query_log WHERE application_name = %s ORDER BY query_start DESC LIMIT %s"
                         cursor.execute(query, (application_name, row_limits))
-                    
-                    else:
-                        raise ValueError(f"Invalid query log URI format: {uri_str}")                    
+                    except ValueError:
+                        return "Invalid row limits format, must be an integer"
                 
+                else:
+                    raise ValueError(f"Invalid query log URI format: {uri_str}")
+
                 rows = cursor.fetchall()
                 if not rows:
                     return "No query logs found"
