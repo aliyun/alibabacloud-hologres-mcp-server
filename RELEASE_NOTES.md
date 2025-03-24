@@ -1,5 +1,5 @@
 # Release Notes
-## Version 0.1.3
+## Version 0.1.4
 ### Enhancement
 The URI of the resource template has been refactored to enable the large language model (LLM) to use it more concisely.
 
