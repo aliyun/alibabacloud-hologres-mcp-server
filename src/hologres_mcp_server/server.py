@@ -128,18 +128,54 @@ async def read_resource(uri: AnyUrl) -> str:
             elif len(path_parts) == 2 and path_parts[1] == "tables":
                 # List tables in specific schema
                 schema = path_parts[0]
-                query = """
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-                    AND table_schema = %s
-                    GROUP BY table_name
-                    ORDER BY table_name;
-                """
-                cursor.execute(query, (schema,))
+                query = f"""
+                        SELECT
+                            tab.table_name,
+                            CASE WHEN p.partrelid IS NOT NULL THEN ' (partitioned_table)' ELSE '' END AS is_partitioned_table
+                        FROM
+                            information_schema.tables AS tab
+                        LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
+                        LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
+                        LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
+                        LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
+                        WHERE
+                            tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
+                            AND tab.table_schema = '{schema}'
+                            AND (inh.inhrelid IS NULL OR NOT EXISTS (
+                                SELECT 1
+                                FROM pg_inherits
+                                WHERE inh.inhrelid = pg_inherits.inhrelid
+                            ))
+                        ORDER BY
+                            tab.table_name;
+                        """
+                cursor.execute(query)
+                tables = cursor.fetchall()
+                return "\n".join([f"{table[0]}{table[1]}" for table in tables])
+
+            elif len(path_parts) == 3 and path_parts[2] == "partitions":
+                # Get partitions
+                schema = path_parts[0]
+                table = path_parts[1]
+                query = f"""
+                        with inh as (
+                            SELECT i.inhrelid, i.inhparent
+                            FROM pg_catalog.pg_class c
+                            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                            LEFT JOIN pg_catalog.pg_inherits i on c.oid=i.inhparent
+                            where n.nspname='{schema}' and c.relname='{table}'
+                        )
+                        select
+                            c.relname as table_name
+                        from inh
+                        join pg_catalog.pg_class c on inh.inhrelid = c.oid
+                        join pg_catalog.pg_namespace n on c.relnamespace = n.oid
+                        join pg_partitioned_table p on p.partrelid = inh.inhparent order by table_name;
+                        """
+                cursor.execute(query)
                 tables = cursor.fetchall()
                 return "\n".join([table[0] for table in tables])
-                
+
             elif len(path_parts) == 3 and path_parts[2] == "ddl":
                 # Get table DDL
                 schema = path_parts[0]
