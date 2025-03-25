@@ -131,7 +131,11 @@ async def read_resource(uri: AnyUrl) -> str:
                 query = f"""
                         SELECT
                             tab.table_name,
-                            CASE WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)' ELSE '' END AS is_partitioned_table
+                            CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
+                                 WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
+                                 WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
+                                 ELSE ''
+                            END AS table_type_info
                         FROM
                             information_schema.tables AS tab
                         LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
