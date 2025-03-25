@@ -296,6 +296,19 @@ async def read_resource(uri: AnyUrl) -> str:
                     except ValueError:
                         return "Invalid row limits format, must be an integer"
                 
+                elif path_parts[1] == "failed" and len(path_parts) == 4:
+                    interval = path_parts[2]
+                    if not interval:
+                        return "Interval cannot be empty"
+                    try:
+                        row_limits = int(path_parts[3])
+                        if row_limits <= 0:
+                            return "Row limits must be a positive integer"
+                        query = f"SELECT * FROM hologres.hg_query_log WHERE status = 'FAILED' AND query_start >= NOW() - INTERVAL '{interval}' ORDER BY query_start DESC LIMIT {row_limits}"
+                        cursor.execute(query)
+                    except ValueError:
+                        return "Invalid row limits format, must be an integer"
+                
                 else:
                     raise ValueError(f"Invalid query log URI format: {uri_str}")
 
