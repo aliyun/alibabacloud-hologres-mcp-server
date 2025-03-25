@@ -131,7 +131,7 @@ async def read_resource(uri: AnyUrl) -> str:
                 query = f"""
                         SELECT
                             tab.table_name,
-                            CASE WHEN p.partrelid IS NOT NULL THEN ' (partitioned_table)' ELSE '' END AS is_partitioned_table
+                            CASE WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)' ELSE '' END AS is_partitioned_table
                         FROM
                             information_schema.tables AS tab
                         LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
@@ -151,7 +151,7 @@ async def read_resource(uri: AnyUrl) -> str:
                         """
                 cursor.execute(query)
                 tables = cursor.fetchall()
-                return "\n".join([f"{table[0]}{table[1]}" for table in tables])
+                return "\n".join([f"\"{table[0].replace('"', '""')}\"{table[1]}" for table in tables])
 
             elif len(path_parts) == 3 and path_parts[2] == "partitions":
                 # Get partitions
