@@ -6,6 +6,7 @@ from psycopg2 import Error
 from mcp.server import Server
 from mcp.types import Resource, Tool, TextContent, ResourceTemplate
 from pydantic import AnyUrl
+from hologres_mcp_server.util import try_infer_view_comments
 
 """
 # 修改日志配置，只使用文件处理器
@@ -62,12 +63,19 @@ System information in Hologres, following are some common system_paths:
 'query_log/latest/<row_limits>'    Get recent query log history with specified number of rows.
 'query_log/user/<user_name>/<row_limits>'    Get query log history for a specific user with row limits.
 'query_log/application/<application_name>/<row_limits>'    Get query log history for a specific application with row limits.
+'query_log/failed/<interval>/<row_limits>' - Get failed query log history with interval and specified number of rows.
 '''
 
 @app.list_resource_templates()
 async def list_resource_templates() -> list[ResourceTemplate]:
     """Define resource URI templates for dynamic resources."""
     return [
+        ResourceTemplate(
+            uriTemplate="hologres:///{schema}/tables",
+            name="Schema Tables",
+            description="List all tables in a specific schema",
+            mimeType="text/plain"
+        ),
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/{table}/ddl",
             name="Table DDL",
@@ -81,9 +89,9 @@ async def list_resource_templates() -> list[ResourceTemplate]:
             mimeType="text/plain"
         ),
         ResourceTemplate(
-            uriTemplate="hologres:///{schema}/tables",
-            name="Schema Tables",
-            description="List all tables in a specific schema",
+            uriTemplate="hologres:///{schema}/{table}/partitions",
+            name="Table Statistics",
+            description="List all partitions of a partitioned table",
             mimeType="text/plain"
         ),
         ResourceTemplate(
@@ -187,7 +195,13 @@ async def read_resource(uri: AnyUrl) -> str:
                 query = f"SELECT hg_dump_script('{schema}.{table}')"
                 cursor.execute(query)
                 ddl = cursor.fetchone()
-                return ddl[0] if ddl and ddl[0] else f"No DDL found for {schema}.{table}"
+                if ddl and ddl[0]:
+                    if "Type: VIEW" in ddl[0]:
+                        return f"{ddl[0].replace("\n\nEND;", "")}{try_infer_view_comments(cursor, schema, table)}\n\nEND;"
+                    else:
+                        return ddl[0]
+                else:
+                    return f"No DDL found for {schema}.{table}"
                 
             elif len(path_parts) == 3 and path_parts[2] == "statistic":
                 # Get table statistics
@@ -358,7 +372,7 @@ async def list_tools() -> list[Tool]:
         # 移除了 query_log 工具
         Tool(
             name="gather_table_statistics",
-            description="Analyze table to collect statistics information",
+            description="Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans",
             inputSchema={
                 "type": "object",
                 "properties": {

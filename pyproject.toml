@@ -9,6 +9,7 @@ dependencies = [
  "mcp>=1.4.1",
  "python-dotenv>=1.0.1",
  "psycopg2>=2.9.5",
+ "pglast>=7.5",
 ]
 [[project.authors]]
 name = "TimothyDing"

@@ -70,6 +70,7 @@ source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
+    { name = "pglast" },
     { name = "psycopg2" },
     { name = "python-dotenv" },
 ]
@@ -78,6 +79,7 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", specifier = ">=1.4.1" },
+    { name = "pglast", specifier = ">=7.5" },
     { name = "psycopg2", specifier = ">=2.9.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
@@ -148,6 +150,27 @@ wheels = [
 ]
 
 [[package]]
+name = "pglast"
+version = "7.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/10/65a1997e0afa801fcc09750024db710509adc0a4281f83463104599c65d2/pglast-7.5.tar.gz", hash = "sha256:a585cc8715b8929338ca1cd0cdb74098ac4be6dc5ba5bbfcc725e42fabfd2a64", size = 3368642 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/87/e7326c1f09109cee3e39a17b44ea600592957b15f5fd575f04e37d82ebc8/pglast-7.5-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:76e3d678523c37590ae6a310e94a5ac75958ca14c807eb2f1d12f69185ccc919", size = 1141764 },
+    { url = "https://files.pythonhosted.org/packages/e6/4e/5688fdcc605c3742a69926d6b2b00eaf17691077b946778e7e22c413292d/pglast-7.5-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:eb947af1ed01423c7973157b895e4aee3ac4200dd7cbd626de223d07485f0f8c", size = 1080664 },
+    { url = "https://files.pythonhosted.org/packages/ea/9f/2aff6a06d8976c144cb021cea8364292ec75072691948d6c7c5b2958efb9/pglast-7.5-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:31177574b2d0e625928b8be806bc8cdda154fe9b0b6f40d729ad469b86d94750", size = 5541606 },
+    { url = "https://files.pythonhosted.org/packages/62/1c/a6c927a4f2ff44c2c57a43759ca40229c06e0b3a3749ba0c4eca2c4a8467/pglast-7.5-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0dc7ab330a6e59778b1571f8bd027f9c50006ffc41fc9a8c69a06f35c23bc316", size = 5639285 },
+    { url = "https://files.pythonhosted.org/packages/1d/0d/63d24574c5036747db2f0b7aacb2d9c870fdaecddd5980821d085f38e4ec/pglast-7.5-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:45bb6fcd99d4b429b6e6edfea860654aab7c5b5e203057900e2206b0308a9a23", size = 5412870 },
+    { url = "https://files.pythonhosted.org/packages/88/e7/e3ce46205e562f006b93389e2feaac1fc86799f9f6a1856a97a0fc059bfa/pglast-7.5-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:12a9aa8ef86a3470f60b82128bba003bd616459f7b61f26cb2a01515f3231205", size = 5301392 },
+    { url = "https://files.pythonhosted.org/packages/ab/ae/8f67dccfc5233065f6b174134d90b529dbbbeeeec415383b196391b74507/pglast-7.5-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:bfa75e48d626dfe924d95742b196f3aacc5502b8d1e7e7ed1fa9c5bd38c85f35", size = 5258627 },
+    { url = "https://files.pythonhosted.org/packages/77/03/e43f4f310e6b6e85f05c737620c1b72bd982e8e656c1615f4103e66d4545/pglast-7.5-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:89d589face8b645e92d9e52dd2b4b6c033fb5cc939247dab224de8056b60a4bb", size = 5441687 },
+    { url = "https://files.pythonhosted.org/packages/fa/63/8fdbcc07bb1e4f46473ea2dfefbf7065cbda50f8842782cd34dd349ef0da/pglast-7.5-cp313-cp313-win32.whl", hash = "sha256:1737c7cfc08861cf22c491cadac2e8553ef4ffb694736c819377e440a34f6b24", size = 1009443 },
+    { url = "https://files.pythonhosted.org/packages/59/76/47dda827a4942f098249e793bb50a0925f0e449b915fa925320f5b3ec2a1/pglast-7.5-cp313-cp313-win_amd64.whl", hash = "sha256:ff00725e2b697125a818690ee86606baddcfcf898e665a55752139572796dd30", size = 1051351 },
+]
+
+[[package]]
 name = "psycopg2"
 version = "2.9.10"
 source = { registry = "https://pypi.org/simple" }
@@ -215,6 +238,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bc/57/e84d88dfe0aec03b7a2d4327012c1627ab5f03652216c63d49846d7a6c58/python-dotenv-1.0.1.tar.gz", hash = "sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca", size = 39115 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/3e/b68c118422ec867fa7ab88444e1274aa40681c606d59ac27de5a5588f082/python_dotenv-1.0.1-py3-none-any.whl", hash = "sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a", size = 19863 },
+]
+
+[[package]]
+name = "setuptools"
+version = "78.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/f4/aa8d364f0dc1f33b2718938648c31202e2db5cd6479a73f0a9ca5a88372d/setuptools-78.0.2.tar.gz", hash = "sha256:137525e6afb9022f019d6e884a319017f9bf879a0d8783985d32cbc8683cab93", size = 1367747 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/db/2fd473dfe436ad19fda190f4079162d400402aedfcc41e048d38c0a375c6/setuptools-78.0.2-py3-none-any.whl", hash = "sha256:4a612c80e1f1d71b80e4906ce730152e8dec23df439f82731d9d0b608d7b700d", size = 1255965 },
 ]
 
 [[package]]

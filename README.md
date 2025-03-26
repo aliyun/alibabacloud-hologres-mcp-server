@@ -103,7 +103,7 @@ Add the following configuration to the MCP client configuration file:
   * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.
   * query_log/user/<user_name>/<row_limits> - Get query log history for a specific user with row limits.
   * query_log/application/<application_name>/<row_limits> - Get query log history for a specific application with row limits.
-  * query_log/failed/\<interval>\/<row_limits> - Get failed query log history with interval  and specified number of rows.
+  * query_log/failed/\<interval>\/<row_limits> - Get failed query log history with interval and specified number of rows.
 
 ### Prompts
 
