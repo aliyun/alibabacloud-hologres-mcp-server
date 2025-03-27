@@ -1,4 +1,8 @@
 # Release Notes
+## Version 0.1.5
+### Enhancement
+Now compatible with Python 3.10 and newer (previously required 3.13+).
+
 ## Version 0.1.4
 ### Enhancement
 The URI of the resource template has been refactored to enable the large language model (LLM) to use it more concisely.
@@ -22,7 +26,7 @@ Hologres MCP Server serves as a universal interface between AI Agents and Hologr
   - Query missing statistics
 
 ### Dependencies
-- Python 3.13 or higher
+- Python 3.10 or higher
 - Required packages
   - mcp >= 1.4.0
   - psycopg2 >= 2.9.5
