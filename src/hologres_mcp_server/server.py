@@ -356,14 +356,42 @@ async def list_tools() -> list[Tool]:
     # logger.info("Listing tools...")
     return [
         Tool(
-            name="execute_sql",
-            description="Execute an SQL query on the Hologres server",
+            name="execute_select_sql",
+            description="Execute a SELECT SQL query on the Hologres server",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The SQL query to execute"
+                        "description": "The SELECT SQL query to execute"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="execute_dml_sql",
+            description="Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The DML SQL query to execute"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="execute_ddl_sql",
+            description="Execute a DDL (CREATE, ALTER, DROP) SQL query on the Hologres server",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The DDL SQL query to execute"
                     }
                 },
                 "required": ["query"]
@@ -423,11 +451,24 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute SQL commands."""
     config = get_db_config()
     
-    if name == "execute_sql":
+    if name == "execute_select_sql":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
-    # 移除了 query_log 的处理逻辑
+        if not query.strip().upper().startswith("SELECT"):
+            raise ValueError("Query must be a SELECT statement")
+    elif name == "execute_dml_sql":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        if not any(query.strip().upper().startswith(keyword) for keyword in ["INSERT", "UPDATE", "DELETE"]):
+            raise ValueError("Query must be a DML statement (INSERT, UPDATE, DELETE)")
+    elif name == "execute_ddl_sql":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP"]):
+            raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP)")
     elif name == "gather_table_statistics":
         schema = arguments.get("schema")
         table = arguments.get("table")
@@ -460,11 +501,14 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             return [TextContent(type="text", text=f"Successfully analyzed table {schema}.{table}")]
         
         # 处理其他有返回结果的查询
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        result = [",".join(map(str, row)) for row in rows]
-        return [TextContent(type="text", text="\n".join([",".join(columns)] + result))]
-                
+        if cursor.description:
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            result = [",".join(map(str, row)) for row in rows]
+            return [TextContent(type="text", text="\n".join([",".join(columns)] + result))]
+        else:
+            return [TextContent(type="text", text="Query executed successfully")]
+
     except Exception as e:
         return [TextContent(type="text", text=f"Error executing query: {str(e)}")]
     finally:
