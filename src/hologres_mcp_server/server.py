@@ -360,7 +360,7 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The SELECT SQL query to execute"
+                        "description": "The (SELECT) SQL query to execute"
                     }
                 },
                 "required": ["query"]
