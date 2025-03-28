@@ -354,7 +354,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="execute_select_sql",
-            description="Execute a SELECT SQL query on the Hologres server",
+            description="Execute SELECT SQL to query data from Hologres database.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -368,7 +368,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="execute_dml_sql",
-            description="Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server",
+            description="Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres databse.",
             inputSchema={
                 "type": "object",
                 "properties": {
