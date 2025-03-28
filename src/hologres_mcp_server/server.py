@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger("hologres-mcp-server")
 """
 
-SERVER_VERSION = "0.1.5"
+SERVER_VERSION = "0.1.6"
 
 def get_db_config():
     """Get database configuration from environment variables."""
@@ -50,7 +50,7 @@ async def list_resources() -> list[Resource]:
         Resource(
             uri="hologres:///schemas",
             name="All Schemas",
-            description="List all schemas in Hologres database",
+            description="Hologres is a PostgreSQL-compatible OLAP product. List all schemas in Hologres database",
             mimeType="text/plain"
         )
     ]
