@@ -1,5 +1,5 @@
-import psycopg2
-from psycopg2 import sql
+import psycopg
+from psycopg import sql
 import pglast
 
 def get_view_definition(cursor, schema_name, view_name):
@@ -54,7 +54,6 @@ def try_infer_view_comments(cursor, schema_name, view_name):
                                     comment_statements.append(statement)
         if comment_statements:
             comment_statements.insert(0, "-- Infer view column comments from related tables")
-        cursor.close()
         return "\n".join(comment_statements)
     
     except Exception as e:
