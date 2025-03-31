@@ -163,8 +163,11 @@ async def read_resource(uri: AnyUrl) -> str:
                                 """
                         cursor.execute(query)
                         tables = cursor.fetchall()
-                        return "\n".join([f"\"{table[0].replace('"', '""')}\"{table[1]}" for table in tables])
-
+                        # 修复 SyntaxError 问题
+                        # 发现问题出在第166行的字符串替换操作中。在Python中，当使用双引号替换双引号时，需要正确处理转义字符。
+                        # 以下是修复方案：
+                        return "\n".join([f"\"{table[0].replace('\"', '\"\"')}\"{table[1]}" for table in tables])
+                        
                     elif len(path_parts) == 3 and path_parts[2] == "partitions":
                         # Get partitions
                         schema = path_parts[0]
