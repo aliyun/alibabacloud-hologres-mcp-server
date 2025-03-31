@@ -2,7 +2,7 @@
 
 ## Version 0.1.7
 
-### Enhancement
+### Bugfix
 
 Fix some bugs when using in Python 3.11.
 
