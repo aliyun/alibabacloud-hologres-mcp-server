@@ -200,7 +200,8 @@ async def read_resource(uri: AnyUrl) -> str:
                         ddl = cursor.fetchone()
                         if ddl and ddl[0]:
                             if "Type: VIEW" in ddl[0]:
-                                return f"{ddl[0].replace("\n\nEND;", "")}{try_infer_view_comments(cursor, schema, table)}\n\nEND;"
+                                # 修复 SyntaxError 问题：使用单引号或原始字符串避免转义字符问题
+                                return f"{ddl[0].replace('\\n\\nEND;', '')}{try_infer_view_comments(cursor, schema, table)}\\n\\nEND;"
                             else:
                                 return ddl[0]
                         else:
