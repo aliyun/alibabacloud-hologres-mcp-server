@@ -163,8 +163,9 @@ async def read_resource(uri: AnyUrl) -> str:
                                 """
                         cursor.execute(query)
                         tables = cursor.fetchall()
-                        return "\n".join([f"\"{table[0].replace('"', '""')}\"{table[1]}" for table in tables])
-
+                        # 修复 SyntaxError 问题：f-string中不能包含反斜杠
+                        return "\n".join(['"' + table[0].replace('"', '""') + '"' + table[1] for table in tables])
+                        
                     elif len(path_parts) == 3 and path_parts[2] == "partitions":
                         # Get partitions
                         schema = path_parts[0]
@@ -197,7 +198,10 @@ async def read_resource(uri: AnyUrl) -> str:
                         ddl = cursor.fetchone()
                         if ddl and ddl[0]:
                             if "Type: VIEW" in ddl[0]:
-                                return f"{ddl[0].replace("\n\nEND;", "")}{try_infer_view_comments(cursor, schema, table)}\n\nEND;"
+                                # 修复 SyntaxError 问题：使用字符串连接而不是在f-string中使用反斜杠
+                                view_content = ddl[0].replace('\n\nEND;', '')
+                                comments = try_infer_view_comments(cursor, schema, table)
+                                return view_content + comments + "\n\nEND;"
                             else:
                                 return ddl[0]
                         else:

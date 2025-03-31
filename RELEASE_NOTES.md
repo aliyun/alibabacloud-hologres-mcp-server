@@ -1,5 +1,11 @@
 # Release Notes
 
+## Version 0.1.7
+
+### Bugfix
+
+Fix some bugs when using in Python 3.11.
+
 ## Version 0.1.6
 
 ### Enhancement
