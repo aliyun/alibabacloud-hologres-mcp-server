@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger("hologres-mcp-server")
 """
 
-SERVER_VERSION = "0.1.6"
+SERVER_VERSION = "0.1.7"
 
 def get_db_config():
     """Get database configuration from environment variables."""
