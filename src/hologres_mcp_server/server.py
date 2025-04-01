@@ -492,8 +492,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
-        if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP"]):
-            raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP)")
+        if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP", "COMMENT ON"]):
+            raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP, COMMENT ON)")
     elif name == "gather_table_statistics":
         schema = arguments.get("schema")
         table = arguments.get("table")
