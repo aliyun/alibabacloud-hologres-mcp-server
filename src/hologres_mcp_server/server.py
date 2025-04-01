@@ -235,11 +235,21 @@ async def read_resource(uri: AnyUrl) -> str:
                             result.append("\t".join(map(str, row)))
                         return "\n".join(result)
                         
+
                 # Handle system:/// URIs
                 elif uri_str.startswith("system:///"):
                     path_parts = uri_str[10:].split('/')
                     
-                    if path_parts[0] == "missing_stats_tables":
+                    if path_parts[0] == "instance_version":
+                        # Execute the SQL to get the version of the Hologres instance
+                        query = "SELECT HG_VERSION();"
+                        cursor.execute(query)
+                        version = cursor.fetchone()[0]
+                        # Extract the version number from the full version string
+                        version_number = version.split(' ')[1]
+                        return version_number
+
+                    elif path_parts[0] == "missing_stats_tables":
                         # Shows the tables that are missing statistics.
                         query = """
                             SELECT 
