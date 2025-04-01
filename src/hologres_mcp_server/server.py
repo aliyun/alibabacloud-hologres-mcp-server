@@ -354,6 +354,20 @@ async def read_resource(uri: AnyUrl) -> str:
                             formatted_row = [str(val) if val is not None else "NULL" for val in row]
                             result.append("\t".join(formatted_row))
                         return "\n".join(result)
+
+                    elif path_parts[0] == "guc":
+                        if len(path_parts) != 2:
+                            raise ValueError(f"Invalid GUC URI format: {uri_str}")
+                        guc_name = path_parts[1]
+                        if not guc_name:
+                            return "GUC name cannot be empty"
+                        query = f"SHOW {guc_name};"
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+                        if not rows:
+                            return f"No GUC found with name {guc_name}"
+                        result = [f"{guc_name}: {rows[0][0]}"]
+                        return "\n".join(result)
                 
                 raise ValueError(f"Invalid resource URI format: {uri_str}")
       

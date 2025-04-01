@@ -101,6 +101,7 @@ Add the following configuration to the MCP client configuration file:
   System paths include:
 
   * instance_version - Shows the hologres instance version.
+  * guc/<guc_name> - Shows the guc(Grand Unified Configuration) value.
   * missing_stats_tables - Shows the tables that are missing statistics.
   * stat_activity - Shows the information of current running queries.
   * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.
