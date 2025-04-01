@@ -455,20 +455,41 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        Tool(
-            name="get_execution_plan",
-            description="Get actual execution plan with runtime statistics for a SQL query",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The SQL query to analyze"
-                    }
+    Tool(
+        name="get_execution_plan",
+        description="Get actual execution plan with runtime statistics for a SQL query",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The SQL query to analyze"
+                }
+            },
+            "required": ["query"]
+        }
+    ),
+    Tool(
+        name="call_procedure",
+        description="Call a stored procedure in Hologres database.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "procedure_name": {
+                    "type": "string",
+                    "description": "The name of the stored procedure to call"
                 },
-                "required": ["query"]
-            }
-        )
+                "arguments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "The arguments to pass to the stored procedure"
+                }
+            },
+            "required": ["procedure_name", "arguments"]
+        }
+    )
     ]
 
 @app.call_tool()
@@ -510,6 +531,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         if not query:
             raise ValueError("Query is required")
         query = f"EXPLAIN ANALYZE {query}"
+    elif name == "call_procedure":
+        procedure_name = arguments.get("procedure_name")
+        arguments_list = arguments.get("arguments")
+        if not procedure_name or not arguments_list:
+            raise ValueError("Procedure name and arguments are required")
+        query = f"CALL {procedure_name}({', '.join(arguments_list)})"
     else:
         raise ValueError(f"Unknown tool: {name}")
     

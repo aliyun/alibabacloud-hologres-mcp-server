@@ -80,10 +80,11 @@ Add the following configuration to the MCP client configuration file:
 
 * `execute_select_sql`: Execute a SELECT SQL query on the Hologres server
 * `execute_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server
-* `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP) SQL query on the Hologres server
+* `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query on the Hologres server
 * `gather_table_statistics`: Collect table statistics
 * `get_query_plan`: Get query plan
 * `get_execution_plan`: Get execution plan
+* `call_procedure`: Invoke a procedure
 
 ### Resources
 
