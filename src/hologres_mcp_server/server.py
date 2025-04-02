@@ -58,6 +58,8 @@ async def list_resources() -> list[Resource]:
 HOLO_SYSTEM_DESC = '''
 System information in Hologres, following are some common system_paths:
 
+'instance_version'    Shows the hologres instance version.
+'guc_value/<guc_name>'    Shows the guc(Grand Unified Configuration) value.
 'missing_stats_tables'    Shows the tables that are missing statistics.
 'stat_activity'    Shows the information of current running queries.
 'query_log/latest/<row_limits>'    Get recent query log history with specified number of rows.
@@ -355,7 +357,7 @@ async def read_resource(uri: AnyUrl) -> str:
                             result.append("\t".join(formatted_row))
                         return "\n".join(result)
 
-                    elif path_parts[0] == "guc":
+                    elif path_parts[0] == "guc_value":
                         if len(path_parts) != 2:
                             raise ValueError(f"Invalid GUC URI format: {uri_str}")
                         guc_name = path_parts[1]
@@ -489,6 +491,37 @@ async def list_tools() -> list[Tool]:
             },
             "required": ["procedure_name", "arguments"]
         }
+    ),
+    Tool(
+        name="create_maxcompute_foreign_table",
+        description="Create MaxCompute foreign tables.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "maxcompute_project": {
+                    "type": "string",
+                    "description": "The remote project name in MaxCompute (required)"
+                },
+                "maxcompute_schema": {
+                    "type": "string",
+                    "default": "default",
+                    "description": "The remote schema name in MaxCompute (optional, default: 'default')"
+                },
+                "tables": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "The MaxCompute table names (required)"
+                },
+                "local_schema": {
+                    "type": "string",
+                    "default": "public",
+                    "description": "The local schema name in Hologres (optional, default: 'public')"
+                }
+            },
+            "required": ["maxcompute_project", "tables"]
+        }
     )
     ]
 
@@ -537,6 +570,20 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         if not procedure_name or not arguments_list:
             raise ValueError("Procedure name and arguments are required")
         query = f"CALL {procedure_name}({', '.join(arguments_list)})"
+    elif name == "create_maxcompute_foreign_table":
+        maxcompute_project = arguments.get("maxcompute_project")
+        maxcompute_schema = arguments.get("maxcompute_schema", "default")
+        tables = arguments.get("tables")
+        local_schema = arguments.get("local_schema", "public")
+        if not all([maxcompute_project, tables]):
+            raise ValueError("maxcompute_project and tables are required")
+        table_list = ", ".join(tables)
+        query = f"""
+            IMPORT FOREIGN SCHEMA "{maxcompute_project}#{maxcompute_schema}"
+            LIMIT TO ({table_list})
+            FROM SERVER odps_server
+            INTO {local_schema};
+        """
     else:
         raise ValueError(f"Unknown tool: {name}")
     
