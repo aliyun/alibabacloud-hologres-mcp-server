@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import psycopg
+import re
 from psycopg import OperationalError as Error
 from mcp.server import Server
 from mcp.types import Resource, Tool, TextContent, ResourceTemplate
@@ -592,8 +593,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
-        if not query.strip().upper().startswith("SELECT"):
-            raise ValueError("Query must be a SELECT statement")
+        if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
+            raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
     elif name == "execute_hg_select_sql_with_serverless_computing":
         query = arguments.get("query")
         if not query:
@@ -603,7 +604,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         # 修改 serverless computing 设置方式
         serverless_query = query  # 保存原始查询
         query = "set hg_computing_resource='serverless';"  # 只设置参数
-        
     elif name == "execute_hg_dml_sql":
         query = arguments.get("query")
         if not query:
