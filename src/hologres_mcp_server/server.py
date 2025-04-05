@@ -547,6 +547,25 @@ async def list_tools() -> list[Tool]:
             },
             "required": ["schema"]
         }
+    ),
+    # 新增show_table_ddl工具
+    Tool(
+        name="show_table_ddl",
+        description="Show DDL script for a table, view, or foreign table in Hologres database.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "Schema name"
+                },
+                "table": {
+                    "type": "string",
+                    "description": "Table name"
+                }
+            },
+            "required": ["schema", "table"]
+        }
     )
     ]
 
@@ -649,6 +668,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             ORDER BY
                 tab.table_name;
         """
+    elif name == "show_table_ddl":
+        schema = arguments.get("schema")
+        table = arguments.get("table")
+        if not all([schema, table]):
+            raise ValueError("Schema and table are required")
+        query = f"SELECT hg_dump_script('\"{schema}\".\"{table}\"')"
     else:
         raise ValueError(f"Unknown tool: {name}")
     
