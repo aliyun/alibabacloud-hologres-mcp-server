@@ -500,12 +500,12 @@ async def list_tools() -> list[Tool]:
             "properties": {
                 "maxcompute_project": {
                     "type": "string",
-                    "description": "The project name in MaxCompute (required)"
+                    "description": "The MaxCompute project name (required)"
                 },
                 "maxcompute_schema": {
                     "type": "string",
                     "default": "default",
-                    "description": "The schema name in MaxCompute (optional, default: 'default')"
+                    "description": "The MaxCompute schema name (optional, default: 'default')"
                 },
                 "maxcompute_tables": {
                     "type": "array",
