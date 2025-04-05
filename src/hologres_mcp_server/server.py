@@ -522,6 +522,16 @@ async def list_tools() -> list[Tool]:
             },
             "required": ["maxcompute_project", "maxcompute_tables"]
         }
+    ),
+    # 新增list_schemas工具
+    Tool(
+        name="list_schemas",
+        description="List all schemas in the current Hologres database, excluding system schemas.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     )
     ]
 
@@ -584,6 +594,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             LIMIT TO ({maxcompute_table_list})
             FROM SERVER odps_server
             INTO {local_schema};
+        """
+    # 处理list_schemas工具
+    elif name == "list_schemas":
+        query = """
+            SELECT table_schema 
+            FROM information_schema.tables 
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+            GROUP BY table_schema
+            ORDER BY table_schema;
         """
     else:
         raise ValueError(f"Unknown tool: {name}")
