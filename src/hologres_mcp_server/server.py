@@ -532,6 +532,21 @@ async def list_tools() -> list[Tool]:
             "properties": {},
             "required": []
         }
+    ),
+    # 新增list_tables_in_a_schema工具
+    Tool(
+        name="list_tables_in_a_schema",
+        description="List all tables in a specific schema, including their types (view, foreign table, partitioned table).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "Schema name to list tables from"
+                }
+            },
+            "required": ["schema"]
+        }
     )
     ]
 
@@ -603,6 +618,36 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
             GROUP BY table_schema
             ORDER BY table_schema;
+        """
+    # 处理list_tables_in_a_schema工具
+    elif name == "list_tables_in_a_schema":
+        schema = arguments.get("schema")
+        if not schema:
+            raise ValueError("Schema name is required")
+        query = f"""
+            SELECT
+                tab.table_name,
+                CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
+                    WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
+                    WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
+                    ELSE ''
+                END AS table_type_info
+            FROM
+                information_schema.tables AS tab
+            LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
+            LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
+            LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
+            LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
+            WHERE
+                tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
+                AND tab.table_schema = '{schema}'
+                AND (inh.inhrelid IS NULL OR NOT EXISTS (
+                    SELECT 1
+                    FROM pg_inherits
+                    WHERE inh.inhrelid = pg_inherits.inhrelid
+                ))
+            ORDER BY
+                tab.table_name;
         """
     else:
         raise ValueError(f"Unknown tool: {name}")
