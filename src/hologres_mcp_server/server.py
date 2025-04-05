@@ -600,8 +600,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             raise ValueError("Query is required")
         if not query.strip().upper().startswith("SELECT"):
             raise ValueError("Query must be a SELECT statement")
-        # 添加 serverless computing 设置
-        query = f"set computing_resource='serverless'; {query}"
+        # 修改 serverless computing 设置方式
+        serverless_query = query  # 保存原始查询
+        query = "set hg_computing_resource='serverless';"  # 只设置参数
+        
     elif name == "execute_dml_sql":
         query = arguments.get("query")
         if not query:
@@ -706,6 +708,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 
                 # Execute the query
                 cursor.execute(query)
+
+                # 特殊处理 serverless computing 查询
+                if name == "execute_select_sql_with_serverless_computing":
+                    # 执行实际的 SELECT 查询
+                    cursor.execute(serverless_query)
                 
                 # 特殊处理 ANALYZE 命令
                 if name == "gather_table_statistics":
