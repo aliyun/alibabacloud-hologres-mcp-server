@@ -58,6 +58,8 @@ async def list_resources() -> list[Resource]:
 HOLO_SYSTEM_DESC = '''
 System information in Hologres, following are some common system_paths:
 
+'instance_version'    Shows the hologres instance version.
+'guc_value/<guc_name>'    Shows the guc(Grand Unified Configuration) value.
 'missing_stats_tables'    Shows the tables that are missing statistics.
 'stat_activity'    Shows the information of current running queries.
 'query_log/latest/<row_limits>'    Get recent query log history with specified number of rows.
@@ -235,11 +237,21 @@ async def read_resource(uri: AnyUrl) -> str:
                             result.append("\t".join(map(str, row)))
                         return "\n".join(result)
                         
+
                 # Handle system:/// URIs
                 elif uri_str.startswith("system:///"):
                     path_parts = uri_str[10:].split('/')
                     
-                    if path_parts[0] == "missing_stats_tables":
+                    if path_parts[0] == "instance_version":
+                        # Execute the SQL to get the version of the Hologres instance
+                        query = "SELECT HG_VERSION();"
+                        cursor.execute(query)
+                        version = cursor.fetchone()[0]
+                        # Extract the version number from the full version string
+                        version_number = version.split(' ')[1]
+                        return version_number
+
+                    elif path_parts[0] == "missing_stats_tables":
                         # Shows the tables that are missing statistics.
                         query = """
                             SELECT 
@@ -344,6 +356,20 @@ async def read_resource(uri: AnyUrl) -> str:
                             formatted_row = [str(val) if val is not None else "NULL" for val in row]
                             result.append("\t".join(formatted_row))
                         return "\n".join(result)
+
+                    elif path_parts[0] == "guc_value":
+                        if len(path_parts) != 2:
+                            raise ValueError(f"Invalid GUC URI format: {uri_str}")
+                        guc_name = path_parts[1]
+                        if not guc_name:
+                            return "GUC name cannot be empty"
+                        query = f"SHOW {guc_name};"
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+                        if not rows:
+                            return f"No GUC found with name {guc_name}"
+                        result = [f"{guc_name}: {rows[0][0]}"]
+                        return "\n".join(result)
                 
                 raise ValueError(f"Invalid resource URI format: {uri_str}")
       
@@ -431,20 +457,72 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        Tool(
-            name="get_execution_plan",
-            description="Get actual execution plan with runtime statistics for a SQL query",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The SQL query to analyze"
-                    }
+    Tool(
+        name="get_execution_plan",
+        description="Get actual execution plan with runtime statistics for a SQL query",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The SQL query to analyze"
+                }
+            },
+            "required": ["query"]
+        }
+    ),
+    Tool(
+        name="call_procedure",
+        description="Call a stored procedure in Hologres database.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "procedure_name": {
+                    "type": "string",
+                    "description": "The name of the stored procedure to call"
                 },
-                "required": ["query"]
-            }
-        )
+                "arguments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "The arguments to pass to the stored procedure"
+                }
+            },
+            "required": ["procedure_name", "arguments"]
+        }
+    ),
+    Tool(
+        name="create_maxcompute_foreign_table",
+        description="Create MaxCompute foreign tables.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "maxcompute_project": {
+                    "type": "string",
+                    "description": "The remote project name in MaxCompute (required)"
+                },
+                "maxcompute_schema": {
+                    "type": "string",
+                    "default": "default",
+                    "description": "The remote schema name in MaxCompute (optional, default: 'default')"
+                },
+                "tables": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "The MaxCompute table names (required)"
+                },
+                "local_schema": {
+                    "type": "string",
+                    "default": "public",
+                    "description": "The local schema name in Hologres (optional, default: 'public')"
+                }
+            },
+            "required": ["maxcompute_project", "tables"]
+        }
+    )
     ]
 
 @app.call_tool()
@@ -468,8 +546,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
-        if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP"]):
-            raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP)")
+        if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP", "COMMENT ON"]):
+            raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP, COMMENT ON)")
     elif name == "gather_table_statistics":
         schema = arguments.get("schema")
         table = arguments.get("table")
@@ -486,6 +564,26 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         if not query:
             raise ValueError("Query is required")
         query = f"EXPLAIN ANALYZE {query}"
+    elif name == "call_procedure":
+        procedure_name = arguments.get("procedure_name")
+        arguments_list = arguments.get("arguments")
+        if not procedure_name or not arguments_list:
+            raise ValueError("Procedure name and arguments are required")
+        query = f"CALL {procedure_name}({', '.join(arguments_list)})"
+    elif name == "create_maxcompute_foreign_table":
+        maxcompute_project = arguments.get("maxcompute_project")
+        maxcompute_schema = arguments.get("maxcompute_schema", "default")
+        tables = arguments.get("tables")
+        local_schema = arguments.get("local_schema", "public")
+        if not all([maxcompute_project, tables]):
+            raise ValueError("maxcompute_project and tables are required")
+        table_list = ", ".join(tables)
+        query = f"""
+            IMPORT FOREIGN SCHEMA "{maxcompute_project}#{maxcompute_schema}"
+            LIMIT TO ({table_list})
+            FROM SERVER odps_server
+            INTO {local_schema};
+        """
     else:
         raise ValueError(f"Unknown tool: {name}")
     

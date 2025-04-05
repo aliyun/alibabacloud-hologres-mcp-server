@@ -80,10 +80,12 @@ Add the following configuration to the MCP client configuration file:
 
 * `execute_select_sql`: Execute a SELECT SQL query on the Hologres server
 * `execute_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server
-* `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP) SQL query on the Hologres server
+* `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query on the Hologres server
 * `gather_table_statistics`: Collect table statistics
 * `get_query_plan`: Get query plan
 * `get_execution_plan`: Get execution plan
+* `call_procedure`: Invoke a procedure
+* `create_maxcompute_foreign_table`: Create MaxCompute foreign tables.
 
 ### Resources
 
@@ -100,6 +102,8 @@ Add the following configuration to the MCP client configuration file:
 * `system:///{+system_path}`:
   System paths include:
 
+  * instance_version - Shows the hologres instance version.
+  * guc_value/<guc_name> - Shows the guc(Grand Unified Configuration) value.
   * missing_stats_tables - Shows the tables that are missing statistics.
   * stat_activity - Shows the information of current running queries.
   * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.
