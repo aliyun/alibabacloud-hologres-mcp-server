@@ -536,7 +536,7 @@ async def list_tools() -> list[Tool]:
     # 新增list_tables_in_a_schema工具
     Tool(
         name="list_tables_in_a_schema",
-        description="List all tables in a specific schema, including their types (view, foreign table, partitioned table).",
+        description="List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table).",
         inputSchema={
             "type": "object",
             "properties": {
