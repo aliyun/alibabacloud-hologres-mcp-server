@@ -494,20 +494,20 @@ async def list_tools() -> list[Tool]:
     ),
     Tool(
         name="create_maxcompute_foreign_table",
-        description="Create MaxCompute foreign tables.",
+        description="Create a MaxCompute foreign table in Hologres to accelerate queries on MaxCompute data.",
         inputSchema={
             "type": "object",
             "properties": {
                 "maxcompute_project": {
                     "type": "string",
-                    "description": "The remote project name in MaxCompute (required)"
+                    "description": "The project name in MaxCompute (required)"
                 },
                 "maxcompute_schema": {
                     "type": "string",
                     "default": "default",
-                    "description": "The remote schema name in MaxCompute (optional, default: 'default')"
+                    "description": "The schema name in MaxCompute (optional, default: 'default')"
                 },
-                "tables": {
+                "maxcompute_tables": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -520,7 +520,7 @@ async def list_tools() -> list[Tool]:
                     "description": "The local schema name in Hologres (optional, default: 'public')"
                 }
             },
-            "required": ["maxcompute_project", "tables"]
+            "required": ["maxcompute_project", "maxcompute_tables"]
         }
     )
     ]
@@ -573,14 +573,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "create_maxcompute_foreign_table":
         maxcompute_project = arguments.get("maxcompute_project")
         maxcompute_schema = arguments.get("maxcompute_schema", "default")
-        tables = arguments.get("tables")
+        maxcompute_tables = arguments.get("maxcompute_tables")
         local_schema = arguments.get("local_schema", "public")
-        if not all([maxcompute_project, tables]):
-            raise ValueError("maxcompute_project and tables are required")
-        table_list = ", ".join(tables)
+        if not all([maxcompute_project, maxcompute_tables]):
+            raise ValueError("maxcompute_project and maxcompute_tables are required")
+        maxcompute_table_list = ", ".join(maxcompute_tables)
+        # 修复 SQL 语句，确保正确拼接项目名称和 schema
         query = f"""
             IMPORT FOREIGN SCHEMA "{maxcompute_project}#{maxcompute_schema}"
-            LIMIT TO ({table_list})
+            LIMIT TO ({maxcompute_table_list})
             FROM SERVER odps_server
             INTO {local_schema};
         """
