@@ -396,6 +396,21 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
+        # 新增 execute_select_sql_with_serverless_computing 工具
+        Tool(
+            name="execute_select_sql_with_serverless_computing",
+            description="Use Serverless Computing resources to execute SELECT SQL to query data from Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_select_sql execution, you can re-execute the SQL with the tool execute_select_sql_with_serverless_computing.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The (SELECT) SQL query to execute with serverless computing"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
         Tool(
             name="execute_dml_sql",
             description="Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres databse.",
@@ -424,7 +439,6 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        # 移除了 query_log 工具
         Tool(
             name="gather_table_statistics",
             description="Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans",
@@ -580,6 +594,14 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             raise ValueError("Query is required")
         if not query.strip().upper().startswith("SELECT"):
             raise ValueError("Query must be a SELECT statement")
+    elif name == "execute_select_sql_with_serverless_computing":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        if not query.strip().upper().startswith("SELECT"):
+            raise ValueError("Query must be a SELECT statement")
+        # 添加 serverless computing 设置
+        query = f"set computing_resource='serverless'; {query}"
     elif name == "execute_dml_sql":
         query = arguments.get("query")
         if not query:
