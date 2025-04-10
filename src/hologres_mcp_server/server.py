@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger("hologres-mcp-server")
 """
 
-SERVER_VERSION = "0.1.7"
+SERVER_VERSION = "0.1.8"
 
 def get_db_config():
     """Get database configuration from environment variables."""
@@ -396,6 +396,21 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
+        # 新增 execute_select_sql_with_serverless_computing 工具
+        Tool(
+            name="execute_select_sql_with_serverless_computing",
+            description="Use Serverless Computing resources to execute SELECT SQL to query data from Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_select_sql execution, you can re-execute the SQL with the tool execute_select_sql_with_serverless_computing.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The (SELECT) SQL query to execute with serverless computing"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
         Tool(
             name="execute_dml_sql",
             description="Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres databse.",
@@ -424,7 +439,6 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        # 移除了 query_log 工具
         Tool(
             name="gather_table_statistics",
             description="Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans",
@@ -494,20 +508,20 @@ async def list_tools() -> list[Tool]:
     ),
     Tool(
         name="create_maxcompute_foreign_table",
-        description="Create MaxCompute foreign tables.",
+        description="Create a MaxCompute foreign table in Hologres to accelerate queries on MaxCompute data.",
         inputSchema={
             "type": "object",
             "properties": {
                 "maxcompute_project": {
                     "type": "string",
-                    "description": "The remote project name in MaxCompute (required)"
+                    "description": "The MaxCompute project name (required)"
                 },
                 "maxcompute_schema": {
                     "type": "string",
                     "default": "default",
-                    "description": "The remote schema name in MaxCompute (optional, default: 'default')"
+                    "description": "The MaxCompute schema name (optional, default: 'default')"
                 },
-                "tables": {
+                "maxcompute_tables": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -520,7 +534,51 @@ async def list_tools() -> list[Tool]:
                     "description": "The local schema name in Hologres (optional, default: 'public')"
                 }
             },
-            "required": ["maxcompute_project", "tables"]
+            "required": ["maxcompute_project", "maxcompute_tables"]
+        }
+    ),
+    # 新增list_schemas工具
+    Tool(
+        name="list_schemas",
+        description="List all schemas in the current Hologres database, excluding system schemas.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    # 新增list_tables_in_a_schema工具
+    Tool(
+        name="list_tables_in_a_schema",
+        description="List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "Schema name to list tables from"
+                }
+            },
+            "required": ["schema"]
+        }
+    ),
+    # 新增show_table_ddl工具
+    Tool(
+        name="show_table_ddl",
+        description="Show DDL script for a table, view, or foreign table in Hologres database.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "Schema name"
+                },
+                "table": {
+                    "type": "string",
+                    "description": "Table name"
+                }
+            },
+            "required": ["schema", "table"]
         }
     )
     ]
@@ -536,6 +594,16 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             raise ValueError("Query is required")
         if not query.strip().upper().startswith("SELECT"):
             raise ValueError("Query must be a SELECT statement")
+    elif name == "execute_select_sql_with_serverless_computing":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query is required")
+        if not query.strip().upper().startswith("SELECT"):
+            raise ValueError("Query must be a SELECT statement")
+        # 修改 serverless computing 设置方式
+        serverless_query = query  # 保存原始查询
+        query = "set hg_computing_resource='serverless';"  # 只设置参数
+        
     elif name == "execute_dml_sql":
         query = arguments.get("query")
         if not query:
@@ -573,17 +641,63 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "create_maxcompute_foreign_table":
         maxcompute_project = arguments.get("maxcompute_project")
         maxcompute_schema = arguments.get("maxcompute_schema", "default")
-        tables = arguments.get("tables")
+        maxcompute_tables = arguments.get("maxcompute_tables")
         local_schema = arguments.get("local_schema", "public")
-        if not all([maxcompute_project, tables]):
-            raise ValueError("maxcompute_project and tables are required")
-        table_list = ", ".join(tables)
+        if not all([maxcompute_project, maxcompute_tables]):
+            raise ValueError("maxcompute_project and maxcompute_tables are required")
+        maxcompute_table_list = ", ".join(maxcompute_tables)
+        # 修复 SQL 语句，确保正确拼接项目名称和 schema
         query = f"""
             IMPORT FOREIGN SCHEMA "{maxcompute_project}#{maxcompute_schema}"
-            LIMIT TO ({table_list})
+            LIMIT TO ({maxcompute_table_list})
             FROM SERVER odps_server
             INTO {local_schema};
         """
+    # 处理list_schemas工具
+    elif name == "list_schemas":
+        query = """
+            SELECT table_schema 
+            FROM information_schema.tables 
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+            GROUP BY table_schema
+            ORDER BY table_schema;
+        """
+    # 处理list_tables_in_a_schema工具
+    elif name == "list_tables_in_a_schema":
+        schema = arguments.get("schema")
+        if not schema:
+            raise ValueError("Schema name is required")
+        query = f"""
+            SELECT
+                tab.table_name,
+                CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
+                    WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
+                    WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
+                    ELSE ''
+                END AS table_type_info
+            FROM
+                information_schema.tables AS tab
+            LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
+            LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
+            LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
+            LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
+            WHERE
+                tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
+                AND tab.table_schema = '{schema}'
+                AND (inh.inhrelid IS NULL OR NOT EXISTS (
+                    SELECT 1
+                    FROM pg_inherits
+                    WHERE inh.inhrelid = pg_inherits.inhrelid
+                ))
+            ORDER BY
+                tab.table_name;
+        """
+    elif name == "show_table_ddl":
+        schema = arguments.get("schema")
+        table = arguments.get("table")
+        if not all([schema, table]):
+            raise ValueError("Schema and table are required")
+        query = f"SELECT hg_dump_script('\"{schema}\".\"{table}\"')"
     else:
         raise ValueError(f"Unknown tool: {name}")
     
@@ -594,6 +708,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 
                 # Execute the query
                 cursor.execute(query)
+
+                # 特殊处理 serverless computing 查询
+                if name == "execute_select_sql_with_serverless_computing":
+                    # 执行实际的 SELECT 查询
+                    cursor.execute(serverless_query)
                 
                 # 特殊处理 ANALYZE 命令
                 if name == "gather_table_statistics":

@@ -79,6 +79,7 @@ Add the following configuration to the MCP client configuration file:
 ### Tools
 
 * `execute_select_sql`: Execute a SELECT SQL query on the Hologres server
+* `execute_select_sql_with_serverless_computing`: Execute a SELECT SQL query on the Hologres server with serverless computing
 * `execute_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server
 * `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query on the Hologres server
 * `gather_table_statistics`: Collect table statistics
@@ -86,6 +87,11 @@ Add the following configuration to the MCP client configuration file:
 * `get_execution_plan`: Get execution plan
 * `call_procedure`: Invoke a procedure
 * `create_maxcompute_foreign_table`: Create MaxCompute foreign tables.
+
+Since some Agents do not support resources and resource templates, the following tools are provided to obtain the metadata of schemas, tables, views, and external tables.
+* `list_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
+* `list_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
+* `show_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
 
 ### Resources
 
