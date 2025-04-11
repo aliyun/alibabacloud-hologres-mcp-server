@@ -2,12 +2,22 @@
 ## Version 0.1.8
 ### Enhancement
 Add tools
-* `execute_select_sql_with_serverless_computing`: Execute a SELECT SQL query on the Hologres server with serverless computing
+- `execute_hg_select_sql_with_serverless_computing`: Execute a SELECT SQL query in Hologres database with serverless computing
+- `create_hg_maxcompute_foreign_table`: Create MaxCompute foreign tables in Hologres database.
 
 Since some Agents do not support resources and resource templates, the following tools are provided to obtain the metadata of schemas, tables, views, and external tables.
-* `list_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
-* `list_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
-* `show_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
+- `list_hg_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
+- `list_hg_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
+- `show_hg_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
+
+In order for the AI Agent to better recognize the Tools, please rename the following Tools as follows.
+- Rename `execute_select_sql` to `execute_hg_select_sql`
+- Rename `execute_dml_sql` to `execute_hg_dml_sql`
+- Rename `execute_ddl_sql` to `execute_hg_ddl_sql`
+- Rename `gather_table_statistics` to `gather_hg_table_statistics`
+- Rename `get_query_plan` to `get_hg_query_plan`
+- Rename `get_execution_plan` to `get_hg_execution_plan`
+- Rename `call_procedure` to `call_hg_procedure`
 
 ## Version 0.1.7
 ### Bugfix

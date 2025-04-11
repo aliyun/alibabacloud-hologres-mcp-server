@@ -78,38 +78,38 @@ Add the following configuration to the MCP client configuration file:
 
 ### Tools
 
-* `execute_select_sql`: Execute a SELECT SQL query on the Hologres server
-* `execute_select_sql_with_serverless_computing`: Execute a SELECT SQL query on the Hologres server with serverless computing
-* `execute_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query on the Hologres server
-* `execute_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query on the Hologres server
-* `gather_table_statistics`: Collect table statistics
-* `get_query_plan`: Get query plan
-* `get_execution_plan`: Get execution plan
-* `call_procedure`: Invoke a procedure
-* `create_maxcompute_foreign_table`: Create MaxCompute foreign tables.
+* `execute_hg_select_sql`: Execute a SELECT SQL query in Hologres database
+* `execute_hg_select_sql_with_serverless_computing`: Execute a SELECT SQL query in Hologres database with serverless computing
+* `execute_hg_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query in Hologres database
+* `execute_hg_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query in Hologres database
+* `gather_hg_table_statistics`: Collect table statistics in Hologres database
+* `get_hg_query_plan`: Get query plan in Hologres database
+* `get_hg_execution_plan`: Get execution plan in Hologres database
+* `call_hg_procedure`: Invoke a procedure in Hologres database
+* `create_hg_maxcompute_foreign_table`: Create MaxCompute foreign tables in Hologres database.
 
 Since some Agents do not support resources and resource templates, the following tools are provided to obtain the metadata of schemas, tables, views, and external tables.
-* `list_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
-* `list_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
-* `show_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
+* `list_hg_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
+* `list_hg_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
+* `show_hg_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
 
 ### Resources
 
 #### Built-in Resources
 
-* `hologres:///schemas`: Get all schemas in the database
+* `hologres:///schemas`: Get all schemas in Hologres database
 
 #### Resource Templates
 
-* `hologres:///{schema}/tables`: List all tables in a schema
-* `hologres:///{schema}/{table}/partitions`: List all partitions of a partitioned table
-* `hologres:///{schema}/{table}/ddl`: Get table DDL
-* `hologres:///{schema}/{table}/statistic`: Show collected table statistics
+* `hologres:///{schema}/tables`: List all tables in a schema in Hologres database
+* `hologres:///{schema}/{table}/partitions`: List all partitions of a partitioned table in Hologres database
+* `hologres:///{schema}/{table}/ddl`: Get table DDL in Hologres database
+* `hologres:///{schema}/{table}/statistic`: Show collected table statistics in Hologres database
 * `system:///{+system_path}`:
   System paths include:
 
-  * instance_version - Shows the hologres instance version.
-  * guc_value/<guc_name> - Shows the guc(Grand Unified Configuration) value.
+  * hg_instance_version - Shows the hologres instance version.
+  * guc_value/<guc_name> - Shows the guc (Grand Unified Configuration) value.
   * missing_stats_tables - Shows the tables that are missing statistics.
   * stat_activity - Shows the information of current running queries.
   * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.

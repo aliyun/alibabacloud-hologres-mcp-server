@@ -49,16 +49,16 @@ async def list_resources() -> list[Resource]:
     return [
         Resource(
             uri="hologres:///schemas",
-            name="All Schemas",
+            name="All Schemas in Hologres database",
             description="Hologres is a PostgreSQL-compatible OLAP product. List all schemas in Hologres database",
             mimeType="text/plain"
         )
     ]
 
 HOLO_SYSTEM_DESC = '''
-System information in Hologres, following are some common system_paths:
+System information in Hologres database, following are some common system_paths:
 
-'instance_version'    Shows the hologres instance version.
+'hg_instance_version'    Shows the hologres instance version.
 'guc_value/<guc_name>'    Shows the guc(Grand Unified Configuration) value.
 'missing_stats_tables'    Shows the tables that are missing statistics.
 'stat_activity'    Shows the information of current running queries.
@@ -74,31 +74,31 @@ async def list_resource_templates() -> list[ResourceTemplate]:
     return [
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/tables",
-            name="Schema Tables",
-            description="List all tables in a specific schema",
+            name="List all tables in a specific schema in Hologres database",
+            description="List all tables in a specific schema in Hologres database",
             mimeType="text/plain"
         ),
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/{table}/ddl",
-            name="Table DDL",
-            description="Get the DDL script of a table in a specific schema",
+            name="Table DDL in Hologres database",
+            description="Get the DDL script of a table in a specific schema in Hologres database",
             mimeType="text/plain"
         ),
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/{table}/statistic",
-            name="Table Statistics",
-            description="Get statistics information of a table",
+            name="Table Statistics in Hologres database",
+            description="Get statistics information of a table in Hologres database",
             mimeType="text/plain"
         ),
         ResourceTemplate(
             uriTemplate="hologres:///{schema}/{table}/partitions",
-            name="Table Statistics",
-            description="List all partitions of a partitioned table",
+            name="Table Partitions in Hologres database",
+            description="List all partitions of a partitioned table in Hologres database",
             mimeType="text/plain"
         ),
         ResourceTemplate(
             uriTemplate="system:///{+system_path}",
-            name="System internal Information",
+            name="System internal Information in Hologres database",
             description=HOLO_SYSTEM_DESC,
             mimeType="text/plain"
         )
@@ -242,7 +242,7 @@ async def read_resource(uri: AnyUrl) -> str:
                 elif uri_str.startswith("system:///"):
                     path_parts = uri_str[10:].split('/')
                     
-                    if path_parts[0] == "instance_version":
+                    if path_parts[0] == "hg_instance_version":
                         # Execute the SQL to get the version of the Hologres instance
                         query = "SELECT HG_VERSION();"
                         cursor.execute(query)
@@ -383,132 +383,132 @@ async def list_tools() -> list[Tool]:
     # logger.info("Listing tools...")
     return [
         Tool(
-            name="execute_select_sql",
+            name="execute_hg_select_sql",
             description="Execute SELECT SQL to query data from Hologres database.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The (SELECT) SQL query to execute"
+                        "description": "The (SELECT) SQL query to execute in Hologres database."
                     }
                 },
                 "required": ["query"]
             }
         ),
-        # 新增 execute_select_sql_with_serverless_computing 工具
+        # 新增 execute_hg_select_sql_with_serverless_computing 工具
         Tool(
-            name="execute_select_sql_with_serverless_computing",
-            description="Use Serverless Computing resources to execute SELECT SQL to query data from Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_select_sql execution, you can re-execute the SQL with the tool execute_select_sql_with_serverless_computing.",
+            name="execute_hg_select_sql_with_serverless_computing",
+            description="Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_hg_select_sql execution, you can re-execute the SQL with the tool execute_hg_select_sql_with_serverless_computing.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The (SELECT) SQL query to execute with serverless computing"
+                        "description": "The (SELECT) SQL query to execute with serverless computing in Hologres database"
                     }
                 },
                 "required": ["query"]
             }
         ),
         Tool(
-            name="execute_dml_sql",
+            name="execute_hg_dml_sql",
             description="Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres databse.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The DML SQL query to execute"
+                        "description": "The DML SQL query to execute in Hologres database"
                     }
                 },
                 "required": ["query"]
             }
         ),
         Tool(
-            name="execute_ddl_sql",
+            name="execute_hg_ddl_sql",
             description="Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres databse.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The DDL SQL query to execute"
+                        "description": "The DDL SQL query to execute in Hologres database"
                     }
                 },
                 "required": ["query"]
             }
         ),
         Tool(
-            name="gather_table_statistics",
+            name="gather_hg_table_statistics",
             description="Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "schema": {
                         "type": "string",
-                        "description": "Schema name"
+                        "description": "Schema name in Hologres database"
                     },
                     "table": {
                         "type": "string",
-                        "description": "Table name"
+                        "description": "Table name in Hologres database"
                     }
                 },
                 "required": ["schema", "table"]
             }
         ),
         Tool(
-            name="get_query_plan",
-            description="Get query plan for a SQL query",
+            name="get_hg_query_plan",
+            description="Get query plan for a SQL query in Hologres database",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The SQL query to analyze"
+                        "description": "The SQL query to analyze in Hologres database"
                     }
                 },
                 "required": ["query"]
             }
         ),
     Tool(
-        name="get_execution_plan",
-        description="Get actual execution plan with runtime statistics for a SQL query",
+        name="get_hg_execution_plan",
+        description="Get actual execution plan with runtime statistics for a SQL query in Hologres database",
         inputSchema={
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "The SQL query to analyze"
+                    "description": "The SQL query to analyze in Hologres database"
                 }
             },
             "required": ["query"]
         }
     ),
     Tool(
-        name="call_procedure",
+        name="call_hg_procedure",
         description="Call a stored procedure in Hologres database.",
         inputSchema={
             "type": "object",
             "properties": {
                 "procedure_name": {
                     "type": "string",
-                    "description": "The name of the stored procedure to call"
+                    "description": "The name of the stored procedure to call in Hologres database"
                 },
                 "arguments": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
-                    "description": "The arguments to pass to the stored procedure"
+                    "description": "The arguments to pass to the stored procedure in Hologres database"
                 }
             },
             "required": ["procedure_name", "arguments"]
         }
     ),
     Tool(
-        name="create_maxcompute_foreign_table",
-        description="Create a MaxCompute foreign table in Hologres to accelerate queries on MaxCompute data.",
+        name="create_hg_maxcompute_foreign_table",
+        description="Create a MaxCompute foreign table in Hologres database to accelerate queries on MaxCompute data.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -537,9 +537,9 @@ async def list_tools() -> list[Tool]:
             "required": ["maxcompute_project", "maxcompute_tables"]
         }
     ),
-    # 新增list_schemas工具
+    # 新增 list_hg_schemas 工具
     Tool(
-        name="list_schemas",
+        name="list_hg_schemas",
         description="List all schemas in the current Hologres database, excluding system schemas.",
         inputSchema={
             "type": "object",
@@ -547,35 +547,35 @@ async def list_tools() -> list[Tool]:
             "required": []
         }
     ),
-    # 新增list_tables_in_a_schema工具
+    # 新增 list_hg_tables_in_a_schema 工具
     Tool(
-        name="list_tables_in_a_schema",
+        name="list_hg_tables_in_a_schema",
         description="List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table).",
         inputSchema={
             "type": "object",
             "properties": {
                 "schema": {
                     "type": "string",
-                    "description": "Schema name to list tables from"
+                    "description": "Schema name to list tables from in Hologres database"
                 }
             },
             "required": ["schema"]
         }
     ),
-    # 新增show_table_ddl工具
+    # 新增 show_hg_table_ddl 工具
     Tool(
-        name="show_table_ddl",
+        name="show_hg_table_ddl",
         description="Show DDL script for a table, view, or foreign table in Hologres database.",
         inputSchema={
             "type": "object",
             "properties": {
                 "schema": {
                     "type": "string",
-                    "description": "Schema name"
+                    "description": "Schema name in Hologres database"
                 },
                 "table": {
                     "type": "string",
-                    "description": "Table name"
+                    "description": "Table name in Hologres database"
                 }
             },
             "required": ["schema", "table"]
@@ -588,13 +588,13 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute SQL commands."""
     config = get_db_config()
     
-    if name == "execute_select_sql":
+    if name == "execute_hg_select_sql":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
         if not query.strip().upper().startswith("SELECT"):
             raise ValueError("Query must be a SELECT statement")
-    elif name == "execute_select_sql_with_serverless_computing":
+    elif name == "execute_hg_select_sql_with_serverless_computing":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
@@ -604,41 +604,41 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         serverless_query = query  # 保存原始查询
         query = "set hg_computing_resource='serverless';"  # 只设置参数
         
-    elif name == "execute_dml_sql":
+    elif name == "execute_hg_dml_sql":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
         if not any(query.strip().upper().startswith(keyword) for keyword in ["INSERT", "UPDATE", "DELETE"]):
             raise ValueError("Query must be a DML statement (INSERT, UPDATE, DELETE)")
-    elif name == "execute_ddl_sql":
+    elif name == "execute_hg_ddl_sql":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
         if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP", "COMMENT ON"]):
             raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP, COMMENT ON)")
-    elif name == "gather_table_statistics":
+    elif name == "gather_hg_table_statistics":
         schema = arguments.get("schema")
         table = arguments.get("table")
         if not all([schema, table]):
             raise ValueError("Schema and table are required")
         query = f"ANALYZE {schema}.{table}"
-    elif name == "get_query_plan":
+    elif name == "get_hg_query_plan":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
         query = f"EXPLAIN {query}"
-    elif name == "get_execution_plan":
+    elif name == "get_hg_execution_plan":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
         query = f"EXPLAIN ANALYZE {query}"
-    elif name == "call_procedure":
+    elif name == "call_hg_procedure":
         procedure_name = arguments.get("procedure_name")
         arguments_list = arguments.get("arguments")
         if not procedure_name or not arguments_list:
             raise ValueError("Procedure name and arguments are required")
         query = f"CALL {procedure_name}({', '.join(arguments_list)})"
-    elif name == "create_maxcompute_foreign_table":
+    elif name == "create_hg_maxcompute_foreign_table":
         maxcompute_project = arguments.get("maxcompute_project")
         maxcompute_schema = arguments.get("maxcompute_schema", "default")
         maxcompute_tables = arguments.get("maxcompute_tables")
@@ -653,8 +653,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             FROM SERVER odps_server
             INTO {local_schema};
         """
-    # 处理list_schemas工具
-    elif name == "list_schemas":
+    # 处理list_hg_schemas工具
+    elif name == "list_hg_schemas":
         query = """
             SELECT table_schema 
             FROM information_schema.tables 
@@ -662,8 +662,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             GROUP BY table_schema
             ORDER BY table_schema;
         """
-    # 处理list_tables_in_a_schema工具
-    elif name == "list_tables_in_a_schema":
+    # 处理list_hg_tables_in_a_schema工具
+    elif name == "list_hg_tables_in_a_schema":
         schema = arguments.get("schema")
         if not schema:
             raise ValueError("Schema name is required")
@@ -692,7 +692,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             ORDER BY
                 tab.table_name;
         """
-    elif name == "show_table_ddl":
+    elif name == "show_hg_table_ddl":
         schema = arguments.get("schema")
         table = arguments.get("table")
         if not all([schema, table]):
@@ -710,12 +710,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 cursor.execute(query)
 
                 # 特殊处理 serverless computing 查询
-                if name == "execute_select_sql_with_serverless_computing":
+                if name == "execute_hg_select_sql_with_serverless_computing":
                     # 执行实际的 SELECT 查询
                     cursor.execute(serverless_query)
                 
                 # 特殊处理 ANALYZE 命令
-                if name == "gather_table_statistics":
+                if name == "gather_hg_table_statistics":
                     return [TextContent(type="text", text=f"Successfully analyzed table {schema}.{table}")]
                 
                 # 处理其他有返回结果的查询
