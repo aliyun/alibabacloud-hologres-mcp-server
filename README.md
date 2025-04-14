@@ -79,7 +79,7 @@ Add the following configuration to the MCP client configuration file:
 ### Tools
 
 * `execute_hg_select_sql`: Execute a SELECT SQL query in Hologres database
-* `execute_hg_select_sql_with_serverless_computing`: Execute a SELECT SQL query in Hologres database with serverless computing
+* `execute_hg_select_sql_with_serverless`: Execute a SELECT SQL query in Hologres database with serverless computing
 * `execute_hg_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query in Hologres database
 * `execute_hg_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query in Hologres database
 * `gather_hg_table_statistics`: Collect table statistics in Hologres database

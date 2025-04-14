@@ -397,10 +397,10 @@ async def list_tools() -> list[Tool]:
                 "required": ["query"]
             }
         ),
-        # 新增 execute_hg_select_sql_with_serverless_computing 工具
+        # 新增 execute_hg_select_sql_with_serverless 工具
         Tool(
-            name="execute_hg_select_sql_with_serverless_computing",
-            description="Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_hg_select_sql execution, you can re-execute the SQL with the tool execute_hg_select_sql_with_serverless_computing.",
+            name="execute_hg_select_sql_with_serverless",
+            description="Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like \"Total memory used by all existing queries exceeded memory limitation\" occurs during execute_hg_select_sql execution, you can re-execute the SQL with the tool execute_hg_select_sql_with_serverless.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -595,7 +595,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             raise ValueError("Query is required")
         if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
             raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
-    elif name == "execute_hg_select_sql_with_serverless_computing":
+    elif name == "execute_hg_select_sql_with_serverless":
         query = arguments.get("query")
         if not query:
             raise ValueError("Query is required")
@@ -710,7 +710,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 cursor.execute(query)
 
                 # 特殊处理 serverless computing 查询
-                if name == "execute_hg_select_sql_with_serverless_computing":
+                if name == "execute_hg_select_sql_with_serverless":
                     # 执行实际的 SELECT 查询
                     cursor.execute(serverless_query)
                 
