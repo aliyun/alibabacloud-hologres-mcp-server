@@ -2,7 +2,7 @@
 ## Version 0.1.8
 ### Enhancement
 Add tools
-- `execute_hg_select_sql_with_serverless_computing`: Execute a SELECT SQL query in Hologres database with serverless computing
+- `execute_hg_select_sql_with_serverless`: Execute a SELECT SQL query in Hologres database with serverless computing
 - `create_hg_maxcompute_foreign_table`: Create MaxCompute foreign tables in Hologres database.
 
 Since some Agents do not support resources and resource templates, the following tools are provided to obtain the metadata of schemas, tables, views, and external tables.
