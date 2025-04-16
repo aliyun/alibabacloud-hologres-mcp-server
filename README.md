@@ -10,7 +10,7 @@ Hologres MCP Server serves as a universal interface between AI Agents and Hologr
 
 Download from Github
 
-```shell
+```bash
 git clone https://github.com/aliyun/alibabacloud-hologres-mcp-server.git
 ```
 
@@ -108,14 +108,14 @@ Since some Agents do not support resources and resource templates, the following
 * `system:///{+system_path}`:
   System paths include:
 
-  * hg_instance_version - Shows the hologres instance version.
-  * guc_value/<guc_name> - Shows the guc (Grand Unified Configuration) value.
-  * missing_stats_tables - Shows the tables that are missing statistics.
-  * stat_activity - Shows the information of current running queries.
-  * query_log/latest/<row_limits> - Get recent query log history with specified number of rows.
-  * query_log/user/<user_name>/<row_limits> - Get query log history for a specific user with row limits.
-  * query_log/application/<application_name>/<row_limits> - Get query log history for a specific application with row limits.
-  * query_log/failed/\<interval>\/<row_limits> - Get failed query log history with interval and specified number of rows.
+  * `hg_instance_version` - Shows the hologres instance version.
+  * `guc_value/<guc_name>` - Shows the guc (Grand Unified Configuration) value.
+  * `missing_stats_tables` - Shows the tables that are missing statistics.
+  * `stat_activity` - Shows the information of current running queries.
+  * `query_log/latest/<row_limits>` - Get recent query log history with specified number of rows.
+  * `query_log/user/<user_name>/<row_limits>` - Get query log history for a specific user with row limits.
+  * `query_log/application/<application_name>/<row_limits>` - Get query log history for a specific application with row limits.
+  * `query_log/failed/<interval>/<row_limits>` - Get failed query log history with interval and specified number of rows.
 
 ### Prompts
 
