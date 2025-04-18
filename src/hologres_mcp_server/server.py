@@ -8,7 +8,6 @@ from mcp.server import Server
 from mcp.types import Resource, Tool, TextContent, ResourceTemplate
 from pydantic import AnyUrl
 from hologres_mcp_server.utils import try_infer_view_comments, handle_read_resource, handle_call_tool
-from hologres_mcp_server.settings import get_db_config
 
 """
 # 修改日志配置，只使用文件处理器
@@ -669,7 +668,7 @@ async def main():
     from mcp.server.stdio import stdio_server
     
     # logger.info("Starting Hologres MCP server...")
-    config = get_db_config()
+    # config = get_db_config()
     # logger.info(f"Database config: {config['host']}:{config['port']}/{config['database']} as {config['user']}")
     
     async with stdio_server() as (read_stream, write_stream):

@@ -84,6 +84,8 @@ dependencies = [
     { name = "pglast" },
     { name = "psycopg" },
     { name = "psycopg-binary" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
     { name = "python-dotenv" },
 ]
 
@@ -94,6 +96,8 @@ requires-dist = [
     { name = "pglast", specifier = ">=7.5" },
     { name = "psycopg", specifier = ">=3.1.0" },
     { name = "psycopg-binary", specifier = ">=3.1.0" },
+    { name = "pydantic", specifier = ">=2.10.6" },
+    { name = "pydantic-core", specifier = ">=2.27.2" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
 
