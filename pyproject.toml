@@ -11,8 +11,7 @@ dependencies = [
  "psycopg>=3.1.0",
  "psycopg-binary>=3.1.0",
  "pglast>=7.5",
- "pydantic>=2.10.6",
- "pydantic-core>=2.27.2",
+ "pydantic>=2.10.6"
 ]
 [[project.authors]]
 name = "TimothyDing"
