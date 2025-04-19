@@ -10,8 +10,7 @@ dependencies = [
  "python-dotenv>=1.0.1",
  "psycopg>=3.1.0",
  "psycopg-binary>=3.1.0",
- "pglast>=7.5",
- "pydantic>=2.10.6"
+ "pglast>=7.5"
 ]
 [[project.authors]]
 name = "TimothyDing"
