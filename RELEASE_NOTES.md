@@ -1,5 +1,5 @@
 # Release Notes
-## Version 0.1.8
+## Version 0.1.9
 ### Enhancement
 Add tools
 - `execute_hg_select_sql_with_serverless`: Execute a SELECT SQL query in Hologres database with serverless computing
