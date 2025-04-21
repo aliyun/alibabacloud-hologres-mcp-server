@@ -1,5 +1,9 @@
 # Release Notes
 ## Version 0.1.9
+### Bugfix
+Fix the configuration issue when the STS token is not defined.
+
+## Version 0.1.8
 ### Enhancement
 Add tools
 - `execute_hg_select_sql_with_serverless`: Execute a SELECT SQL query in Hologres database with serverless computing
