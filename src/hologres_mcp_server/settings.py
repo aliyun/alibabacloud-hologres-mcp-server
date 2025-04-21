@@ -16,7 +16,9 @@ def get_db_config():
     if user is None or password is None:
         user = os.getenv("ALIBABA_CLOUD_ACCESS_KEY_ID")
         password = os.getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET")
-        options = f"sts_token={os.getenv("ALIBABA_CLOUD_SECURITY_TOKEN")}"
+        sts_token = os.getenv("ALIBABA_CLOUD_SECURITY_TOKEN")
+        if sts_token:
+            options = f"sts_token={sts_token}"
 
     config = {
         "host": os.getenv("HOLOGRES_HOST", "localhost"),
