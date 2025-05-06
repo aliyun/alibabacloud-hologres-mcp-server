@@ -11,3 +11,6 @@ wheels/
 
 
 .DS_Store
+
+# test case environment variables
+.test_mcp_client_env
