@@ -1,3 +1,5 @@
+[English](README.md) | 中文
+
 # Hologres MCP 服务器
 
 Hologres MCP 服务器作为 AI 代理与 Hologres 数据库之间的通用接口。它实现了 AI 代理与 Hologres 之间的无缝通信，帮助 AI 代理获取 Hologres 数据库元数据并执行 SQL 操作。
@@ -48,6 +50,8 @@ pip install hologres-mcp-server
 #### MCP 集成
 在 MCP 客户端配置文件中添加以下配置：
 
+使用 UV 模式
+
 ```json
 "mcpServers": {
     "hologres-mcp-server": {
@@ -56,6 +60,24 @@ pip install hologres-mcp-server
         "run",
         "--with",
         "hologres-mcp-server",
+        "hologres-mcp-server"
+      ],
+      "env": {
+        "HOLOGRES_HOST": "host",
+        "HOLOGRES_PORT": "port",
+        "HOLOGRES_USER": "access_id",
+        "HOLOGRES_PASSWORD": "access_key",
+        "HOLOGRES_DATABASE": "database"
+      }
+    }
+  }
+```
+使用 uvx 模式
+```json
+"mcpServers": {
+    "hologres-mcp-server": {
+      "command": "uvx",
+      "args": [
         "hologres-mcp-server"
       ],
       "env": {

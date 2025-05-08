@@ -1,3 +1,5 @@
+English | [中文](README_ZH.md)
+
 # Hologres MCP Server
 
 Hologres MCP Server serves as a universal interface between AI Agents and Hologres databases. It enables seamless communication between AI Agents and Hologres, helping AI Agents retrieve Hologres database metadata and execute SQL operations.
@@ -53,6 +55,8 @@ pip install hologres-mcp-server
 
 Add the following configuration to the MCP client configuration file:
 
+Use uv mode
+
 ```json
 "mcpServers": {
     "hologres-mcp-server": {
@@ -61,6 +65,25 @@ Add the following configuration to the MCP client configuration file:
         "run",
         "--with",
         "hologres-mcp-server",
+        "hologres-mcp-server"
+      ],
+      "env": {
+        "HOLOGRES_HOST": "host",
+        "HOLOGRES_PORT": "port",
+        "HOLOGRES_USER": "access_id",
+        "HOLOGRES_PASSWORD": "access_key",
+        "HOLOGRES_DATABASE": "database"
+      }
+    }
+  }
+```
+Use uvx mode
+
+```json
+"mcpServers": {
+    "hologres-mcp-server": {
+      "command": "uvx",
+      "args": [
         "hologres-mcp-server"
       ],
       "env": {

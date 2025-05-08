@@ -1,0 +1,6 @@
+# Hologres 数据库连接信息
+HOLOGRES_HOST=localhost
+HOLOGRES_PORT=5432
+HOLOGRES_USER=your_access_id
+HOLOGRES_PASSWORD=your_access_key
+HOLOGRES_DATABASE=your_database
