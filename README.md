@@ -21,23 +21,25 @@ git clone https://github.com/aliyun/alibabacloud-hologres-mcp-server.git
 Add the following configuration to the MCP client configuration file:
 
 ```json
-"mcpServers": {
-  "hologres-mcp-server": {
-    "command": "uv",
-    "args": [
-      "--directory",
-      "/path/to/alibabacloud-hologres-mcp-server",
-      "run",
-      "hologres-mcp-server"
-    ],
-    "env": {
-      "HOLOGRES_HOST": "host",
-      "HOLOGRES_PORT": "port",
-      "HOLOGRES_USER": "access_id",
-      "HOLOGRES_PASSWORD": "access_key",
-      "HOLOGRES_DATABASE": "database"
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uv",
+            "args": [
+                "--directory",
+                "/path/to/alibabacloud-hologres-mcp-server",
+                "run",
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -58,43 +60,47 @@ Add the following configuration to the MCP client configuration file:
 Use uv mode
 
 ```json
-"mcpServers": {
-    "hologres-mcp-server": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "hologres-mcp-server",
-        "hologres-mcp-server"
-      ],
-      "env": {
-        "HOLOGRES_HOST": "host",
-        "HOLOGRES_PORT": "port",
-        "HOLOGRES_USER": "access_id",
-        "HOLOGRES_PASSWORD": "access_key",
-        "HOLOGRES_DATABASE": "database"
-      }
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--with",
+                "hologres-mcp-server",
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
+}
 ```
 Use uvx mode
 
 ```json
-"mcpServers": {
-    "hologres-mcp-server": {
-      "command": "uvx",
-      "args": [
-        "hologres-mcp-server"
-      ],
-      "env": {
-        "HOLOGRES_HOST": "host",
-        "HOLOGRES_PORT": "port",
-        "HOLOGRES_USER": "access_id",
-        "HOLOGRES_PASSWORD": "access_key",
-        "HOLOGRES_DATABASE": "database"
-      }
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uvx",
+            "args": [
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
+}
 ```
 
 ## Components

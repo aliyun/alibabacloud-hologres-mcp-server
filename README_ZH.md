@@ -20,23 +20,25 @@ git clone https://github.com/aliyun/alibabacloud-hologres-mcp-server.git
 在 MCP 客户端配置文件中添加以下配置：
 
 ```json
-"mcpServers": {
-  "hologres-mcp-server": {
-    "command": "uv",
-    "args": [
-      "--directory",
-      "/path/to/alibabacloud-hologres-mcp-server",
-      "run",
-      "hologres-mcp-server"
-    ],
-    "env": {
-      "HOLOGRES_HOST": "host",
-      "HOLOGRES_PORT": "port",
-      "HOLOGRES_USER": "access_id",
-      "HOLOGRES_PASSWORD": "access_key",
-      "HOLOGRES_DATABASE": "database"
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uv",
+            "args": [
+                "--directory",
+                "/path/to/alibabacloud-hologres-mcp-server",
+                "run",
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -53,42 +55,46 @@ pip install hologres-mcp-server
 使用 UV 模式
 
 ```json
-"mcpServers": {
-    "hologres-mcp-server": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "hologres-mcp-server",
-        "hologres-mcp-server"
-      ],
-      "env": {
-        "HOLOGRES_HOST": "host",
-        "HOLOGRES_PORT": "port",
-        "HOLOGRES_USER": "access_id",
-        "HOLOGRES_PASSWORD": "access_key",
-        "HOLOGRES_DATABASE": "database"
-      }
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--with",
+                "hologres-mcp-server",
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
+}
 ```
 使用 uvx 模式
 ```json
-"mcpServers": {
-    "hologres-mcp-server": {
-      "command": "uvx",
-      "args": [
-        "hologres-mcp-server"
-      ],
-      "env": {
-        "HOLOGRES_HOST": "host",
-        "HOLOGRES_PORT": "port",
-        "HOLOGRES_USER": "access_id",
-        "HOLOGRES_PASSWORD": "access_key",
-        "HOLOGRES_DATABASE": "database"
-      }
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "command": "uvx",
+            "args": [
+                "hologres-mcp-server"
+            ],
+            "env": {
+                "HOLOGRES_HOST": "host",
+                "HOLOGRES_PORT": "port",
+                "HOLOGRES_USER": "access_id",
+                "HOLOGRES_PASSWORD": "access_key",
+                "HOLOGRES_DATABASE": "database"
+            }
+        }
     }
-  }
+}
 ```
 
 ## 组件
@@ -117,7 +123,7 @@ pip install hologres-mcp-server
 - `hologres:///{schema}/{table}/statistic` ：显示 Hologres 数据库中收集的表统计信息
 - `system:///{+system_path}` ：
   系统路径包括：
-  
+
   - `hg_instance_version` - 显示 hologres 实例版本
   - `guc_value/<guc_name>` - 显示 guc（统一配置）值
   - `missing_stats_tables` - 显示缺少统计信息的表
