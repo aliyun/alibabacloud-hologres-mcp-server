@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/aliyun-alibabacloud-hologres-mcp-server-badge.png)](https://mseep.ai/app/aliyun-alibabacloud-hologres-mcp-server)
+
 # Hologres MCP Server
 
 Hologres MCP Server serves as a universal interface between AI Agents and Hologres databases. It enables seamless communication between AI Agents and Hologres, helping AI Agents retrieve Hologres database metadata and execute SQL operations.
