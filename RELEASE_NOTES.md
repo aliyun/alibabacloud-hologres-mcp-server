@@ -1,4 +1,22 @@
 # Release Notes
+## Version 0.2.0
+### Refactoring
+- Migrated from low-level `mcp.server.Server` to `mcp.server.fastmcp.FastMCP` framework
+- Simplified codebase by leveraging FastMCP decorators (`@app.tool()`, `@app.resource()`, `@app.prompt()`)
+- Removed pydantic dependency (FastMCP handles validation internally)
+
+### New Features
+Added 3 prompts for AI-assisted database operations:
+- `analyze_table_performance`: Generate a prompt to analyze table performance in Hologres
+- `optimize_query`: Generate a prompt to optimize a SQL query in Hologres
+- `explore_schema`: Generate a prompt to explore a schema in Hologres database
+
+### Testing
+- Restructured test suite with separate `unit` and `integration` directories
+- Added environment variable support for test fixtures (`HOLOGRES_TEST_SCHEMA`, `HOLOGRES_TEST_TABLE`)
+- Added comprehensive unit tests for tools, resources, prompts, SQL validation, and utils
+- Added integration tests with MCP client session management
+
 ## Version 0.1.9
 ### Bugfix
 Fix the configuration issue when the STS token is not defined.

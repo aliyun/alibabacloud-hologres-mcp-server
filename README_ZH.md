@@ -132,3 +132,63 @@ pip install hologres-mcp-server
   - `query_log/user/<user_name>/<row_limits>` - 获取特定用户的查询日志历史，带行数限制
   - `query_log/application/<application_name>/<row_limits>` - 获取特定应用程序的查询日志历史，带行数限制
   - `query_log/failed/<interval>/<row_limits>` - 获取失败的查询日志历史，带时间间隔和指定行数
+
+### 提示
+
+- `analyze_table_performance`：生成分析 Hologres 中表性能的提示
+- `optimize_query`：生成优化 Hologres SQL 查询的提示
+- `explore_schema`：生成探索 Hologres 数据库中模式的提示
+
+## 测试
+
+项目包含完整的单元测试和集成测试。
+
+### 单元测试
+
+单元测试不需要数据库连接，使用模拟依赖。
+
+```bash
+# 运行所有单元测试
+uv run pytest tests/unit/ -v
+
+# 运行特定测试文件
+uv run pytest tests/unit/test_tools.py -v
+
+# 运行并生成覆盖率报告
+uv run pytest tests/unit/ --cov=src/hologres_mcp_server --cov-report=html
+```
+
+### 集成测试
+
+集成测试需要真实的 Hologres 数据库连接。
+
+1. 从示例文件创建配置文件：
+
+```bash
+cp tests/integration/.test_mcp_client_env_example tests/integration/.test_mcp_client_env
+```
+
+2. 编辑配置文件，填入您的 Hologres 凭证：
+
+```
+HOLOGRES_HOST=your-hologres-instance.hologres.aliyuncs.com
+HOLOGRES_PORT=80
+HOLOGRES_USER=your_username
+HOLOGRES_PASSWORD=your_password
+HOLOGRES_DATABASE=your_database
+```
+
+3. 运行集成测试：
+
+```bash
+# 运行所有集成测试
+uv run pytest tests/integration/ -v -m integration
+
+# 运行特定测试类
+uv run pytest tests/integration/test_mcp_integration.py::TestMCPTools -v
+
+# 运行所有测试（单元测试 + 集成测试）
+uv run pytest tests/ -v
+```
+
+**注意：** 如果缺少 `.test_mcp_client_env` 文件或配置不完整，集成测试将被跳过。
