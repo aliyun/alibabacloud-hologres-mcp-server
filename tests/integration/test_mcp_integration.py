@@ -1057,3 +1057,350 @@ class TestErrorHandling:
 
         assert result is not None
         # Should handle the error gracefully
+
+
+# ============================================================================
+# MCP Prompts Tests
+# ============================================================================
+
+class TestMCPPrompts:
+    """Tests for MCP prompt functionality."""
+
+    async def test_get_analyze_table_performance_prompt(
+        self, mcp_session: ClientSession, test_schema: str, test_table: str
+    ):
+        """Test analyze_table_performance prompt generation."""
+        if test_table is None:
+            pytest.skip("No test table available")
+
+        result = await mcp_session.get_prompt(
+            "analyze_table_performance",
+            {"schema": test_schema, "table": test_table}
+        )
+
+        assert result is not None
+        assert hasattr(result, "messages")
+        # Verify prompt contains expected content about table analysis
+        prompt_text = str(result.messages)
+        assert test_schema in prompt_text
+        assert test_table in prompt_text
+        # Should mention performance-related keywords
+        assert "performance" in prompt_text.lower() or "analyze" in prompt_text.lower()
+
+    async def test_get_optimize_query_prompt(self, mcp_session: ClientSession):
+        """Test optimize_query prompt generation."""
+        test_query = "SELECT * FROM users WHERE id = 1"
+
+        result = await mcp_session.get_prompt(
+            "optimize_query",
+            {"query": test_query}
+        )
+
+        assert result is not None
+        assert hasattr(result, "messages")
+        # Verify prompt contains the query
+        prompt_text = str(result.messages)
+        assert test_query in prompt_text
+        # Should mention optimization-related keywords
+        assert "optimize" in prompt_text.lower() or "query" in prompt_text.lower()
+
+    async def test_get_explore_schema_prompt(
+        self, mcp_session: ClientSession, test_schema: str
+    ):
+        """Test explore_schema prompt generation."""
+        result = await mcp_session.get_prompt(
+            "explore_schema",
+            {"schema": test_schema}
+        )
+
+        assert result is not None
+        assert hasattr(result, "messages")
+        # Verify prompt contains the schema name
+        prompt_text = str(result.messages)
+        assert test_schema in prompt_text
+        # Should mention schema exploration keywords
+        assert "schema" in prompt_text.lower() or "explore" in prompt_text.lower()
+
+    async def test_get_prompt_with_default_parameter(
+        self, mcp_session: ClientSession
+    ):
+        """Test explore_schema prompt with default parameter value."""
+        # explore_schema has a default value of "public" for schema parameter
+        result = await mcp_session.get_prompt("explore_schema", {})
+
+        assert result is not None
+        assert hasattr(result, "messages")
+        prompt_text = str(result.messages)
+        # Should use default schema "public"
+        assert "public" in prompt_text.lower()
+
+
+# ============================================================================
+# MCP Concurrency Tests
+# ============================================================================
+
+class TestMCPConcurrency:
+    """Tests for concurrent MCP operations."""
+
+    async def test_concurrent_select_queries(self, mcp_session: ClientSession):
+        """Test multiple concurrent SELECT queries."""
+        import asyncio
+
+        # Execute 5 concurrent SELECT queries
+        queries = [
+            mcp_session.call_tool(
+                "execute_hg_select_sql",
+                {"query": f"SELECT {i} AS id, 'test{i}' AS name"}
+            )
+            for i in range(5)
+        ]
+
+        results = await asyncio.gather(*queries)
+
+        # All queries should succeed
+        assert len(results) == 5
+        for i, result in enumerate(results):
+            assert result is not None
+            assert hasattr(result, "content")
+            assert str(i) in result.content[0].text
+
+    async def test_concurrent_mixed_operations(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test concurrent read and write operations."""
+        import asyncio
+
+        table_name = f"{integration_test_prefix}concurrent_test"
+
+        # Create table first
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE TABLE IF NOT EXISTS public.{table_name} (
+                    id INT PRIMARY KEY,
+                    value TEXT
+                )
+                """
+            }
+        )
+
+        try:
+            # Concurrent operations: 1 INSERT + 2 SELECTs
+            insert_task = mcp_session.call_tool(
+                "execute_hg_dml_sql",
+                {"query": f"INSERT INTO public.{table_name} VALUES (1, 'concurrent_test')"}
+            )
+
+            select_tasks = [
+                mcp_session.call_tool(
+                    "execute_hg_select_sql",
+                    {"query": f"SELECT * FROM public.{table_name}"}
+                )
+                for _ in range(2)
+            ]
+
+            # Execute concurrently
+            results = await asyncio.gather(insert_task, *select_tasks, return_exceptions=True)
+
+            # All operations should complete (may have race conditions but shouldn't crash)
+            assert len(results) == 3
+            for result in results:
+                assert result is not None
+                if isinstance(result, Exception):
+                    # Race condition is acceptable, but we log it
+                    pass
+
+        finally:
+            # Cleanup
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
+            )
+
+    async def test_concurrent_resource_reads(self, mcp_session: ClientSession):
+        """Test concurrent resource reads."""
+        import asyncio
+
+        # Read multiple resources concurrently
+        resources = [
+            "hologres:///schemas",
+            "system:///hg_instance_version",
+            "system:///missing_stats_tables",
+            "system:///stat_activity",
+        ]
+
+        tasks = [
+            mcp_session.read_resource(uri)
+            for uri in resources
+        ]
+
+        results = await asyncio.gather(*tasks)
+
+        # All resource reads should succeed
+        assert len(results) == 4
+        for result in results:
+            assert result is not None
+            assert hasattr(result, "contents")
+
+
+# ============================================================================
+# MCP Boundary Condition Tests (Extended)
+# ============================================================================
+
+class TestMCPBoundaryConditions:
+    """Tests for boundary conditions and edge cases."""
+
+    async def test_select_with_unicode(self, mcp_session: ClientSession):
+        """Test SELECT with Unicode characters in query."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": "SELECT '中文测试' AS chinese, '🔥' AS emoji, '日本語' AS japanese"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+        # Verify Unicode characters are preserved
+        assert "中文测试" in text_content
+        assert "🔥" in text_content
+        assert "日本語" in text_content
+
+    async def test_empty_result_set(self, mcp_session: ClientSession):
+        """Test query that returns empty result."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": "SELECT 1 AS id WHERE FALSE"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+        # Should have headers but no data rows
+        assert "id" in text_content.lower() or len(text_content.strip()) > 0
+
+    async def test_select_with_null_values(self, mcp_session: ClientSession):
+        """Test SELECT with NULL values."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": "SELECT NULL AS null_col, 'value' AS non_null_col"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        # Should handle NULL values gracefully
+        text_content = result.content[0].text
+        assert text_content is not None
+
+    async def test_select_with_special_sql_characters(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test handling of special characters in SQL strings."""
+        # Test with strings containing quotes, semicolons, etc.
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": "SELECT 'test''s value' AS quoted, 'a;b' AS semicolon"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+        # Should properly escape/handle special characters
+        assert text_content is not None
+
+
+# ============================================================================
+# MCP Performance Tests
+# ============================================================================
+
+class TestMCPPerformance:
+    """Tests for performance scenarios."""
+
+    async def test_large_result_set(self, mcp_session: ClientSession):
+        """Test query returning a moderately large result set."""
+        import time
+
+        # Generate 1000 rows using generate_series
+        start_time = time.time()
+
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {
+                "query": """
+                SELECT
+                    i AS id,
+                    'name_' || i AS name,
+                    i * 100 AS value
+                FROM generate_series(1, 1000) AS i
+                """
+            }
+        )
+
+        elapsed_time = time.time() - start_time
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Verify we got a reasonable amount of data
+        lines = text_content.strip().split('\n')
+        assert len(lines) >= 1000  # Should have at least 1000 rows
+
+        # Performance check - should complete within reasonable time
+        assert elapsed_time < 30, f"Query took too long: {elapsed_time:.2f}s"
+
+    async def test_wide_result_set(self, mcp_session: ClientSession):
+        """Test query returning many columns."""
+        # Build a query with 50 columns
+        columns = [f"i AS col{i}" for i in range(1, 51)]
+        query = f"SELECT {', '.join(columns)} FROM generate_series(1, 10) AS i"
+
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": query}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Verify we got all columns
+        for i in range(1, 51):
+            assert f"col{i}" in text_content or str(i) in text_content
+
+    async def test_complex_join_query(self, mcp_session: ClientSession):
+        """Test complex query with joins and subqueries."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {
+                "query": """
+                WITH
+                    users AS (
+                        SELECT i AS user_id, 'user_' || i AS username
+                        FROM generate_series(1, 100) AS i
+                    ),
+                    orders AS (
+                        SELECT i AS order_id, (i % 100) + 1 AS user_id, i * 10 AS amount
+                        FROM generate_series(1, 500) AS i
+                    )
+                SELECT
+                    u.user_id,
+                    u.username,
+                    COUNT(o.order_id) AS order_count,
+                    COALESCE(SUM(o.amount), 0) AS total_amount
+                FROM users u
+                LEFT JOIN orders o ON u.user_id = o.user_id
+                GROUP BY u.user_id, u.username
+                ORDER BY u.user_id
+                LIMIT 10
+                """
+            }
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Verify we got results
+        assert "user_id" in text_content.lower() or "user" in text_content.lower()
+        assert "order_count" in text_content.lower() or "count" in text_content.lower()

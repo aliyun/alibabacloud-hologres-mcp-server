@@ -17,6 +17,33 @@ Added 3 prompts for AI-assisted database operations:
 - Added comprehensive unit tests for tools, resources, prompts, SQL validation, and utils
 - Added integration tests with MCP client session management
 
+### Testing Improvements
+Enhanced integration test coverage with 14 new test cases across 4 new test classes:
+
+- **TestMCPPrompts** (4 tests): Tests for MCP prompt functionality
+  - `analyze_table_performance` prompt generation and content validation
+  - `optimize_query` prompt with SQL query parameter
+  - `explore_schema` prompt with schema exploration
+  - Default parameter handling for prompts
+
+- **TestMCPConcurrency** (3 tests): Tests for concurrent MCP operations
+  - Concurrent SELECT queries using `asyncio.gather`
+  - Concurrent mixed operations (read/write)
+  - Concurrent resource reads
+
+- **TestMCPBoundaryConditions** (4 tests): Tests for edge cases
+  - Unicode character handling in SQL queries (Chinese, Japanese, emoji)
+  - Empty result set handling
+  - NULL value handling in query results
+  - Special SQL characters (quotes, semicolons) in strings
+
+- **TestMCPPerformance** (3 tests): Tests for performance scenarios
+  - Large result sets (1000 rows using `generate_series`)
+  - Wide result sets (50 columns)
+  - Complex JOIN queries with CTEs and aggregations
+
+Total integration tests: 61 (up from 47)
+
 ## Version 0.1.9
 ### Bugfix
 Fix the configuration issue when the STS token is not defined.

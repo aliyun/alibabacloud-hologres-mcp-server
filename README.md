@@ -158,7 +158,14 @@ The project includes comprehensive unit tests and integration tests.
 
 ### Unit Tests
 
-Unit tests do not require a database connection and use mocked dependencies.
+Unit tests do not require a database connection and use mocked dependencies. The test suite includes **295 test cases** covering:
+
+- Tools functionality and SQL validation
+- Resources and resource templates
+- Prompts generation
+- Utility functions and error handling
+- Concurrency scenarios
+- SQL injection protection
 
 ```bash
 # Run all unit tests
@@ -173,7 +180,22 @@ uv run pytest tests/unit/ --cov=src/hologres_mcp_server --cov-report=html
 
 ### Integration Tests
 
-Integration tests require a real Hologres database connection.
+Integration tests require a real Hologres database connection. The test suite includes **61 test cases** organized into 12 test classes:
+
+| Test Class | Tests | Description |
+|------------|-------|-------------|
+| `TestMCPConnection` | 5 | MCP server connection and basic functionality |
+| `TestMCPResources` | 14 | Resource reading functionality (schemas, tables, DDL, statistics, partitions, query logs) |
+| `TestMCPTools` | 10 | Tool calls for read-only operations |
+| `TestMCPProcedureTools` | 3 | Stored procedure tool calls |
+| `TestMCPMaxComputeTools` | 1 | MaxCompute foreign table creation |
+| `TestMCPDDLTools` | 5 | DDL operations (CREATE, ALTER, DROP, COMMENT) |
+| `TestMCPDMLTools` | 3 | DML operations (INSERT, UPDATE, DELETE) |
+| `TestErrorHandling` | 3 | Error handling and edge cases |
+| `TestMCPPrompts` | 4 | Prompt generation functionality |
+| `TestMCPConcurrency` | 3 | Concurrent MCP operations |
+| `TestMCPBoundaryConditions` | 4 | Edge cases (Unicode, NULL, empty results) |
+| `TestMCPPerformance` | 3 | Performance scenarios (large/wide result sets) |
 
 1. Create a configuration file from the example:
 

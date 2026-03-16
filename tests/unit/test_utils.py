@@ -801,6 +801,174 @@ class TestTryInferViewCommentsExtended:
                 assert isinstance(result, str)
 
 
+class TestTryInferViewCommentsComplexScenarios:
+    """Additional tests for complex VIEW scenarios in try_infer_view_comments."""
+
+    def test_view_with_nested_subquery(self, mock_env_basic):
+        """Test VIEW with nested subquery."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT * FROM (SELECT id FROM (SELECT id FROM base) AS inner_subq) AS outer_subq",),
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch("psycopg.connect", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql") as mock_parse:
+                # Create nested subquery AST structure
+                raw_stmt = MagicMock()
+                raw_stmt.stmt = MagicMock()  # Complex nested structure
+                mock_parse.return_value = [raw_stmt]
+
+                result = try_infer_view_comments("public", "nested_subquery_view")
+
+                # Should handle nested structure without crashing
+                assert isinstance(result, str)
+
+    def test_view_with_window_function(self, mock_env_basic):
+        """Test VIEW containing window functions like ROW_NUMBER, RANK."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT id, ROW_NUMBER() OVER (PARTITION BY category ORDER BY created_at) AS row_num FROM products",),
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        # Create a window function AST node
+        func_call = MagicMock(spec=pglast.ast.FuncCall)
+        res_target = MagicMock(spec=pglast.ast.ResTarget)
+        res_target.val = func_call
+        res_target.name = "row_num"  # Aliased window function
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("psycopg.connect", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "window_view")
+
+                # Window functions don't have source columns to infer from
+                assert isinstance(result, str)
+
+    def test_view_with_aggregate_functions(self, mock_env_basic):
+        """Test VIEW containing aggregate functions like COUNT, SUM, AVG."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT category, COUNT(*) AS cnt, SUM(price) AS total FROM products GROUP BY category",),
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        # Create aggregate function AST nodes
+        count_func = MagicMock(spec=pglast.ast.FuncCall)
+        count_target = MagicMock(spec=pglast.ast.ResTarget)
+        count_target.val = count_func
+        count_target.name = "cnt"
+
+        sum_func = MagicMock(spec=pglast.ast.FuncCall)
+        sum_target = MagicMock(spec=pglast.ast.ResTarget)
+        sum_target.val = sum_func
+        sum_target.name = "total"
+
+        # Column reference for GROUP BY column
+        category_ref = MagicMock(spec=pglast.ast.ColumnRef)
+        category_field = MagicMock(sval="category")
+        category_ref.fields = [category_field]
+        category_target = MagicMock(spec=pglast.ast.ResTarget)
+        category_target.val = category_ref
+        category_target.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [category_target, count_target, sum_target]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("psycopg.connect", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "aggregate_view")
+
+                # Aggregate functions don't have source columns
+                # but GROUP BY columns might
+                assert isinstance(result, str)
+
+    def test_view_with_cte(self, mock_env_basic):
+        """Test VIEW with Common Table Expression (WITH clause)."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("WITH user_orders AS (SELECT user_id, COUNT(*) FROM orders GROUP BY user_id) SELECT * FROM user_orders",),
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch("psycopg.connect", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql") as mock_parse:
+                # CTE creates a more complex AST
+                raw_stmt = MagicMock()
+                raw_stmt.stmt = MagicMock()
+                mock_parse.return_value = [raw_stmt]
+
+                result = try_infer_view_comments("public", "cte_view")
+
+                assert isinstance(result, str)
+
+    def test_view_with_distinct(self, mock_env_basic):
+        """Test VIEW with DISTINCT clause."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT DISTINCT category FROM products",),
+            (None,),
+            ("Product category",),
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        column_ref = MagicMock(spec=pglast.ast.ColumnRef)
+        field = MagicMock(sval="category")
+        column_ref.fields = [field]
+
+        res_target = MagicMock(spec=pglast.ast.ResTarget)
+        res_target.val = column_ref
+        res_target.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target]
+        select_stmt.distinctClause = [True]  # DISTINCT is set
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("psycopg.connect", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "distinct_view")
+
+                assert isinstance(result, str)
+
+
 class TestConnectWithRetryExtended:
     """Extended tests for connect_with_retry function."""
 

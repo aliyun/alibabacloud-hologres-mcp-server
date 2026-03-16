@@ -145,7 +145,14 @@ pip install hologres-mcp-server
 
 ### 单元测试
 
-单元测试不需要数据库连接，使用模拟依赖。
+单元测试不需要数据库连接，使用模拟依赖。测试套件包含 **295 个测试用例**，覆盖：
+
+- 工具功能和 SQL 验证
+- 资源和资源模板
+- 提示生成
+- 工具函数和错误处理
+- 并发场景
+- SQL 注入防护
 
 ```bash
 # 运行所有单元测试
@@ -160,7 +167,22 @@ uv run pytest tests/unit/ --cov=src/hologres_mcp_server --cov-report=html
 
 ### 集成测试
 
-集成测试需要真实的 Hologres 数据库连接。
+集成测试需要真实的 Hologres 数据库连接。测试套件包含 **61 个测试用例**，组织为 12 个测试类：
+
+| 测试类 | 测试数 | 描述 |
+|--------|--------|------|
+| `TestMCPConnection` | 5 | MCP 服务器连接和基本功能 |
+| `TestMCPResources` | 14 | 资源读取功能（模式、表、DDL、统计信息、分区、查询日志） |
+| `TestMCPTools` | 10 | 只读操作的工具调用 |
+| `TestMCPProcedureTools` | 3 | 存储过程工具调用 |
+| `TestMCPMaxComputeTools` | 1 | MaxCompute 外部表创建 |
+| `TestMCPDDLTools` | 5 | DDL 操作（CREATE、ALTER、DROP、COMMENT） |
+| `TestMCPDMLTools` | 3 | DML 操作（INSERT、UPDATE、DELETE） |
+| `TestErrorHandling` | 3 | 错误处理和边界情况 |
+| `TestMCPPrompts` | 4 | 提示生成功能 |
+| `TestMCPConcurrency` | 3 | 并发 MCP 操作 |
+| `TestMCPBoundaryConditions` | 4 | 边界条件（Unicode、NULL、空结果） |
+| `TestMCPPerformance` | 3 | 性能场景（大型/宽结果集） |
 
 1. 从示例文件创建配置文件：
 

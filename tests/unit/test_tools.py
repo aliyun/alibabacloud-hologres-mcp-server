@@ -544,6 +544,90 @@ class TestToolParameterValidation:
             assert "tab.table_schema = ''" in query
 
 
+class TestToolBoundaryConditions:
+    """工具函数边界条件测试。"""
+
+    def test_unicode_in_schema_table_names(self):
+        """测试 Unicode 字符在 schema/table 名中。"""
+        unicode_schema = "测试模式"
+        unicode_table = "表格名称"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = gather_hg_table_statistics(unicode_schema, unicode_table)
+
+            query = mock.call_args[0][1]
+            # Unicode characters should be preserved in the query
+            assert unicode_schema in query
+            assert unicode_table in query
+
+    def test_null_byte_in_parameters(self):
+        """测试参数中包含 NULL 字节。"""
+        # Null byte in schema name
+        schema_with_null = "public\x00malicious"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = gather_hg_table_statistics(schema_with_null, "users")
+
+            query = mock.call_args[0][1]
+            # Null byte should be in the query (potential truncation risk)
+            assert schema_with_null in query or "public" in query
+
+    def test_call_procedure_with_none_arguments(self):
+        """测试 call_hg_procedure 参数为 None。
+
+        当前实现不支持参数列表中包含 None 值，
+        会抛出 TypeError。这记录了边界条件行为。
+        """
+        # 当前行为：None 参数会导致 TypeError
+        # 如果需要支持 None，需要在实现中添加类型转换
+        with pytest.raises(TypeError):
+            call_hg_procedure("my_procedure", [None, "valid_arg"])
+
+    def test_maxcompute_foreign_table_none_tables(self):
+        """测试 maxcompute_tables 为 None 时的行为。
+
+        当前实现不支持 maxcompute_tables 为 None，
+        会抛出 TypeError。这记录了边界条件行为。
+        """
+        # 当前行为：None 参数会导致 TypeError
+        # FastMCP 的参数验证应该确保传入的是列表
+        with pytest.raises(TypeError):
+            create_hg_maxcompute_foreign_table(
+                maxcompute_project="my_project",
+                maxcompute_tables=None
+            )
+
+    def test_very_long_sql_query(self):
+        """测试超长 SQL 查询。"""
+        # Create a query with many conditions
+        long_query = "SELECT * FROM users WHERE " + " AND ".join([f"id{i} = {i}" for i in range(1000)])
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+            result = execute_hg_select_sql(long_query)
+
+            # Query should be accepted even if very long
+            assert mock.called
+            assert len(mock.call_args[0][1]) > 10000
+
+    def test_special_sql_characters_in_query(self):
+        """测试 SQL 特殊字符在查询中。"""
+        special_queries = [
+            "SELECT * FROM users WHERE name = 'O''Brien'",  # Escaped quote
+            "SELECT * FROM users WHERE data LIKE '%test%'",  # LIKE pattern
+            "SELECT * FROM users WHERE json_col->>'key' = 'value'",  # JSON operator
+            "SELECT * FROM users WHERE arr_col @> ARRAY[1, 2]",  # Array operator
+        ]
+
+        for query in special_queries:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+                result = execute_hg_select_sql(query)
+
+                # Special characters should be preserved
+                assert mock.called
+                called_query = mock.call_args[0][1]
+                assert query in called_query
+
+
 class TestShowHgTableDdlExtended:
     """Extended tests for show_hg_table_ddl tool."""
 
