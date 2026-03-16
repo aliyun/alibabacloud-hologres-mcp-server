@@ -59,7 +59,7 @@ class TestSqlInjectionPrevention:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="success") as mock:
                 # Table name is directly interpolated
-                result = gather_hg_table_statistics("public", payload)
+                result = gather_hg_table_statistics(schema_name="public", table=payload)
 
                 query = mock.call_args[0][1]
                 # Injection payload is included in the SQL
@@ -72,7 +72,7 @@ class TestSqlInjectionPrevention:
         for payload in sql_injection_payloads[:5]:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="success") as mock:
-                result = gather_hg_table_statistics(payload, "users")
+                result = gather_hg_table_statistics(schema_name=payload, table="users")
 
                 query = mock.call_args[0][1]
                 assert payload in query  # Documents security risk
@@ -211,7 +211,7 @@ class TestSqlInjectionAssertions:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="Error: relation does not exist") as mock:
                 # Inject payload as table name
-                result = gather_hg_table_statistics("public", payload)
+                result = gather_hg_table_statistics(schema_name="public", table=payload)
 
                 # Assert: The query was formed with the payload
                 query = mock.call_args[0][1]
@@ -287,7 +287,7 @@ class TestSqlInjectionAssertions:
         for payload in numeric_payloads:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="Error: syntax error") as mock:
-                result = gather_hg_table_statistics("public", payload)
+                result = gather_hg_table_statistics(schema_name="public", table=payload)
 
                 # Assert: Query includes the payload (it's interpolated)
                 query = mock.call_args[0][1]
@@ -311,7 +311,7 @@ class TestSqlInjectionDocumentation:
         with patch("hologres_mcp_server.server.handle_call_tool",
                    return_value="success") as mock:
             # Show how table name is interpolated
-            gather_hg_table_statistics("public", "users")
+            gather_hg_table_statistics(schema_name="public", table="users")
 
             query = mock.call_args[0][1]
             assert query == "ANALYZE public.users"
@@ -327,7 +327,7 @@ class TestSqlInjectionDocumentation:
         for table_name, description in special_names:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="success") as mock:
-                gather_hg_table_statistics("public", table_name)
+                gather_hg_table_statistics(schema_name="public", table=table_name)
 
                 query = mock.call_args[0][1]
                 # Document: special characters are included as-is
@@ -338,7 +338,7 @@ class TestSqlInjectionDocumentation:
         with patch("hologres_mcp_server.server.handle_call_tool",
                    return_value="success") as mock:
             # Current implementation doesn't quote identifiers
-            show_hg_table_ddl("my schema", "my table")
+            show_hg_table_ddl(schema_name="my schema", table="my table")
 
             query = mock.call_args[0][1]
             # Note: Spaces are included without quotes
@@ -360,7 +360,7 @@ class TestSafeIdentifierPatterns:
         for schema, table in safe_identifiers:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="success") as mock:
-                gather_hg_table_statistics(schema, table)
+                gather_hg_table_statistics(schema_name=schema, table=table)
 
                 query = mock.call_args[0][1]
                 assert f"ANALYZE {schema}.{table}" == query
@@ -377,7 +377,7 @@ class TestSafeIdentifierPatterns:
             with patch("hologres_mcp_server.server.handle_call_tool",
                        return_value="success") as mock:
                 # This documents that dangerous patterns are not filtered
-                gather_hg_table_statistics(schema, table)
+                gather_hg_table_statistics(schema_name=schema, table=table)
 
                 query = mock.call_args[0][1]
                 # The dangerous content is in the query

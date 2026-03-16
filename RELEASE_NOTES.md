@@ -1,5 +1,21 @@
 # Release Notes
 ## Version 0.2.0
+### Breaking Changes
+The following tools have renamed their `schema` parameter to `schema_name` to avoid Pydantic field shadowing warnings:
+- `gather_hg_table_statistics`
+- `list_hg_tables_in_a_schema`
+- `show_hg_table_ddl`
+
+MCP clients must update their tool calls to use the new parameter name:
+
+```python
+# Before 0.2.0
+await session.call_tool("gather_hg_table_statistics", {"schema": "public", "table": "users"})
+
+# After 0.2.0
+await session.call_tool("gather_hg_table_statistics", {"schema_name": "public", "table": "users"})
+```
+
 ### Refactoring
 - Migrated from low-level `mcp.server.Server` to `mcp.server.fastmcp.FastMCP` framework
 - Simplified codebase by leveraging FastMCP decorators (`@app.tool()`, `@app.resource()`, `@app.prompt()`)

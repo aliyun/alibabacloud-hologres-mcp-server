@@ -104,6 +104,7 @@ pip install hologres-mcp-server
 - `execute_hg_dml_sql` ：在 Hologres 数据库中执行 DML（INSERT、UPDATE、DELETE）SQL 查询
 - `execute_hg_ddl_sql` ：在 Hologres 数据库中执行 DDL（CREATE、ALTER、DROP、COMMENT ON）SQL 查询
 - `gather_hg_table_statistics` ：收集 Hologres 数据库中的表统计信息
+  - 参数：`schema_name`（字符串），`table`（字符串）
 - `get_hg_query_plan` ：获取 Hologres 数据库中的查询计划
 - `get_hg_execution_plan` ：获取 Hologres 数据库中的执行计划
 - `call_hg_procedure` ：调用 Hologres 数据库中的存储过程
@@ -113,7 +114,9 @@ pip install hologres-mcp-server
 
 - `list_hg_schemas` ：列出当前 Hologres 数据库中的所有模式，不包括系统模式
 - `list_hg_tables_in_a_schema` ：列出特定模式中的所有表，包括它们的类型（表、视图、外部表、分区表）
+  - 参数：`schema_name`（字符串）
 - `show_hg_table_ddl` ：显示 Hologres 数据库中表、视图或外部表的 DDL 脚本
+  - 参数：`schema_name`（字符串），`table`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

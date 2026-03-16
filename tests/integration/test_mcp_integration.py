@@ -451,7 +451,7 @@ class TestMCPTools:
         """Test list_hg_tables_in_a_schema tool."""
         result = await mcp_session.call_tool(
             "list_hg_tables_in_a_schema",
-            {"schema": test_schema}
+            {"schema_name": test_schema}
         )
 
         assert result is not None
@@ -536,7 +536,7 @@ class TestMCPTools:
 
         result = await mcp_session.call_tool(
             "show_hg_table_ddl",
-            {"schema": test_schema, "table": test_table}
+            {"schema_name": test_schema, "table": test_table}
         )
 
         assert result is not None
@@ -743,7 +743,7 @@ class TestMCPDDLTools:
         # Verify table exists by listing tables
         list_result = await mcp_session.call_tool(
             "list_hg_tables_in_a_schema",
-            {"schema": "public"}
+            {"schema_name": "public"}
         )
         assert table_name in list_result.content[0].text
 
@@ -994,7 +994,7 @@ class TestMCPDMLTools:
             # Gather statistics
             stats_result = await mcp_session.call_tool(
                 "gather_hg_table_statistics",
-                {"schema": "public", "table": table_name}
+                {"schema_name": "public", "table": table_name}
             )
 
             assert stats_result is not None

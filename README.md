@@ -112,6 +112,7 @@ Use uvx mode
 * `execute_hg_dml_sql`: Execute a DML (INSERT, UPDATE, DELETE) SQL query in Hologres database
 * `execute_hg_ddl_sql`: Execute a DDL (CREATE, ALTER, DROP, COMMENT ON) SQL query in Hologres database
 * `gather_hg_table_statistics`: Collect table statistics in Hologres database
+  - Parameters: `schema_name` (string), `table` (string)
 * `get_hg_query_plan`: Get query plan in Hologres database
 * `get_hg_execution_plan`: Get execution plan in Hologres database
 * `call_hg_procedure`: Invoke a procedure in Hologres database
@@ -120,7 +121,9 @@ Use uvx mode
 Since some Agents do not support resources and resource templates, the following tools are provided to obtain the metadata of schemas, tables, views, and external tables.
 * `list_hg_schemas`: Lists all schemas in the current Hologres database, excluding system schemas.
 * `list_hg_tables_in_a_schema`: Lists all tables in a specific schema, including their types (table, view, external table, partitioned table).
+  - Parameters: `schema_name` (string)
 * `show_hg_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
+  - Parameters: `schema_name` (string), `table` (string)
 
 ### Resources
 

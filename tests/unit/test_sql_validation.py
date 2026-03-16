@@ -59,8 +59,11 @@ class TestSelectValidation:
     def test_select_validation_with_cte_multiline(self):
         """Test multi-line WITH ... SELECT statement passes validation."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
-            # Multi-line CTE - each line starts properly
-            result = execute_hg_select_sql("""WITH user_counts AS (SELECT user_id, COUNT(*) as count FROM orders GROUP BY user_id) SELECT * FROM user_counts""")
+            # Multi-line CTE with actual newlines between WITH and SELECT
+            result = execute_hg_select_sql("""WITH
+    users AS (SELECT 1 AS id),
+    orders AS (SELECT 2 AS order_id)
+SELECT * FROM users""")
             assert result == "success"
 
     def test_select_validation_with_cte_leading_whitespace(self):

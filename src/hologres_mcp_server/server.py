@@ -26,7 +26,7 @@ def execute_hg_select_sql(
     query: Annotated[str, "The (SELECT) SQL query to execute in Hologres database."]
 ) -> str:
     """Execute SELECT SQL to query data from Hologres database."""
-    if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
+    if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE | re.DOTALL) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
         raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
     return handle_call_tool("execute_hg_select_sql", query, serverless=False)
 
@@ -63,11 +63,11 @@ def execute_hg_ddl_sql(
 
 @app.tool()
 def gather_hg_table_statistics(
-    schema: Annotated[str, "Schema name in Hologres database"],
+    schema_name: Annotated[str, "Schema name in Hologres database"],
     table: Annotated[str, "Table name in Hologres database"]
 ) -> str:
     """Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans."""
-    query = f"ANALYZE {schema}.{table}"
+    query = f"ANALYZE {schema_name}.{table}"
     return handle_call_tool("gather_hg_table_statistics", query, serverless=False)
 
 
@@ -133,7 +133,7 @@ def list_hg_schemas() -> str:
 
 @app.tool()
 def list_hg_tables_in_a_schema(
-    schema: Annotated[str, "Schema name to list tables from in Hologres database"]
+    schema_name: Annotated[str, "Schema name to list tables from in Hologres database"]
 ) -> str:
     """List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table)."""
     query = f"""
@@ -152,7 +152,7 @@ def list_hg_tables_in_a_schema(
         LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
         WHERE
             tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
-            AND tab.table_schema = '{schema}'
+            AND tab.table_schema = '{schema_name}'
             AND (inh.inhrelid IS NULL OR NOT EXISTS (
                 SELECT 1
                 FROM pg_inherits
@@ -166,11 +166,11 @@ def list_hg_tables_in_a_schema(
 
 @app.tool()
 def show_hg_table_ddl(
-    schema: Annotated[str, "Schema name in Hologres database"],
+    schema_name: Annotated[str, "Schema name in Hologres database"],
     table: Annotated[str, "Table name in Hologres database"]
 ) -> str:
     """Show DDL script for a table, view, or foreign table in Hologres database."""
-    query = f"SELECT hg_dump_script('\"{schema}\".\"{table}\"')"
+    query = f"SELECT hg_dump_script('\"{schema_name}\".\"{table}\"')"
     result = handle_call_tool("show_hg_table_ddl", query, serverless=False)
 
     # Handle VIEW DDL with comment inference
@@ -178,7 +178,7 @@ def show_hg_table_ddl(
         ddl = handle_read_resource("list_ddl", query)
         if ddl and ddl[0]:
             view_content = ddl[0][0].replace('\n\nEND;', '')
-            comments = try_infer_view_comments(schema, table)
+            comments = try_infer_view_comments(schema_name, table)
             return view_content + comments + "\n\nEND."
     return result
 

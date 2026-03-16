@@ -173,7 +173,7 @@ class TestGatherHgTableStatistics:
     def test_basic_functionality(self):
         """Test ANALYZE command is generated correctly."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="Successfully ANALYZED") as mock:
-            result = gather_hg_table_statistics("public", "users")
+            result = gather_hg_table_statistics(schema_name="public", table="users")
             assert result == "Successfully ANALYZED"
 
             # Check the generated query
@@ -183,7 +183,7 @@ class TestGatherHgTableStatistics:
     def test_schema_in_query(self):
         """Test schema name is included in query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            gather_hg_table_statistics("my_schema", "my_table")
+            gather_hg_table_statistics(schema_name="my_schema", table="my_table")
 
             query = mock.call_args[0][1]
             assert "my_schema" in query
@@ -191,7 +191,7 @@ class TestGatherHgTableStatistics:
     def test_table_in_query(self):
         """Test table name is included in query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            gather_hg_table_statistics("public", "orders")
+            gather_hg_table_statistics(schema_name="public", table="orders")
 
             query = mock.call_args[0][1]
             assert "orders" in query
@@ -199,7 +199,7 @@ class TestGatherHgTableStatistics:
     def test_serverless_false(self):
         """Test serverless is False for statistics gathering."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            gather_hg_table_statistics("public", "users")
+            gather_hg_table_statistics(schema_name="public", table="users")
             assert mock.call_args[1]["serverless"] is False
 
 
@@ -375,7 +375,7 @@ class TestListHgTablesInASchema:
     def test_basic_functionality(self):
         """Test table listing query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="users, orders") as mock:
-            result = list_hg_tables_in_a_schema("public")
+            result = list_hg_tables_in_a_schema(schema_name="public")
             assert result == "users, orders"
 
             query = mock.call_args[0][1]
@@ -386,7 +386,7 @@ class TestListHgTablesInASchema:
     def test_schema_parameter_in_query(self):
         """Test schema parameter is in query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="") as mock:
-            list_hg_tables_in_a_schema("analytics")
+            list_hg_tables_in_a_schema(schema_name="analytics")
 
             query = mock.call_args[0][1]
             assert "analytics" in query
@@ -394,7 +394,7 @@ class TestListHgTablesInASchema:
     def test_table_type_detection(self):
         """Test table type detection is included in query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="") as mock:
-            list_hg_tables_in_a_schema("public")
+            list_hg_tables_in_a_schema(schema_name="public")
 
             query = mock.call_args[0][1]
             # Check for table type detection
@@ -409,7 +409,7 @@ class TestShowHgTableDdl:
     def test_basic_functionality(self):
         """Test DDL retrieval."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="CREATE TABLE...") as mock:
-            result = show_hg_table_ddl("public", "users")
+            result = show_hg_table_ddl(schema_name="public", table="users")
             assert "CREATE TABLE" in result
 
             query = mock.call_args[0][1]
@@ -424,7 +424,7 @@ class TestShowHgTableDdl:
         with patch("hologres_mcp_server.server.handle_call_tool", return_value=view_ddl):
             with patch("hologres_mcp_server.server.handle_read_resource", return_value=[(view_ddl,)]):
                 with patch("hologres_mcp_server.server.try_infer_view_comments", return_value=""):
-                    result = show_hg_table_ddl("public", "my_view")
+                    result = show_hg_table_ddl(schema_name="public", table="my_view")
 
                     # Should contain view DDL
                     assert "CREATE VIEW" in result or "my_view" in result
@@ -432,7 +432,7 @@ class TestShowHgTableDdl:
     def test_schema_table_in_query(self):
         """Test schema and table are properly quoted in query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="DDL") as mock:
-            show_hg_table_ddl("my_schema", "my_table")
+            show_hg_table_ddl(schema_name="my_schema", table="my_table")
 
             query = mock.call_args[0][1]
             assert "my_schema" in query
@@ -446,7 +446,7 @@ class TestToolParameterValidation:
         """Test gather_hg_table_statistics with empty schema name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
             # Empty schema - the function doesn't validate, it just passes through
-            result = gather_hg_table_statistics("", "users")
+            result = gather_hg_table_statistics(schema_name="", table="users")
 
             # Check that the query was formed with empty schema
             query = mock.call_args[0][1]
@@ -455,7 +455,7 @@ class TestToolParameterValidation:
     def test_gather_stats_empty_table(self):
         """Test gather_hg_table_statistics with empty table name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics("public", "")
+            result = gather_hg_table_statistics(schema_name="public", table="")
 
             query = mock.call_args[0][1]
             assert query == "ANALYZE public."
@@ -465,7 +465,7 @@ class TestToolParameterValidation:
         long_name = "a" * 1000
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(long_name, long_name)
+            result = gather_hg_table_statistics(schema_name=long_name, table=long_name)
 
             query = mock.call_args[0][1]
             assert long_name in query
@@ -476,7 +476,7 @@ class TestToolParameterValidation:
         special_table = "table;with;semicolons"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(special_schema, special_table)
+            result = gather_hg_table_statistics(schema_name=special_schema, table=special_table)
 
             query = mock.call_args[0][1]
             assert special_schema in query
@@ -487,7 +487,7 @@ class TestToolParameterValidation:
         for payload in sql_injection_payloads[:5]:  # Test a subset
             with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 # Use injection payload as schema/table name
-                result = gather_hg_table_statistics("public", payload)
+                result = gather_hg_table_statistics(schema_name="public", table=payload)
 
                 query = mock.call_args[0][1]
                 # The payload is directly interpolated - potential security issue
@@ -537,7 +537,7 @@ class TestToolParameterValidation:
     def test_list_tables_empty_schema(self):
         """Test list_hg_tables_in_a_schema with empty schema name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="") as mock:
-            result = list_hg_tables_in_a_schema("")
+            result = list_hg_tables_in_a_schema(schema_name="")
 
             query = mock.call_args[0][1]
             # Empty schema is embedded in query
@@ -553,7 +553,7 @@ class TestToolBoundaryConditions:
         unicode_table = "表格名称"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(unicode_schema, unicode_table)
+            result = gather_hg_table_statistics(schema_name=unicode_schema, table=unicode_table)
 
             query = mock.call_args[0][1]
             # Unicode characters should be preserved in the query
@@ -566,7 +566,7 @@ class TestToolBoundaryConditions:
         schema_with_null = "public\x00malicious"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_with_null, "users")
+            result = gather_hg_table_statistics(schema_name=schema_with_null, table="users")
 
             query = mock.call_args[0][1]
             # Null byte should be in the query (potential truncation risk)
@@ -634,7 +634,7 @@ class TestShowHgTableDdlExtended:
     def test_ddl_for_nonexistent_table(self):
         """Test DDL retrieval for non-existent table."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="Error: table not found"):
-            result = show_hg_table_ddl("public", "nonexistent_table")
+            result = show_hg_table_ddl(schema_name="public", table="nonexistent_table")
 
             # Error message should be returned
             assert "Error" in result or "not found" in result
@@ -642,7 +642,7 @@ class TestShowHgTableDdlExtended:
     def test_ddl_with_special_characters(self):
         """Test DDL with special characters in table name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="DDL content") as mock:
-            result = show_hg_table_ddl("my-schema", "table;with;special")
+            result = show_hg_table_ddl(schema_name="my-schema", table="table;with;special")
 
             query = mock.call_args[0][1]
             # Special characters are included in query
@@ -654,13 +654,13 @@ class TestShowHgTableDdlExtended:
         # Test with connection error
         with patch("hologres_mcp_server.server.handle_call_tool",
                    return_value="Error executing query: Connection failed"):
-            result = show_hg_table_ddl("public", "users")
+            result = show_hg_table_ddl(schema_name="public", table="users")
 
             assert "Error" in result or "Connection failed" in result
 
         # Test with permission error
         with patch("hologres_mcp_server.server.handle_call_tool",
                    return_value="Error: permission denied"):
-            result = show_hg_table_ddl("restricted", "secret_table")
+            result = show_hg_table_ddl(schema_name="restricted", table="secret_table")
 
             assert "Error" in result or "permission" in result
