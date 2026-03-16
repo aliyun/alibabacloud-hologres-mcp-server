@@ -227,6 +227,203 @@ class TestMCPResources:
         assert result is not None
         assert hasattr(result, "contents")
 
+    async def test_get_table_partitions_partitioned(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test reading partitions resource for a partitioned table."""
+        table_name = f"{integration_test_prefix}partitioned_table"
+
+        # Create partitioned table
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE TABLE IF NOT EXISTS public.{table_name} (
+                    id INT,
+                    name TEXT
+                ) PARTITION BY LIST (id)
+                """
+            }
+        )
+
+        try:
+            # Create partitions
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {
+                    "query": f"""
+                    CREATE TABLE IF NOT EXISTS public.{table_name}_part1
+                    PARTITION OF public.{table_name}
+                    FOR VALUES IN (1)
+                    """
+                }
+            )
+
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {
+                    "query": f"""
+                    CREATE TABLE IF NOT EXISTS public.{table_name}_part2
+                    PARTITION OF public.{table_name}
+                    FOR VALUES IN (2)
+                    """
+                }
+            )
+
+            # Read partitions
+            result = await mcp_session.read_resource(
+                f"hologres:///public/{table_name}/partitions"
+            )
+
+            assert result is not None
+            assert hasattr(result, "contents")
+            content = result.contents[0]
+            # Should list the created partitions
+            assert content.text is not None
+
+        finally:
+            # Cleanup - drop partitions first
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}_part1"}
+            )
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}_part2"}
+            )
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
+            )
+
+    async def test_get_table_partitions_non_partitioned(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test reading partitions resource for a non-partitioned table."""
+        table_name = f"{integration_test_prefix}non_partitioned_table"
+
+        # Create regular (non-partitioned) table
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE TABLE IF NOT EXISTS public.{table_name} (
+                    id INT,
+                    name TEXT
+                )
+                """
+            }
+        )
+
+        try:
+            # Read partitions - should return empty for non-partitioned table
+            result = await mcp_session.read_resource(
+                f"hologres:///public/{table_name}/partitions"
+            )
+
+            assert result is not None
+            assert hasattr(result, "contents")
+            # Result should be empty or indicate no partitions
+            content = result.contents[0]
+            assert content.text is not None
+
+        finally:
+            # Cleanup
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
+            )
+
+    async def test_get_query_log_user(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading query log by user name."""
+        result = await mcp_session.read_resource(
+            "system:///query_log/user/test_user/10"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        # Result might be "No query logs found" if user hasn't run queries
+
+    async def test_get_query_log_user_empty(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading query log with empty user name.
+
+        Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
+        because the URI template cannot match. This is expected behavior.
+        """
+        from mcp.shared.exceptions import McpError
+
+        with pytest.raises(McpError) as exc_info:
+            await mcp_session.read_resource(
+                "system:///query_log/user//10"
+            )
+
+        # FastMCP rejects this at routing level - URI template cannot match
+        assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
+
+    async def test_get_query_log_application(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading query log by application name."""
+        result = await mcp_session.read_resource(
+            "system:///query_log/application/test_app/10"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        # Result might be "No query logs found" if app hasn't run queries
+
+    async def test_get_query_log_application_empty(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading query log with empty application name.
+
+        Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
+        because the URI template cannot match. This is expected behavior.
+        """
+        from mcp.shared.exceptions import McpError
+
+        with pytest.raises(McpError) as exc_info:
+            await mcp_session.read_resource(
+                "system:///query_log/application//10"
+            )
+
+        # FastMCP rejects this at routing level - URI template cannot match
+        assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
+
+    async def test_get_query_log_failed(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading failed query log within an interval."""
+        result = await mcp_session.read_resource(
+            "system:///query_log/failed/1 day/10"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        # Result might be "No query logs found" if no failed queries
+
+    async def test_get_query_log_failed_empty_interval(
+        self, mcp_session: ClientSession
+    ):
+        """Test reading failed query log with empty interval.
+
+        Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
+        because the URI template cannot match. This is expected behavior.
+        """
+        from mcp.shared.exceptions import McpError
+
+        with pytest.raises(McpError) as exc_info:
+            await mcp_session.read_resource(
+                "system:///query_log/failed//10"
+            )
+
+        # FastMCP rejects this at routing level - URI template cannot match
+        assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
+
 
 # ============================================================================
 # MCP Tools Tests (Read-Only)
@@ -372,6 +569,145 @@ class TestMCPTools:
         assert result is not None
         assert hasattr(result, "isError")
         assert result.isError is True
+
+
+# ============================================================================
+# MCP Procedure Tools Tests
+# ============================================================================
+
+class TestMCPProcedureTools:
+    """Tests for stored procedure tool calls."""
+
+    async def test_call_procedure_no_args(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test calling a stored procedure with no arguments."""
+        procedure_name = f"{integration_test_prefix}simple_proc"
+
+        # Create test stored procedure
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE OR REPLACE PROCEDURE public.{procedure_name}()
+                AS $$
+                BEGIN
+                    NULL;
+                END;
+                $$ LANGUAGE PLPGSQL
+                """
+            }
+        )
+
+        try:
+            result = await mcp_session.call_tool(
+                "call_hg_procedure",
+                {"procedure_name": f"public.{procedure_name}"}
+            )
+
+            assert result is not None
+            assert hasattr(result, "content")
+            # Procedure should execute without error
+        finally:
+            # Cleanup
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}()"}
+            )
+
+    async def test_call_procedure_with_args(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test calling a stored procedure with arguments."""
+        procedure_name = f"{integration_test_prefix}args_proc"
+
+        # Create test stored procedure that accepts arguments
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE OR REPLACE PROCEDURE public.{procedure_name}(p_id INT, p_name TEXT)
+                AS $$
+                BEGIN
+                    NULL;
+                END;
+                $$ LANGUAGE PLPGSQL
+                """
+            }
+        )
+
+        try:
+            result = await mcp_session.call_tool(
+                "call_hg_procedure",
+                {
+                    "procedure_name": f"public.{procedure_name}",
+                    "arguments": ["1", "'test_name'"]
+                }
+            )
+
+            assert result is not None
+            assert hasattr(result, "content")
+        finally:
+            # Cleanup
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}(INT, TEXT)"}
+            )
+
+    async def test_call_nonexistent_procedure(
+        self, mcp_session: ClientSession
+    ):
+        """Test calling a procedure that does not exist."""
+        result = await mcp_session.call_tool(
+            "call_hg_procedure",
+            {"procedure_name": "public.nonexistent_procedure_xyz_12345"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        # Should contain an error message
+        text_content = result.content[0].text
+        assert "error" in text_content.lower() or "Error" in text_content or "does not exist" in text_content.lower()
+
+
+# ============================================================================
+# MCP MaxCompute Tools Tests
+# ============================================================================
+
+class TestMCPMaxComputeTools:
+    """Tests for MaxCompute foreign table tool calls."""
+
+    async def test_create_maxcompute_foreign_table_skip(
+        self, mcp_session: ClientSession, integration_env: dict
+    ):
+        """Test that MaxCompute foreign table creation is skipped without configuration.
+
+        This test is skipped if MaxCompute configuration is not provided.
+        In a real environment with MaxCompute access, you would configure:
+        - HOLOGRES_MAXCOMPUTE_PROJECT
+        - HOLOGRES_MAXCOMPUTE_TABLE
+        """
+        import os
+
+        maxcompute_project = os.getenv("HOLOGRES_MAXCOMPUTE_PROJECT")
+        maxcompute_table = os.getenv("HOLOGRES_MAXCOMPUTE_TABLE")
+
+        if not maxcompute_project or not maxcompute_table:
+            pytest.skip("MaxCompute configuration not provided. Set HOLOGRES_MAXCOMPUTE_PROJECT and HOLOGRES_MAXCOMPUTE_TABLE to run this test.")
+
+        # If configuration is provided, attempt to create the foreign table
+        result = await mcp_session.call_tool(
+            "create_hg_maxcompute_foreign_table",
+            {
+                "maxcompute_project": maxcompute_project,
+                "maxcompute_tables": [maxcompute_table],
+                "maxcompute_schema": "default",
+                "local_schema": "public"
+            }
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
 
 
 # ============================================================================

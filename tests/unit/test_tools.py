@@ -437,3 +437,146 @@ class TestShowHgTableDdl:
             query = mock.call_args[0][1]
             assert "my_schema" in query
             assert "my_table" in query
+
+
+class TestToolParameterValidation:
+    """Tests for tool parameter validation and edge cases."""
+
+    def test_gather_stats_empty_schema(self):
+        """Test gather_hg_table_statistics with empty schema name."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            # Empty schema - the function doesn't validate, it just passes through
+            result = gather_hg_table_statistics("", "users")
+
+            # Check that the query was formed with empty schema
+            query = mock.call_args[0][1]
+            assert query == "ANALYZE .users"  # Note: this is a potential SQL issue
+
+    def test_gather_stats_empty_table(self):
+        """Test gather_hg_table_statistics with empty table name."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = gather_hg_table_statistics("public", "")
+
+            query = mock.call_args[0][1]
+            assert query == "ANALYZE public."
+
+    def test_gather_stats_very_long_names(self, mock_env_with_long_names):
+        """Test gather_hg_table_statistics with very long names."""
+        long_name = "a" * 1000
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = gather_hg_table_statistics(long_name, long_name)
+
+            query = mock.call_args[0][1]
+            assert long_name in query
+
+    def test_gather_stats_special_characters(self):
+        """Test gather_hg_table_statistics with special characters in names."""
+        special_schema = "schema-with-dashes"
+        special_table = "table;with;semicolons"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = gather_hg_table_statistics(special_schema, special_table)
+
+            query = mock.call_args[0][1]
+            assert special_schema in query
+            assert special_table in query
+
+    def test_gather_stats_sql_injection_attempt(self, sql_injection_payloads):
+        """Test gather_hg_table_statistics with SQL injection attempts."""
+        for payload in sql_injection_payloads[:5]:  # Test a subset
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+                # Use injection payload as schema/table name
+                result = gather_hg_table_statistics("public", payload)
+
+                query = mock.call_args[0][1]
+                # The payload is directly interpolated - potential security issue
+                assert payload in query or "ANALYZE" in query
+
+    def test_call_procedure_empty_name(self):
+        """Test call_hg_procedure with empty procedure name."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
+            result = call_hg_procedure("")
+
+            query = mock.call_args[0][1]
+            assert query == "CALL ()"  # Empty procedure name
+
+    def test_call_procedure_with_sql_injection(self, sql_injection_payloads):
+        """Test call_hg_procedure with SQL injection in arguments."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
+            # Injection in procedure arguments
+            result = call_hg_procedure("my_procedure", ["'; DROP TABLE users; --"])
+
+            query = mock.call_args[0][1]
+            assert "DROP TABLE" in query  # Injection payload is included
+
+    def test_maxcompute_foreign_table_empty_project(self):
+        """Test create_hg_maxcompute_foreign_table with empty project."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = create_hg_maxcompute_foreign_table(
+                maxcompute_project="",
+                maxcompute_tables=["table1"]
+            )
+
+            query = mock.call_args[0][1]
+            # Empty project results in "#" in the schema name (project#schema format)
+            assert '"#default"' in query
+
+    def test_maxcompute_foreign_table_empty_tables(self):
+        """Test create_hg_maxcompute_foreign_table with empty table list."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+            result = create_hg_maxcompute_foreign_table(
+                maxcompute_project="my_project",
+                maxcompute_tables=[]
+            )
+
+            query = mock.call_args[0][1]
+            # Empty table list results in "LIMIT TO ()"
+            assert "LIMIT TO ()" in query
+
+    def test_list_tables_empty_schema(self):
+        """Test list_hg_tables_in_a_schema with empty schema name."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="") as mock:
+            result = list_hg_tables_in_a_schema("")
+
+            query = mock.call_args[0][1]
+            # Empty schema is embedded in query
+            assert "tab.table_schema = ''" in query
+
+
+class TestShowHgTableDdlExtended:
+    """Extended tests for show_hg_table_ddl tool."""
+
+    def test_ddl_for_nonexistent_table(self):
+        """Test DDL retrieval for non-existent table."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="Error: table not found"):
+            result = show_hg_table_ddl("public", "nonexistent_table")
+
+            # Error message should be returned
+            assert "Error" in result or "not found" in result
+
+    def test_ddl_with_special_characters(self):
+        """Test DDL with special characters in table name."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="DDL content") as mock:
+            result = show_hg_table_ddl("my-schema", "table;with;special")
+
+            query = mock.call_args[0][1]
+            # Special characters are included in query
+            assert "my-schema" in query
+            assert "table;with;special" in query
+
+    def test_ddl_error_handling(self):
+        """Test DDL error handling paths."""
+        # Test with connection error
+        with patch("hologres_mcp_server.server.handle_call_tool",
+                   return_value="Error executing query: Connection failed"):
+            result = show_hg_table_ddl("public", "users")
+
+            assert "Error" in result or "Connection failed" in result
+
+        # Test with permission error
+        with patch("hologres_mcp_server.server.handle_call_tool",
+                   return_value="Error: permission denied"):
+            result = show_hg_table_ddl("restricted", "secret_table")
+
+            assert "Error" in result or "permission" in result

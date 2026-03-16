@@ -19,3 +19,7 @@ HOLOGRES_DATABASE=your_database
 # Used for DDL and statistics tests
 HOLOGRES_TEST_SCHEMA=public
 HOLOGRES_TEST_TABLE=None
+
+# Optional: MaxCompute configuration for foreign table tests
+# HOLOGRES_MAXCOMPUTE_PROJECT=your_maxcompute_project
+# HOLOGRES_MAXCOMPUTE_TABLE=your_maxcompute_table

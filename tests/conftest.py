@@ -339,3 +339,177 @@ def integration_test_prefix():
     Used to identify and clean up test tables, views, etc.
     """
     return "mcp_test_"
+
+
+# ============================================================================
+# Edge Case Fixtures for Extended Unit Tests
+# ============================================================================
+
+@pytest.fixture
+def mock_env_with_long_names():
+    """Environment variables with very long names for testing edge cases."""
+    long_name = "a" * 1000  # 1000 character name
+    env = {
+        "HOLOGRES_HOST": "test-host.hologres.aliyuncs.com",
+        "HOLOGRES_PORT": "80",
+        "HOLOGRES_USER": "test_user",
+        "HOLOGRES_PASSWORD": "test_password",
+        "HOLOGRES_DATABASE": "test_db",
+        "HOLOGRES_TEST_LONG_SCHEMA": long_name,
+        "HOLOGRES_TEST_LONG_TABLE": long_name,
+    }
+    with patch.dict(os.environ, env, clear=True):
+        yield env
+
+
+@pytest.fixture
+def mock_env_with_unicode():
+    """Environment variables with Unicode characters for testing."""
+    env = {
+        "HOLOGRES_HOST": "test-host.hologres.aliyuncs.com",
+        "HOLOGRES_PORT": "80",
+        "HOLOGRES_USER": "测试用户",  # Chinese characters
+        "HOLOGRES_PASSWORD": "パスワード123",  # Japanese characters
+        "HOLOGRES_DATABASE": "test_db_αβγ",  # Greek letters
+    }
+    with patch.dict(os.environ, env, clear=True):
+        yield env
+
+
+@pytest.fixture
+def mock_cursor_with_nulls():
+    """Create a mock cursor that returns NULL values in results."""
+    cursor = MagicMock()
+    cursor.description = [
+        ("col1",),
+        ("col2",),
+        ("col3",),
+    ]
+    cursor.fetchall.return_value = [
+        ("value1", None, "value3"),
+        (None, None, None),
+        ("value1", "value2", None),
+    ]
+    cursor.rowcount = 3
+    return cursor
+
+
+@pytest.fixture
+def mock_cursor_with_large_result():
+    """Create a mock cursor that returns a large number of rows and columns."""
+    # Create 100 columns
+    columns = [f"col{i}" for i in range(100)]
+    cursor = MagicMock()
+    cursor.description = [(col,) for col in columns]
+
+    # Create 1000 rows with 100 columns each
+    rows = [tuple(f"value_{i}_{j}" for j in range(100)) for i in range(1000)]
+    cursor.fetchall.return_value = rows
+    cursor.rowcount = 1000
+    return cursor
+
+
+@pytest.fixture
+def sql_injection_payloads():
+    """Common SQL injection payloads for security testing."""
+    return [
+        # Basic injection attempts
+        "'; DROP TABLE users; --",
+        "1; DROP TABLE users",
+        "' OR '1'='1",
+        "' OR '1'='1' --",
+        "1' OR '1'='1",
+        "admin'--",
+        "' UNION SELECT * FROM users --",
+
+        # Comment-based injection
+        "/* comment */",
+        "-- comment",
+        "# comment",
+
+        # Stacked queries
+        "SELECT * FROM users; DROP TABLE users;",
+
+        # Time-based injection
+        "'; WAITFOR DELAY '0:0:5' --",
+        "'; SELECT SLEEP(5) --",
+        "1; SELECT pg_sleep(5);",
+
+        # Union-based injection
+        "' UNION SELECT NULL --",
+        "' UNION SELECT NULL, NULL --",
+        "' UNION ALL SELECT NULL --",
+
+        # Boolean-based injection
+        "' AND 1=1 --",
+        "' AND 1=2 --",
+        "' OR 1=1 --",
+
+        # Function-based injection
+        "'; EXEC xp_cmdshell('dir') --",
+        "'; SELECT * FROM information_schema.tables --",
+
+        # Schema/table name injection
+        "users; DROP TABLE users",
+        "users' OR '1'='1",
+        "users; DELETE FROM users WHERE '1'='1",
+
+        # Numeric injection
+        "1 OR 1=1",
+        "1; DROP TABLE users",
+        "1 AND 1=1",
+    ]
+
+
+@pytest.fixture
+def edge_case_schema_names():
+    """Edge case schema names for boundary testing."""
+    return [
+        "",  # Empty string
+        "   ",  # Whitespace only
+        "a",  # Single character
+        "a" * 63,  # Maximum PostgreSQL identifier length
+        "a" * 64,  # Exceeds maximum length
+        "schema-with-dashes",
+        "schema_with_underscores",
+        "schema.with.dots",
+        "schema\"with\"quotes",
+        "schema'with'apostrophes",
+        "schema with spaces",
+        "schema;with;semicolons",
+        "UPPERCASE",
+        "MixedCase",
+        "123numbers",
+        "_underscore_start",
+        "测试schema",  # Unicode
+        "📝emoji",  # Emoji
+    ]
+
+
+@pytest.fixture
+def mock_cursor_with_very_long_values():
+    """Create a mock cursor that returns very long string values."""
+    long_value = "x" * (1024 * 1024)  # 1MB string
+    cursor = MagicMock()
+    cursor.description = [("col1",), ("col2",)]
+    cursor.fetchall.return_value = [
+        (long_value, "normal_value"),
+        ("normal_value", long_value),
+    ]
+    cursor.rowcount = 2
+    return cursor
+
+
+@pytest.fixture
+def mock_cursor_with_binary_data():
+    """Create a mock cursor that returns binary data."""
+    cursor = MagicMock()
+    cursor.description = [("binary_col",), ("text_col",)]
+    # Binary data with null bytes
+    binary_data = bytes([0, 1, 2, 3, 0, 255, 254, 253])
+    cursor.fetchall.return_value = [
+        (binary_data, "text"),
+        (b"\x00\x01\x02", "more text"),
+    ]
+    cursor.rowcount = 2
+    return cursor
