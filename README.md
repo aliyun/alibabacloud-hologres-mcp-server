@@ -148,4 +148,60 @@ Since some Agents do not support resources and resource templates, the following
 
 ### Prompts
 
-None at this time
+* `analyze_table_performance`: Generate a prompt to analyze table performance in Hologres
+* `optimize_query`: Generate a prompt to optimize a SQL query in Hologres
+* `explore_schema`: Generate a prompt to explore a schema in Hologres database
+
+## Testing
+
+The project includes comprehensive unit tests and integration tests.
+
+### Unit Tests
+
+Unit tests do not require a database connection and use mocked dependencies.
+
+```bash
+# Run all unit tests
+uv run pytest tests/unit/ -v
+
+# Run specific test file
+uv run pytest tests/unit/test_tools.py -v
+
+# Run with coverage
+uv run pytest tests/unit/ --cov=src/hologres_mcp_server --cov-report=html
+```
+
+### Integration Tests
+
+Integration tests require a real Hologres database connection.
+
+1. Create a configuration file from the example:
+
+```bash
+cp tests/integration/.test_mcp_client_env_example tests/integration/.test_mcp_client_env
+```
+
+2. Edit the configuration file with your Hologres credentials:
+
+```
+HOLOGRES_HOST=your-hologres-instance.hologres.aliyuncs.com
+HOLOGRES_PORT=80
+HOLOGRES_USER=your_username
+HOLOGRES_PASSWORD=your_password
+HOLOGRES_DATABASE=your_database
+```
+
+3. Run the integration tests:
+
+```bash
+# Run all integration tests
+uv run pytest tests/integration/ -v -m integration
+
+# Run specific test class
+uv run pytest tests/integration/test_mcp_integration.py::TestMCPTools -v
+
+# Run all tests (unit + integration)
+uv run pytest tests/ -v
+```
+
+**Note:** Integration tests will be skipped if the `.test_mcp_client_env` file is missing or contains incomplete configuration.

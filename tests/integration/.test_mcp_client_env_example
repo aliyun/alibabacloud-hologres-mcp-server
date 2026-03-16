@@ -1,0 +1,25 @@
+# Hologres MCP Server Integration Test Environment Configuration
+# Copy this file to .test_mcp_client_env and fill in your actual values
+
+# Hologres Instance Connection
+HOLOGRES_HOST=your-hologres-instance.hologres.aliyuncs.com
+HOLOGRES_PORT=80
+
+# Database Credentials
+HOLOGRES_USER=your_username
+HOLOGRES_PASSWORD=your_password
+HOLOGRES_DATABASE=your_database
+
+# Optional: If using Alibaba Cloud STS token authentication
+# ALIBABA_CLOUD_ACCESS_KEY_ID=your_access_key_id
+# ALIBABA_CLOUD_ACCESS_KEY_SECRET=your_access_key_secret
+# ALIBABA_CLOUD_SECURITY_TOKEN=your_sts_token
+
+# Test table configuration (optional)
+# Used for DDL and statistics tests
+HOLOGRES_TEST_SCHEMA=public
+HOLOGRES_TEST_TABLE=None
+
+# Optional: MaxCompute configuration for foreign table tests
+# HOLOGRES_MAXCOMPUTE_PROJECT=your_maxcompute_project
+# HOLOGRES_MAXCOMPUTE_TABLE=your_maxcompute_table

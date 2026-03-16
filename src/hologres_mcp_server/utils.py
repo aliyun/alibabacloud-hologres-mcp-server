@@ -69,7 +69,7 @@ def handle_call_tool(tool_name, query, serverless = False):
                     rows = cursor.fetchall()
                     result = [",".join(map(str, row)) for row in rows]
                     return "\n".join([",".join(columns)] + result)
-                elif tool_name == "execute_dml_sql":  # Non-SELECT query
+                elif tool_name == "execute_hg_dml_sql":  # Non-SELECT query (DML)
                     row_count = cursor.rowcount
                     return f"Query executed successfully. {row_count} rows affected."
                 else:
