@@ -3,7 +3,7 @@ Tests for SQL validation logic in server tools.
 
 SQL validation is embedded in tool functions:
 - execute_hg_select_sql: SELECT or WITH...SELECT
-- execute_hg_select_sql_with_serverless: SELECT only
+- execute_hg_select_sql_with_serverless: SELECT or WITH...SELECT
 - execute_hg_dml_sql: INSERT, UPDATE, DELETE
 - execute_hg_ddl_sql: CREATE, ALTER, DROP, COMMENT ON
 """
@@ -150,12 +150,32 @@ class TestSelectServerlessValidation:
             result = execute_hg_select_sql_with_serverless("select * from users")
             assert result == "success"
 
-    def test_serverless_select_with_cte_rejected(self):
-        """Test WITH ... SELECT is rejected (serverless doesn't support CTE prefix)."""
-        # Note: The serverless validation is stricter - it only checks if query starts with SELECT
-        # after stripping whitespace, so WITH...SELECT would be rejected
-        with pytest.raises(ValueError, match="must be a SELECT statement"):
-            execute_hg_select_sql_with_serverless("WITH cte AS (SELECT 1) SELECT * FROM cte")
+    def test_serverless_select_with_cte(self):
+        """Test WITH ... SELECT statement passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_select_sql_with_serverless("WITH cte AS (SELECT 1) SELECT * FROM cte")
+            assert result == "success"
+
+    def test_serverless_select_with_cte_multiline(self):
+        """Test multi-line WITH ... SELECT statement passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_select_sql_with_serverless("""WITH
+    users AS (SELECT 1 AS id),
+    orders AS (SELECT 2 AS order_id)
+SELECT * FROM users""")
+            assert result == "success"
+
+    def test_serverless_select_with_cte_leading_whitespace(self):
+        """Test WITH ... SELECT with leading whitespace passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_select_sql_with_serverless("   WITH cte AS (SELECT 1) SELECT * FROM cte")
+            assert result == "success"
+
+    def test_serverless_select_with_cte_case_insensitive(self):
+        """Test case insensitivity for WITH keyword in serverless."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_select_sql_with_serverless("with cte as (select 1) select * from cte")
+            assert result == "success"
 
     def test_serverless_select_invalid_insert(self):
         """Test INSERT fails validation."""

@@ -501,6 +501,25 @@ class TestMCPTools:
         assert result is not None
         assert hasattr(result, "content")
 
+    async def test_execute_select_serverless_with_cte(self, mcp_session: ClientSession):
+        """Test execute_hg_select_sql_with_serverless tool with CTE query."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql_with_serverless",
+            {
+                "query": """
+                WITH test_data AS (
+                    SELECT 1 AS id, 'serverless_test' AS name
+                )
+                SELECT * FROM test_data
+                """
+            }
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+        assert text_content is not None
+
     async def test_get_query_plan(self, mcp_session: ClientSession):
         """Test get_hg_query_plan tool."""
         result = await mcp_session.call_tool(

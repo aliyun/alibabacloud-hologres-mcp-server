@@ -36,8 +36,8 @@ def execute_hg_select_sql_with_serverless(
     query: Annotated[str, "The (SELECT) SQL query to execute with serverless computing in Hologres database"]
 ) -> str:
     """Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like 'Total memory used by all existing queries exceeded memory limitation' occurs during execute_hg_select_sql execution, you can re-execute the SQL with this tool."""
-    if not query.strip().upper().startswith("SELECT"):
-        raise ValueError("Query must be a SELECT statement")
+    if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE | re.DOTALL) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
+        raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
     return handle_call_tool("execute_hg_select_sql_with_serverless", query, serverless=True)
 
 

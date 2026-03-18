@@ -89,6 +89,12 @@ class TestExecuteHgSelectSqlWithServerless:
             execute_hg_select_sql_with_serverless("SELECT 1")
             assert mock.call_args[1]["serverless"] is True
 
+    def test_valid_with_cte(self):
+        """Test WITH ... SELECT query with serverless."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+            result = execute_hg_select_sql_with_serverless("WITH cte AS (SELECT 1) SELECT * FROM cte")
+            assert result == "result"
+
     def test_invalid_non_select(self):
         """Test non-SELECT query is rejected."""
         with pytest.raises(ValueError, match="must be a SELECT statement"):
