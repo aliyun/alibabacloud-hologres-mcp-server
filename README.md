@@ -230,3 +230,49 @@ uv run pytest tests/ -v
 ```
 
 **Note:** Integration tests will be skipped if the `.test_mcp_client_env` file is missing or contains incomplete configuration.
+
+## Build & Publish
+
+### Build
+
+This project uses [hatchling](https://hatch.pypa.io/) as the build backend. Build artifacts will be generated in the `dist/` directory.
+
+```bash
+# Using uv (recommended)
+uv build
+
+# Or using python build module
+pip install build
+python -m build
+```
+
+### Publish to PyPI
+
+```bash
+# Install twine
+pip install twine
+
+# Upload to PyPI
+twine upload dist/*
+
+# Or upload to Test PyPI first for verification
+twine upload --repository testpypi dist/*
+```
+
+### Release Workflow
+
+```bash
+# 1. Update version in pyproject.toml
+# 2. Clean old build artifacts
+rm -rf dist/
+
+# 3. Build
+uv build
+
+# 4. Publish
+twine upload dist/*
+
+# 5. Tag the release
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin v0.2.0
+```

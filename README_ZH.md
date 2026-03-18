@@ -217,3 +217,49 @@ uv run pytest tests/ -v
 ```
 
 **注意：** 如果缺少 `.test_mcp_client_env` 文件或配置不完整，集成测试将被跳过。
+
+## 构建与发布
+
+### 构建
+
+本项目使用 [hatchling](https://hatch.pypa.io/) 作为构建后端。构建产物将生成在 `dist/` 目录下。
+
+```bash
+# 使用 uv（推荐）
+uv build
+
+# 或使用 python build 模块
+pip install build
+python -m build
+```
+
+### 发布到 PyPI
+
+```bash
+# 安装 twine
+pip install twine
+
+# 上传到 PyPI
+twine upload dist/*
+
+# 或先上传到测试 PyPI 进行验证
+twine upload --repository testpypi dist/*
+```
+
+### 发版流程
+
+```bash
+# 1. 更新 pyproject.toml 中的版本号
+# 2. 清理旧的构建产物
+rm -rf dist/
+
+# 3. 构建
+uv build
+
+# 4. 发布
+twine upload dist/*
+
+# 5. 打标签
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin v0.2.0
+```
