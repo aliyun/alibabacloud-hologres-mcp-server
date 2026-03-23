@@ -2,15 +2,32 @@ import psycopg
 from psycopg import sql
 import pglast
 import time
+import re
 from hologres_mcp_server.settings import get_db_config
 
 
-def connect_with_retry(retries=3):
+# Pre-compiled regex patterns for SQL validation
+WITH_SELECT_PATTERN = re.compile(r"^\s*WITH\s+.*?SELECT\b", re.IGNORECASE | re.DOTALL)
+SELECT_PATTERN = re.compile(r"^\s*SELECT\b", re.IGNORECASE)
+
+# SQL statement type keywords
+DML_KEYWORDS = ("INSERT", "UPDATE", "DELETE")
+DDL_KEYWORDS = ("CREATE", "ALTER", "DROP", "COMMENT ON")
+
+# System schemas to exclude from listings
+SYSTEM_SCHEMAS = ("pg_catalog", "information_schema", "hologres", "hologres_statistic", "hologres_streaming_mv")
+
+# Default connection retry settings
+DEFAULT_RETRY_COUNT = 3
+DEFAULT_RETRY_DELAY = 5  # seconds
+
+
+def connect_with_retry(retries=DEFAULT_RETRY_COUNT):
+    config = get_db_config()  # Fetch config once before retry loop
     attempt = 0
     err_msg = ""
     while attempt <= retries:
         try:
-            config = get_db_config()
             conn = psycopg.connect(**config)
             conn.autocommit = True
             with conn.cursor() as cursor:
@@ -22,14 +39,12 @@ def connect_with_retry(retries=3):
             attempt += 1
             if attempt <= retries:
                 print(f"Retrying connection (attempt {attempt + 1} of {retries + 1})...")
-                time.sleep(5)  # 等待 2 秒后再次尝试连接
+                time.sleep(DEFAULT_RETRY_DELAY)
     raise psycopg.Error(f"Failed to connect to Hologres database after retrying: {err_msg}")
 
 
-# 处理resource的通用函数
-def handle_read_resource(resource_name, query, with_headers = False):
+def handle_read_resource(resource_name, query, with_headers=False):
     """Handle readResource method."""
-    config = get_db_config()
     try:
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
@@ -38,38 +53,30 @@ def handle_read_resource(resource_name, query, with_headers = False):
                 headers = [desc[0] for desc in cursor.description]
                 if with_headers:
                     return rows, headers
-                else:
-                    return rows
+                return rows
     except Exception as e:
         return f"Error executing query: {str(e)}"
 
 
-# 处理tool的通用函数
-def handle_call_tool(tool_name, query, serverless = False):
+def handle_call_tool(tool_name, query, serverless=False):
     """Handle callTool method."""
-    config = get_db_config()
     try:
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
-
-                # 特殊处理 serverless computing 查询
                 if serverless:
                     cursor.execute("set hg_computing_resource='serverless'")
-                
-                # Execute the query
+
                 cursor.execute(query)
-                
-                # 特殊处理 ANALYZE 命令
+
                 if tool_name == "gather_hg_table_statistics":
                     return f"Successfully {query}"
-                
-                # 处理其他有返回结果的查询
-                if cursor.description:  # SELECT query
+
+                if cursor.description:
                     columns = [desc[0] for desc in cursor.description]
                     rows = cursor.fetchall()
                     result = [",".join(map(str, row)) for row in rows]
                     return "\n".join([",".join(columns)] + result)
-                elif tool_name == "execute_hg_dml_sql":  # Non-SELECT query (DML)
+                elif tool_name == "execute_hg_dml_sql":
                     row_count = cursor.rowcount
                     return f"Query executed successfully. {row_count} rows affected."
                 else:
@@ -79,12 +86,13 @@ def handle_call_tool(tool_name, query, serverless = False):
 
 def get_view_definition(cursor, schema_name, view_name):
     cursor.execute(sql.SQL("""
-        SELECT definition 
-        FROM pg_views 
+        SELECT definition
+        FROM pg_views
         WHERE schemaname = %s AND viewname = %s
     """), [schema_name, view_name])
     result = cursor.fetchone()
     return result[0] if result else None
+
 
 def get_column_comment(cursor, schema_name, table_name, column_name):
     cursor.execute(sql.SQL("""
@@ -97,11 +105,10 @@ def get_column_comment(cursor, schema_name, table_name, column_name):
     result = cursor.fetchone()
     return result[0] if result else None
 
+
 def try_infer_view_comments(schema_name, view_name):
     try:
-        config = get_db_config()
-        with psycopg.connect(**config) as conn:
-            conn.autocommit = True
+        with connect_with_retry() as conn:
             with conn.cursor() as cursor:
                 view_definition = get_view_definition(cursor, schema_name, view_name)
                 if not view_definition:
@@ -133,6 +140,102 @@ def try_infer_view_comments(schema_name, view_name):
                 if comment_statements:
                     comment_statements.insert(0, "-- Infer view column comments from related tables")
                 return "\n".join(comment_statements)
-            
+
     except Exception as e:
         return ""
+
+
+# ============================================================================
+# SQL Validation Helpers
+# ============================================================================
+
+def validate_select_query(query: str) -> None:
+    """Validate that query is SELECT or WITH...SELECT. Raises ValueError if not."""
+    if not WITH_SELECT_PATTERN.match(query) and not SELECT_PATTERN.match(query):
+        raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
+
+
+def validate_dml_query(query: str) -> None:
+    """Validate that query starts with INSERT/UPDATE/DELETE. Raises ValueError if not."""
+    if not any(query.strip().upper().startswith(keyword) for keyword in DML_KEYWORDS):
+        raise ValueError(f"Query must be a DML statement ({', '.join(DML_KEYWORDS)})")
+
+
+def validate_ddl_query(query: str) -> None:
+    """Validate that query starts with CREATE/ALTER/DROP/COMMENT ON. Raises ValueError if not."""
+    if not any(query.strip().upper().startswith(keyword) for keyword in DDL_KEYWORDS):
+        raise ValueError(f"Query must be a DDL statement ({', '.join(DDL_KEYWORDS)})")
+
+
+def validate_positive_integer(value: str, param_name: str = "Row limits") -> tuple[int, str | None]:
+    """Validate string is a positive integer.
+
+    Returns:
+        tuple of (parsed_value, error_message). If valid, error_message is None.
+    """
+    try:
+        limit = int(value)
+        if limit <= 0:
+            return 0, f"{param_name} must be a positive integer"
+        return limit, None
+    except ValueError:
+        return 0, f"Invalid {param_name.lower()} format, must be an integer"
+
+
+# ============================================================================
+# Result Formatting Helpers
+# ============================================================================
+
+def format_tabular_result(rows: list, headers: list) -> str:
+    """Format query results as tab-separated values with headers."""
+    result = ["\t".join(headers)]
+    for row in rows:
+        formatted_row = [str(val) if val is not None else "NULL" for val in row]
+        result.append("\t".join(formatted_row))
+    return "\n".join(result)
+
+
+# ============================================================================
+# Query Generators
+# ============================================================================
+
+def get_list_schemas_query() -> str:
+    """Return the SQL query for listing schemas."""
+    excluded = "', '".join(SYSTEM_SCHEMAS)
+    return f"""
+        SELECT table_schema
+        FROM information_schema.tables
+        WHERE table_schema NOT IN ('{excluded}')
+        GROUP BY table_schema
+        ORDER BY table_schema;
+    """
+
+
+def get_list_tables_query(schema_name: str) -> str:
+    """Return the SQL query for listing tables in a schema."""
+    excluded = "', '".join(SYSTEM_SCHEMAS)
+    return f"""
+        SELECT
+            tab.table_name,
+            CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
+                WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
+                WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
+                ELSE ''
+            END AS table_type_info
+        FROM
+            information_schema.tables AS tab
+        LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
+        LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
+        LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
+        LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
+        WHERE
+            tab.table_schema NOT IN ('{excluded}')
+            AND tab.table_schema = '{schema_name}'
+            AND (inh.inhrelid IS NULL OR NOT EXISTS (
+                SELECT 1
+                FROM pg_inherits
+                WHERE inh.inhrelid = pg_inherits.inhrelid
+            ))
+        ORDER BY
+            tab.table_name;
+    """

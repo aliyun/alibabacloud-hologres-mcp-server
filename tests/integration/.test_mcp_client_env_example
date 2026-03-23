@@ -6,9 +6,9 @@ HOLOGRES_HOST=your-hologres-instance.hologres.aliyuncs.com
 HOLOGRES_PORT=80
 
 # Database Credentials
-HOLOGRES_USER=your_username
-HOLOGRES_PASSWORD=your_password
-HOLOGRES_DATABASE=your_database
+HOLOGRES_USER='your_username'
+HOLOGRES_PASSWORD='your_password'
+HOLOGRES_DATABASE='your_database'
 
 # Optional: If using Alibaba Cloud STS token authentication
 # ALIBABA_CLOUD_ACCESS_KEY_ID=your_access_key_id

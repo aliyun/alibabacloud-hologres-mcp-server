@@ -3,14 +3,20 @@ Hologres MCP Server - FastMCP Implementation
 Migrated from low-level mcp.server.Server to mcp.server.fastmcp.FastMCP
 """
 
-import re
 from typing import Annotated, Optional
-from pydantic import AnyUrl
 from mcp.server.fastmcp import FastMCP
 from hologres_mcp_server.utils import (
     try_infer_view_comments,
     handle_read_resource,
     handle_call_tool,
+    validate_select_query,
+    validate_dml_query,
+    validate_ddl_query,
+    validate_positive_integer,
+    format_tabular_result,
+    get_list_schemas_query,
+    get_list_tables_query,
+    SYSTEM_SCHEMAS,
 )
 
 # Initialize FastMCP server
@@ -26,8 +32,7 @@ def execute_hg_select_sql(
     query: Annotated[str, "The (SELECT) SQL query to execute in Hologres database."]
 ) -> str:
     """Execute SELECT SQL to query data from Hologres database."""
-    if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE | re.DOTALL) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
-        raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
+    validate_select_query(query)
     return handle_call_tool("execute_hg_select_sql", query, serverless=False)
 
 
@@ -36,8 +41,7 @@ def execute_hg_select_sql_with_serverless(
     query: Annotated[str, "The (SELECT) SQL query to execute with serverless computing in Hologres database"]
 ) -> str:
     """Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like 'Total memory used by all existing queries exceeded memory limitation' occurs during execute_hg_select_sql execution, you can re-execute the SQL with this tool."""
-    if not re.match(r"^\s*WITH\s+.*?SELECT\b", query, re.IGNORECASE | re.DOTALL) and not re.match(r"^\s*SELECT\b", query, re.IGNORECASE):
-        raise ValueError("Query must be a SELECT statement or start with WITH followed by a SELECT statement")
+    validate_select_query(query)
     return handle_call_tool("execute_hg_select_sql_with_serverless", query, serverless=True)
 
 
@@ -46,8 +50,7 @@ def execute_hg_dml_sql(
     query: Annotated[str, "The DML SQL query to execute in Hologres database"]
 ) -> str:
     """Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres database."""
-    if not any(query.strip().upper().startswith(keyword) for keyword in ["INSERT", "UPDATE", "DELETE"]):
-        raise ValueError("Query must be a DML statement (INSERT, UPDATE, DELETE)")
+    validate_dml_query(query)
     return handle_call_tool("execute_hg_dml_sql", query, serverless=False)
 
 
@@ -56,8 +59,7 @@ def execute_hg_ddl_sql(
     query: Annotated[str, "The DDL SQL query to execute in Hologres database"]
 ) -> str:
     """Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres database."""
-    if not any(query.strip().upper().startswith(keyword) for keyword in ["CREATE", "ALTER", "DROP", "COMMENT ON"]):
-        raise ValueError("Query must be a DDL statement (CREATE, ALTER, DROP, COMMENT ON)")
+    validate_ddl_query(query)
     return handle_call_tool("execute_hg_ddl_sql", query, serverless=False)
 
 
@@ -121,14 +123,7 @@ def create_hg_maxcompute_foreign_table(
 @app.tool()
 def list_hg_schemas() -> str:
     """List all schemas in the current Hologres database, excluding system schemas."""
-    query = """
-        SELECT table_schema
-        FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-        GROUP BY table_schema
-        ORDER BY table_schema;
-    """
-    return handle_call_tool("list_hg_schemas", query, serverless=False)
+    return handle_call_tool("list_hg_schemas", get_list_schemas_query(), serverless=False)
 
 
 @app.tool()
@@ -136,32 +131,7 @@ def list_hg_tables_in_a_schema(
     schema_name: Annotated[str, "Schema name to list tables from in Hologres database"]
 ) -> str:
     """List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table)."""
-    query = f"""
-        SELECT
-            tab.table_name,
-            CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
-                WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
-                WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
-                ELSE ''
-            END AS table_type_info
-        FROM
-            information_schema.tables AS tab
-        LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
-        LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
-        LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
-        LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
-        WHERE
-            tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
-            AND tab.table_schema = '{schema_name}'
-            AND (inh.inhrelid IS NULL OR NOT EXISTS (
-                SELECT 1
-                FROM pg_inherits
-                WHERE inh.inhrelid = pg_inherits.inhrelid
-            ))
-        ORDER BY
-            tab.table_name;
-    """
-    return handle_call_tool("list_hg_tables_in_a_schema", query, serverless=False)
+    return handle_call_tool("list_hg_tables_in_a_schema", get_list_tables_query(schema_name), serverless=False)
 
 
 @app.tool()
@@ -173,7 +143,6 @@ def show_hg_table_ddl(
     query = f"SELECT hg_dump_script('\"{schema_name}\".\"{table}\"')"
     result = handle_call_tool("show_hg_table_ddl", query, serverless=False)
 
-    # Handle VIEW DDL with comment inference
     if "Type: VIEW" in result:
         ddl = handle_read_resource("list_ddl", query)
         if ddl and ddl[0]:
@@ -190,46 +159,14 @@ def show_hg_table_ddl(
 @app.resource("hologres:///schemas")
 def list_schemas() -> str:
     """List all schemas in Hologres database."""
-    query = """
-        SELECT table_schema
-        FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
-        GROUP BY table_schema
-        ORDER BY table_schema;
-    """
-    schemas = handle_read_resource("list_schemas", query)
+    schemas = handle_read_resource("list_schemas", get_list_schemas_query())
     return "\n".join([schema[0] for schema in schemas])
 
 
 @app.resource("hologres:///{schema}/tables")
 def list_tables_in_schema(schema: str) -> str:
     """List all tables in a specific schema in Hologres database."""
-    query = f"""
-        SELECT
-            tab.table_name,
-            CASE WHEN tab.table_type = 'VIEW' THEN ' (view)'
-                WHEN tab.table_type = 'FOREIGN' THEN ' (foreign table)'
-                WHEN p.partrelid IS NOT NULL THEN ' (partitioned table)'
-                ELSE ''
-            END AS table_type_info
-        FROM
-            information_schema.tables AS tab
-        LEFT JOIN pg_class AS cls ON tab.table_name = cls.relname
-        LEFT JOIN pg_namespace AS ns ON tab.table_schema = ns.nspname
-        LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
-        LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
-        WHERE
-            tab.table_schema NOT IN ('pg_catalog', 'information_schema', 'hologres', 'hologres_statistic', 'hologres_streaming_mv')
-            AND tab.table_schema = '{schema}'
-            AND (inh.inhrelid IS NULL OR NOT EXISTS (
-                SELECT 1
-                FROM pg_inherits
-                WHERE inh.inhrelid = pg_inherits.inhrelid
-            ))
-        ORDER BY
-            tab.table_name;
-    """
-    tables = handle_read_resource("list_tables_in_schema", query)
+    tables = handle_read_resource("list_tables_in_schema", get_list_tables_query(schema))
     return "\n".join(['"' + table[0].replace('"', '""') + '"' + table[1] for table in tables])
 
 
@@ -310,36 +247,33 @@ def get_hg_instance_version() -> str:
 @app.resource("system:///missing_stats_tables")
 def get_missing_stats_tables() -> str:
     """Get tables with missing statistics."""
-    query = """
+    excluded = "', '".join(SYSTEM_SCHEMAS)
+    query = f"""
         SELECT *
         FROM hologres_statistic.hg_stats_missing
-        WHERE schemaname NOT IN ('pg_catalog', 'information_schema','hologres','hologres_statistic','hologres_streaming_mv')
+        WHERE schemaname NOT IN ('{excluded}')
         ORDER BY schemaname, tablename;
     """
-    rows, headers = handle_read_resource("get_missing_stats_tables", query, with_headers=True)
+    result = handle_read_resource("get_missing_stats_tables", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No tables found with missing statistics"
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("system:///stat_activity")
 def get_stat_activity() -> str:
     """Get current database activity."""
-    query = """
-        SELECT * FROM hg_stat_activity ORDER BY pid;
-    """
-    rows, headers = handle_read_resource("get_stat_activity", query, with_headers=True)
+    query = "SELECT * FROM hg_stat_activity ORDER BY pid;"
+    result = handle_read_resource("get_stat_activity", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No queries found with current running status"
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("system:///guc_value/{guc_name}")
@@ -357,23 +291,17 @@ def get_guc_value(guc_name: str) -> str:
 @app.resource("system:///query_log/latest/{row_limits}")
 def get_query_log_latest(row_limits: str) -> str:
     """Get latest query log entries."""
-    try:
-        limit = int(row_limits)
-        if limit <= 0:
-            return "Row limits must be a positive integer"
-        query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
-        rows, headers = handle_read_resource("get_latest_query_log", query, with_headers=True)
-    except ValueError:
-        return "Invalid row limits format, must be an integer"
-
+    limit, error = validate_positive_integer(row_limits)
+    if error:
+        return error
+    query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
+    result = handle_read_resource("get_latest_query_log", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No query logs found"
-
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("system:///query_log/user/{user_name}/{row_limits}")
@@ -381,23 +309,17 @@ def get_query_log_user(user_name: str, row_limits: str) -> str:
     """Get query log entries for a specific user."""
     if not user_name:
         return "Username cannot be empty"
-    try:
-        limit = int(row_limits)
-        if limit <= 0:
-            return "Row limits must be a positive integer"
-        query = f"SELECT * FROM hologres.hg_query_log WHERE usename = '{user_name}' ORDER BY query_start DESC LIMIT {limit}"
-        rows, headers = handle_read_resource("get_user_query_log", query, with_headers=True)
-    except ValueError:
-        return "Invalid row limits format, must be an integer"
-
+    limit, error = validate_positive_integer(row_limits)
+    if error:
+        return error
+    query = f"SELECT * FROM hologres.hg_query_log WHERE usename = '{user_name}' ORDER BY query_start DESC LIMIT {limit}"
+    result = handle_read_resource("get_user_query_log", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No query logs found"
-
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("system:///query_log/application/{application_name}/{row_limits}")
@@ -405,23 +327,17 @@ def get_query_log_application(application_name: str, row_limits: str) -> str:
     """Get query log entries for a specific application."""
     if not application_name:
         return "Application name cannot be empty"
-    try:
-        limit = int(row_limits)
-        if limit <= 0:
-            return "Row limits must be a positive integer"
-        query = f"SELECT * FROM hologres.hg_query_log WHERE application_name = '{application_name}' ORDER BY query_start DESC LIMIT {limit}"
-        rows, headers = handle_read_resource("get_application_query_log", query, with_headers=True)
-    except ValueError:
-        return "Invalid row limits format, must be an integer"
-
+    limit, error = validate_positive_integer(row_limits)
+    if error:
+        return error
+    query = f"SELECT * FROM hologres.hg_query_log WHERE application_name = '{application_name}' ORDER BY query_start DESC LIMIT {limit}"
+    result = handle_read_resource("get_application_query_log", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No query logs found"
-
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("system:///query_log/failed/{interval}/{row_limits}")
@@ -429,23 +345,17 @@ def get_query_log_failed(interval: str, row_limits: str) -> str:
     """Get failed query log entries within a time interval."""
     if not interval:
         return "Interval cannot be empty"
-    try:
-        limit = int(row_limits)
-        if limit <= 0:
-            return "Row limits must be a positive integer"
-        query = f"SELECT * FROM hologres.hg_query_log WHERE status = 'FAILED' AND query_start >= NOW() - INTERVAL '{interval}' ORDER BY query_start DESC LIMIT {limit}"
-        rows, headers = handle_read_resource("get_failed_query_log", query, with_headers=True)
-    except ValueError:
-        return "Invalid row limits format, must be an integer"
-
+    limit, error = validate_positive_integer(row_limits)
+    if error:
+        return error
+    query = f"SELECT * FROM hologres.hg_query_log WHERE status = 'FAILED' AND query_start >= NOW() - INTERVAL '{interval}' ORDER BY query_start DESC LIMIT {limit}"
+    result = handle_read_resource("get_failed_query_log", query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
     if not rows:
         return "No query logs found"
-
-    result = ["\t".join(headers)]
-    for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 # ============================================================================
