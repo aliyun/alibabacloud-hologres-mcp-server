@@ -640,3 +640,141 @@ class TestResourceBoundaryConditions:
 
                 # Should attempt query with the interval
                 assert isinstance(result, str)
+
+
+class TestResourceErrorPaths:
+    """Tests for resource error handling paths to achieve 100% coverage."""
+
+    def test_get_missing_stats_tables_returns_error_string(self):
+        """Test get_missing_stats_tables when handle_read_resource returns error string.
+
+        Covers line 259: isinstance(result, str) path.
+        """
+        error_msg = "Error executing query: Connection refused"
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=error_msg):
+            result = get_missing_stats_tables()
+
+            # Should return the error string directly
+            assert result == error_msg
+
+    def test_get_stat_activity_returns_error_string(self):
+        """Test get_stat_activity when handle_read_resource returns error string.
+
+        Covers line 272: isinstance(result, str) path.
+        """
+        error_msg = "Error executing query: Permission denied"
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=error_msg):
+            result = get_stat_activity()
+
+            # Should return the error string directly
+            assert result == error_msg
+
+    def test_get_guc_value_empty_result(self):
+        """Test get_guc_value when no rows returned.
+
+        Covers line 287: if not rows path.
+        """
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=[]):
+            result = get_guc_value("nonexistent_guc")
+
+            assert "No GUC found with name nonexistent_guc" in result
+
+    def test_get_query_log_latest_empty_result(self):
+        """Test get_query_log_latest when no rows returned.
+
+        Covers line 303: if not rows path.
+        """
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=([], ["id", "query"])):
+            result = get_query_log_latest("10")
+
+            assert "No query logs found" in result
+
+    def test_get_query_log_user_empty_result(self):
+        """Test get_query_log_user when no rows returned.
+
+        Covers line 321: if not rows path.
+        """
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=([], ["id", "query"])):
+            result = get_query_log_user("test_user", "10")
+
+            assert "No query logs found" in result
+
+    def test_get_query_log_application_empty_result(self):
+        """Test get_query_log_application when no rows returned.
+
+        Covers line 339: if not rows path.
+        """
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=([], ["id", "query"])):
+            result = get_query_log_application("my_app", "10")
+
+            assert "No query logs found" in result
+
+    def test_get_query_log_failed_empty_result(self):
+        """Test get_query_log_failed when no rows returned.
+
+        Covers line 357: if not rows path.
+        """
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=([], ["id", "query"])):
+            result = get_query_log_failed("1 day", "10")
+
+            assert "No query logs found" in result
+
+    def test_get_query_log_user_invalid_row_limits(self):
+        """Test get_query_log_user with invalid row_limits.
+
+        Covers line 314: if error path for parameter validation.
+        """
+        result = get_query_log_user("test_user", "invalid")
+
+        assert "Invalid row limits" in result
+
+    def test_get_query_log_user_returns_error_string(self):
+        """Test get_query_log_user when handle_read_resource returns error string.
+
+        Covers line 318: isinstance(result, str) path.
+        """
+        error_msg = "Error executing query: Table not found"
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=error_msg):
+            result = get_query_log_user("test_user", "10")
+
+            assert result == error_msg
+
+    def test_get_query_log_application_invalid_row_limits(self):
+        """Test get_query_log_application with invalid row_limits.
+
+        Covers line 332: if error path for parameter validation.
+        """
+        result = get_query_log_application("my_app", "abc")
+
+        assert "Invalid row limits" in result
+
+    def test_get_query_log_application_returns_error_string(self):
+        """Test get_query_log_application when handle_read_resource returns error string.
+
+        Covers line 336: isinstance(result, str) path.
+        """
+        error_msg = "Error executing query: Timeout"
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=error_msg):
+            result = get_query_log_application("my_app", "10")
+
+            assert result == error_msg
+
+    def test_get_query_log_failed_invalid_row_limits(self):
+        """Test get_query_log_failed with invalid row_limits.
+
+        Covers line 350: if error path for parameter validation.
+        """
+        result = get_query_log_failed("1 day", "-1")
+
+        assert "must be a positive integer" in result
+
+    def test_get_query_log_failed_returns_error_string(self):
+        """Test get_query_log_failed when handle_read_resource returns error string.
+
+        Covers line 354: isinstance(result, str) path.
+        """
+        error_msg = "Error executing query: Connection lost"
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=error_msg):
+            result = get_query_log_failed("1 day", "10")
+
+            assert result == error_msg

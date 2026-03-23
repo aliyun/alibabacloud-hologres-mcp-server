@@ -581,10 +581,11 @@ class TestTryInferViewCommentsExtended:
 
         import pglast.ast
 
-        # Expression (not a ColumnRef)
+        # Expression (not a ColumnRef) - covers branch 124->123
+        # Create a ResTarget where val is NOT a ColumnRef
         func_call = MagicMock(spec=pglast.ast.FuncCall)
         res_target = MagicMock(spec=pglast.ast.ResTarget)
-        res_target.val = func_call  # Expression, not ColumnRef
+        res_target.val = func_call  # Expression, not ColumnRef -> skips to next target
         res_target.name = None
 
         select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
@@ -612,14 +613,21 @@ class TestTryInferViewCommentsExtended:
         mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
+        import pglast.ast
+
         # SELECT * produces a different AST structure
+        # Covers branch 124->123: target is not ResTarget, continue to next
         with patch("psycopg.connect", return_value=mock_conn):
             with patch("pglast.parser.parse_sql") as mock_parse:
-                # Simulate parsing result for SELECT *
+                # Create a SelectStmt with a target that is NOT a ResTarget
+                non_res_target = MagicMock()  # Not a ResTarget -> skips to next
+                # Make isinstance return False for this target
+                non_res_target.__class__ = MagicMock  # Not pglast.ast.ResTarget
+
+                select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+                select_stmt.targetList = [non_res_target]
+
                 raw_stmt = MagicMock()
-                select_stmt = MagicMock()
-                # SELECT * has targetList that may contain special nodes
-                select_stmt.targetList = None  # or special star node
                 raw_stmt.stmt = select_stmt
                 mock_parse.return_value = [raw_stmt]
 
@@ -712,6 +720,201 @@ class TestTryInferViewCommentsExtended:
 
                 # Should not add duplicate comment
                 assert isinstance(result, str)
+
+    def test_view_column_comment_generated_no_existing_comment(self, mock_env_basic):
+        """Test COMMENT statement is generated when view column has no existing comment.
+
+        This test covers lines 138-139, 141 in utils.py:
+        - Line 138-139: Generate COMMENT statement and append to list
+        - Line 141: Insert header comment when statements exist
+
+        fetchone call order:
+        1. get_view_definition -> view definition
+        2. get_column_comment -> source column comment (must be truthy to trigger next steps)
+        3. check view column comment -> None or (None,) to trigger COMMENT generation
+        """
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT t.id FROM users t",),  # 1. get_view_definition
+            ("User ID",),  # 2. get_column_comment - source column has comment
+            (None,),  # 3. view column has NO existing comment -> triggers COMMENT generation
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        # Create ColumnRef for t.id
+        column_ref = MagicMock(spec=pglast.ast.ColumnRef)
+        field1 = MagicMock(sval="t")
+        field2 = MagicMock(sval="id")
+        column_ref.fields = [field1, field2]
+
+        res_target = MagicMock(spec=pglast.ast.ResTarget)
+        res_target.val = column_ref
+        res_target.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "my_view")
+
+                # Should contain COMMENT statement and header
+                assert "COMMENT ON COLUMN public.my_view.id IS 'User ID';" in result
+                assert "-- Infer view column comments from related tables" in result
+
+    def test_view_column_no_source_comment(self, mock_env_basic):
+        """Test when source column has no comment.
+
+        Covers branch 130->123: when column_comment is falsy, continue to next target.
+        """
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT t.id FROM users t",),  # 1. get_view_definition
+            None,  # 2. get_column_comment returns None -> skip to next target
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        column_ref = MagicMock(spec=pglast.ast.ColumnRef)
+        field1 = MagicMock(sval="t")
+        field2 = MagicMock(sval="id")
+        column_ref.fields = [field1, field2]
+
+        res_target = MagicMock(spec=pglast.ast.ResTarget)
+        res_target.val = column_ref
+        res_target.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "no_comment_view")
+
+                # Should return empty string since no comments were generated
+                assert result == ""
+
+    def test_view_column_comment_generated_fetchone_none(self, mock_env_basic):
+        """Test COMMENT generation when fetchone returns None (not tuple with None).
+
+        This also covers lines 138-139, 141 with different fetchone return pattern.
+        """
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT t.name FROM users t",),  # 1. get_view_definition
+            ("User Name",),  # 2. get_column_comment - source column has comment
+            None,  # 3. view column check returns None -> triggers COMMENT generation
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        column_ref = MagicMock(spec=pglast.ast.ColumnRef)
+        field1 = MagicMock(sval="t")
+        field2 = MagicMock(sval="name")
+        column_ref.fields = [field1, field2]
+
+        res_target = MagicMock(spec=pglast.ast.ResTarget)
+        res_target.val = column_ref
+        res_target.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "name_view")
+
+                assert "COMMENT ON COLUMN public.name_view.name IS 'User Name';" in result
+                assert "-- Infer view column comments from related tables" in result
+
+    def test_view_multiple_columns_with_comments_generated(self, mock_env_basic):
+        """Test multiple COMMENT statements are generated for multiple columns.
+
+        This ensures line 141 (header insertion) works with multiple statements.
+        """
+        mock_cursor = MagicMock()
+        # fetchone sequence for multiple columns
+        mock_cursor.fetchone.side_effect = [
+            ("SELECT t.id, t.name FROM users t",),  # 1. get_view_definition
+            ("User ID",),  # 2. get_column_comment for first column
+            (None,),  # 3. view column check for first column
+            ("User Name",),  # 4. get_column_comment for second column
+            (None,),  # 5. view column check for second column
+        ]
+        mock_cursor.execute = MagicMock()
+
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        import pglast.ast
+
+        # Create two ColumnRefs
+        col_ref1 = MagicMock(spec=pglast.ast.ColumnRef)
+        f1 = MagicMock(sval="t")
+        f2 = MagicMock(sval="id")
+        col_ref1.fields = [f1, f2]
+
+        col_ref2 = MagicMock(spec=pglast.ast.ColumnRef)
+        f3 = MagicMock(sval="t")
+        f4 = MagicMock(sval="name")
+        col_ref2.fields = [f3, f4]
+
+        res_target1 = MagicMock(spec=pglast.ast.ResTarget)
+        res_target1.val = col_ref1
+        res_target1.name = None
+
+        res_target2 = MagicMock(spec=pglast.ast.ResTarget)
+        res_target2.val = col_ref2
+        res_target2.name = None
+
+        select_stmt = MagicMock(spec=pglast.ast.SelectStmt)
+        select_stmt.targetList = [res_target1, res_target2]
+
+        raw_stmt = MagicMock()
+        raw_stmt.stmt = select_stmt
+
+        with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
+            with patch("pglast.parser.parse_sql", return_value=[raw_stmt]):
+                result = try_infer_view_comments("public", "multi_view")
+
+                # Should have header and both COMMENT statements
+                assert "-- Infer view column comments from related tables" in result
+                assert "COMMENT ON COLUMN public.multi_view.id IS 'User ID';" in result
+                assert "COMMENT ON COLUMN public.multi_view.name IS 'User Name';" in result
 
     def test_view_with_schema_qualified_tables(self, mock_env_basic):
         """Test view referencing schema-qualified tables."""

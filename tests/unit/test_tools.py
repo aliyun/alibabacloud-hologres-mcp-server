@@ -670,3 +670,72 @@ class TestShowHgTableDdlExtended:
             result = show_hg_table_ddl(schema_name="restricted", table="secret_table")
 
             assert "Error" in result or "permission" in result
+
+    def test_view_ddl_full_processing(self):
+        """Test VIEW DDL full processing path (lines 147-151).
+
+        This tests the complete VIEW handling path where:
+        1. handle_call_tool returns result containing 'Type: VIEW'
+        2. handle_read_resource returns valid DDL tuple
+        3. try_infer_view_comments returns comments
+        4. The final result combines view_content + comments + '\\n\\nEND.'
+        """
+        view_ddl = "CREATE VIEW my_view AS SELECT id, name FROM users\n\nEND;"
+        # Result from handle_call_tool must contain "Type: VIEW"
+        tool_result = f"{view_ddl}\n\nType: VIEW"
+
+        # handle_read_resource returns tuple with DDL
+        ddl_tuple = [(view_ddl,)]
+
+        # Comments from try_infer_view_comments
+        inferred_comments = "\n-- Infer view column comments from related tables\nCOMMENT ON COLUMN public.my_view.id IS 'User ID';"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value=tool_result):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=ddl_tuple):
+                with patch("hologres_mcp_server.server.try_infer_view_comments", return_value=inferred_comments):
+                    result = show_hg_table_ddl(schema_name="public", table="my_view")
+
+                    # Verify the full processing path
+                    # view_content should have '\n\nEND;' replaced
+                    assert "CREATE VIEW my_view" in result
+                    assert "COMMENT ON COLUMN public.my_view.id IS 'User ID';" in result
+                    assert "-- Infer view column comments from related tables" in result
+                    # Should end with '\n\nEND.' (added by the function)
+                    assert result.endswith("\n\nEND.")
+
+    def test_view_ddl_with_empty_comments(self):
+        """Test VIEW DDL processing when no comments are inferred."""
+        view_ddl = "CREATE VIEW simple_view AS SELECT * FROM base\n\nEND;"
+        tool_result = f"{view_ddl}\n\nType: VIEW"
+        ddl_tuple = [(view_ddl,)]
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value=tool_result):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=ddl_tuple):
+                with patch("hologres_mcp_server.server.try_infer_view_comments", return_value=""):
+                    result = show_hg_table_ddl(schema_name="public", table="simple_view")
+
+                    # Should still have the view content
+                    assert "CREATE VIEW simple_view" in result
+                    assert result.endswith("\n\nEND.")
+
+    def test_view_ddl_handle_read_resource_empty(self):
+        """Test VIEW DDL when handle_read_resource returns empty."""
+        tool_result = "CREATE VIEW my_view AS SELECT 1\n\nEND;\n\nType: VIEW"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value=tool_result):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=[]):
+                result = show_hg_table_ddl(schema_name="public", table="my_view")
+
+                # Should fall through and return the original result
+                assert "Type: VIEW" in result
+
+    def test_view_ddl_handle_read_resource_none_first_element(self):
+        """Test VIEW DDL when ddl[0] is falsy."""
+        tool_result = "CREATE VIEW my_view AS SELECT 1\n\nEND;\n\nType: VIEW"
+
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value=tool_result):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=[("",)]):
+                result = show_hg_table_ddl(schema_name="public", table="my_view")
+
+                # Should fall through since ddl[0][0] is empty string (falsy)
+                assert isinstance(result, str)
