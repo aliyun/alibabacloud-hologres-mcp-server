@@ -218,6 +218,27 @@ uv run pytest tests/ -v
 
 **注意：** 如果缺少 `.test_mcp_client_env` 文件或配置不完整，集成测试将被跳过。
 
+## 代码质量
+
+本项目使用 [ruff](https://docs.astral.sh/ruff/) 进行代码检查和格式化。
+
+```bash
+# 安装开发依赖
+uv sync --dev
+
+# 检查代码风格
+uv run ruff check .
+
+# 检查并自动修复
+uv run ruff check . --fix
+
+# 格式化代码
+uv run ruff format .
+
+# 仅检查格式（不修改）
+uv run ruff format . --check
+```
+
 ## 构建与发布
 
 ### 构建
@@ -260,6 +281,6 @@ uv build
 twine upload dist/*
 
 # 5. 打标签
-git tag -a v0.2.0 -m "Release v0.2.0"
-git push origin v0.2.0
+git tag -a v0.2.1 -m "Release v0.2.1"
+git push origin v0.2.1
 ```

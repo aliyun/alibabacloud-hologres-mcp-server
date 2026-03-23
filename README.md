@@ -231,6 +231,27 @@ uv run pytest tests/ -v
 
 **Note:** Integration tests will be skipped if the `.test_mcp_client_env` file is missing or contains incomplete configuration.
 
+## Code Quality
+
+This project uses [ruff](https://docs.astral.sh/ruff/) for code linting and formatting.
+
+```bash
+# Install dev dependencies
+uv sync --dev
+
+# Check code style
+uv run ruff check .
+
+# Check and auto-fix
+uv run ruff check . --fix
+
+# Format code
+uv run ruff format .
+
+# Format check only (no changes)
+uv run ruff format . --check
+```
+
 ## Build & Publish
 
 ### Build
@@ -273,6 +294,6 @@ uv build
 twine upload dist/*
 
 # 5. Tag the release
-git tag -a v0.2.0 -m "Release v0.2.0"
-git push origin v0.2.0
+git tag -a v0.2.1 -m "Release v0.2.1"
+git push origin v0.2.1
 ```

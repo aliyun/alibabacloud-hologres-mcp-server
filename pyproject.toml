@@ -1,6 +1,6 @@
 [project]
 name = "hologres-mcp-server"
-version = "0.2.0"
+version = "0.2.1"
 description = "A MCP Server for Hologres"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -37,7 +37,16 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP"]
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
