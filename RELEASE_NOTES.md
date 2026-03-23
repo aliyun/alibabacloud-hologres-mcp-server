@@ -1,4 +1,20 @@
 # Release Notes
+
+## Version 0.2.1
+
+### Code Quality
+- Added [ruff](https://docs.astral.sh/ruff/) for code linting and formatting
+- Fixed all linting issues (unused imports, unused variables, trailing whitespace, import sorting)
+- Added ruff configuration in `pyproject.toml`
+
+### Testing
+- Unit test cases increased from 295 to **326**
+- Added more comprehensive test coverage
+
+### Documentation
+- Added "Code Quality" section to README with ruff usage instructions
+- Updated version references in release workflow examples
+
 ## Version 0.2.0
 ### Breaking Changes
 The following tools have renamed their `schema` parameter to `schema_name` to avoid Pydantic field shadowing warnings:

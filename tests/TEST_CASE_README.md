@@ -1,21 +1,23 @@
 # Hologres MCP Server 测试
 
-本目录包含用于测试 Hologres MCP Server 的客户端测试脚本。这些测试脚本使用 MCP Python SDK 连接到 Hologres MCP Server，并测试其提供的资源和工具。
+本目录包含用于测试 Hologres MCP Server 的单元测试和集成测试。
 
-## 测试脚本
+## 测试结构
 
-- `test_mcp_client.py`: 基础测试脚本，测试 MCP Server 的基本功能
-- `test_mcp_client_comprehensive.py`: 全面测试脚本，测试 MCP Server 的所有资源和工具
+- `unit/`: 单元测试（326 个测试用例，不需要数据库连接）
+- `integration/`: 集成测试（61 个测试用例，需要真实 Hologres 连接）
+- `conftest.py`: pytest 配置和共享 fixture
+- `requirements.txt`: 测试依赖
 
 ## 环境配置
 
-测试脚本使用 `.test_mcp_client_env` 文件中的环境变量连接到 Hologres 数据库。在运行测试前，请先配置此文件：
+集成测试使用 `integration/.test_mcp_client_env` 文件中的环境变量连接到 Hologres 数据库。在运行测试前，请先配置此文件：
 
 ```bash
 # 复制环境变量文件
-cp .test_mcp_client_env.example .test_mcp_client_env
+cp integration/.test_mcp_client_env_example integration/.test_mcp_client_env
 # 编辑环境变量文件
-vim .test_mcp_client_env
+vim integration/.test_mcp_client_env
 ```
 
 `.test_mcp_client_env` 文件内容示例：
@@ -35,41 +37,89 @@ HOLOGRES_DATABASE=your_database
 在运行测试前，请确保已安装所需的依赖：
 
 ```bash
+# 使用 uv（推荐）
+uv sync --dev
+uv pip install pytest pytest-cov pytest-asyncio
+
+# 或使用 pip
 pip install -r requirements.txt
 ```
 
 ## 运行测试
 
-### 基础测试
+### 单元测试
 
 ```bash
-python test_mcp_client.py
+# 运行所有单元测试
+uv run pytest unit/ -v
+
+# 运行特定测试文件
+uv run pytest unit/test_tools.py -v
+
+# 运行并生成覆盖率报告
+uv run pytest unit/ --cov=src/hologres_mcp_server --cov-report=html
 ```
 
-### 全面测试
+### 集成测试
 
 ```bash
-python test_mcp_client_comprehensive.py
+# 运行所有集成测试
+uv run pytest integration/ -v -m integration
+
+# 运行特定测试类
+uv run pytest integration/test_mcp_integration.py::TestMCPTools -v
 ```
 
-默认情况下，测试脚本会使用项目中的 `src/hologres_mcp_server/server.py` 作为服务器脚本。您也可以通过命令行参数指定服务器脚本路径：
+### 运行所有测试
 
 ```bash
-python test_mcp_client.py /path/to/server.py
+uv run pytest . -v
 ```
 
-## 测试输出
+## 代码质量检查
 
-测试脚本会输出每个测试步骤的结果，包括：
+在提交代码前，请运行代码质量检查：
 
-- 资源列表
-- 资源模板列表
-- 资源内容
-- 工具列表
-- 工具调用结果
+```bash
+# 检查代码风格
+uv run ruff check .
 
-如果测试过程中出现错误，脚本会输出错误信息，但会继续执行后续测试。
+# 自动修复
+uv run ruff check . --fix
+
+# 格式化代码
+uv run ruff format .
+```
+
+## 测试覆盖范围
+
+### 单元测试（326 个测试用例）
+
+- 工具功能和 SQL 验证
+- 资源和资源模板
+- 提示生成
+- 工具函数和错误处理
+- 并发场景
+- SQL 注入防护
+
+### 集成测试（61 个测试用例）
+
+| 测试类 | 测试数 | 描述 |
+|--------|--------|------|
+| `TestMCPConnection` | 5 | MCP 服务器连接和基本功能 |
+| `TestMCPResources` | 14 | 资源读取功能 |
+| `TestMCPTools` | 10 | 只读操作的工具调用 |
+| `TestMCPProcedureTools` | 3 | 存储过程工具调用 |
+| `TestMCPMaxComputeTools` | 1 | MaxCompute 外部表创建 |
+| `TestMCPDDLTools` | 5 | DDL 操作 |
+| `TestMCPDMLTools` | 3 | DML 操作 |
+| `TestErrorHandling` | 3 | 错误处理和边界情况 |
+| `TestMCPPrompts` | 4 | 提示生成功能 |
+| `TestMCPConcurrency` | 3 | 并发 MCP 操作 |
+| `TestMCPBoundaryConditions` | 4 | 边界条件 |
+| `TestMCPPerformance` | 3 | 性能场景 |
 
 ## 注意事项
 
-测试脚本中包含了一个 `to_serializable()` 辅助函数，用于将 MCP 对象转换为可 JSON 序列化的格式。这是因为 MCP 返回的对象（如 `ListResourcesResult`）默认不是 JSON 可序列化的。该函数会递归地将对象的属性转换为基本数据类型，以便进行 JSON 序列化。
+- 如果缺少 `.test_mcp_client_env` 文件或配置不完整，集成测试将被跳过
+- 单元测试使用 mock 依赖，不需要实际数据库连接

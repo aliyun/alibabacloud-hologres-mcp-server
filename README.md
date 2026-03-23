@@ -161,7 +161,7 @@ The project includes comprehensive unit tests and integration tests.
 
 ### Unit Tests
 
-Unit tests do not require a database connection and use mocked dependencies. The test suite includes **295 test cases** covering:
+Unit tests do not require a database connection and use mocked dependencies. The test suite includes **326 test cases** covering:
 
 - Tools functionality and SQL validation
 - Resources and resource templates
