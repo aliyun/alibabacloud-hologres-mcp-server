@@ -10,16 +10,17 @@ Functions:
 - try_infer_view_comments(schema_name, view_name)
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
+
 import psycopg
+import pytest
 
 from hologres_mcp_server.utils import (
     connect_with_retry,
-    handle_read_resource,
-    handle_call_tool,
-    get_view_definition,
     get_column_comment,
+    get_view_definition,
+    handle_call_tool,
+    handle_read_resource,
     try_infer_view_comments,
 )
 
@@ -52,10 +53,7 @@ class TestConnectWithRetry:
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("psycopg.connect", side_effect=[
-            psycopg.Error("Connection failed"),
-            mock_conn
-        ]) as mock_connect:
+        with patch("psycopg.connect", side_effect=[psycopg.Error("Connection failed"), mock_conn]) as mock_connect:
             with patch("time.sleep"):
                 result = connect_with_retry(retries=3)
 
@@ -1178,7 +1176,6 @@ class TestConnectWithRetryExtended:
     def test_concurrent_connections(self, mock_env_basic):
         """Test concurrent connection attempts."""
         import threading
-        import time
 
         results = []
         errors = []

@@ -7,12 +7,10 @@ Prompts:
 - explore_schema(schema="public")
 """
 
-import pytest
-
 from hologres_mcp_server.server import (
     analyze_table_performance,
-    optimize_query,
     explore_schema,
+    optimize_query,
 )
 
 
@@ -166,7 +164,7 @@ class TestOptimizeQuery:
 
     def test_with_special_sql_characters(self):
         """Test with special SQL characters."""
-        query = "SELECT * FROM \"user-table\" WHERE \"col-name\" = 'value'"
+        query = 'SELECT * FROM "user-table" WHERE "col-name" = \'value\''
         result = optimize_query(query)
 
         assert query in result

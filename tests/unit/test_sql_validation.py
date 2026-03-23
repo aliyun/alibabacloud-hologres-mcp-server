@@ -8,15 +8,16 @@ SQL validation is embedded in tool functions:
 - execute_hg_ddl_sql: CREATE, ALTER, DROP, COMMENT ON
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 # Import tool functions for testing validation
 from hologres_mcp_server.server import (
+    execute_hg_ddl_sql,
+    execute_hg_dml_sql,
     execute_hg_select_sql,
     execute_hg_select_sql_with_serverless,
-    execute_hg_dml_sql,
-    execute_hg_ddl_sql,
 )
 
 

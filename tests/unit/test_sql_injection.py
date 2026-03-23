@@ -12,18 +12,14 @@ which is inherently vulnerable to SQL injection. These tests serve as:
 3. Verification that injection attempts don't cause crashes
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from hologres_mcp_server.server import (
-    execute_hg_select_sql,
-    execute_hg_dml_sql,
-    execute_hg_ddl_sql,
-    gather_hg_table_statistics,
     call_hg_procedure,
+    execute_hg_select_sql,
+    gather_hg_table_statistics,
     get_guc_value,
     show_hg_table_ddl,
-    list_hg_tables_in_a_schema,
 )
 
 
@@ -43,8 +39,7 @@ class TestSqlInjectionPrevention:
             # So injection in WHERE clause would pass validation
             query = f"SELECT * FROM users WHERE name = '{payload}'"
 
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="result"):
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
                 try:
                     result = execute_hg_select_sql(query)
                     # Query is executed as-is - injection payload included
@@ -56,10 +51,9 @@ class TestSqlInjectionPrevention:
     def test_injection_in_table_name(self, sql_injection_payloads):
         """Test SQL injection attempts in table names."""
         for payload in sql_injection_payloads[:5]:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="success") as mock:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 # Table name is directly interpolated
-                result = gather_hg_table_statistics(schema_name="public", table=payload)
+                gather_hg_table_statistics(schema_name="public", table=payload)
 
                 query = mock.call_args[0][1]
                 # Injection payload is included in the SQL
@@ -70,9 +64,8 @@ class TestSqlInjectionPrevention:
     def test_injection_in_schema_name(self, sql_injection_payloads):
         """Test SQL injection attempts in schema names."""
         for payload in sql_injection_payloads[:5]:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="success") as mock:
-                result = gather_hg_table_statistics(schema_name=payload, table="users")
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+                gather_hg_table_statistics(schema_name=payload, table="users")
 
                 query = mock.call_args[0][1]
                 assert payload in query  # Documents security risk
@@ -82,8 +75,7 @@ class TestSqlInjectionPrevention:
         # Most injection payloads would fail because SHOW expects a valid GUC name
         # But we test that the system handles them gracefully
         for payload in sql_injection_payloads[:3]:
-            with patch("hologres_mcp_server.server.handle_read_resource",
-                       return_value=[("value",)]):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=[("value",)]):
                 result = get_guc_value(payload)
 
                 # GUC name is directly interpolated into SHOW statement
@@ -98,9 +90,8 @@ class TestSqlInjectionPrevention:
         ]
 
         for arg in injection_args:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="done") as mock:
-                result = call_hg_procedure("my_procedure", [arg])
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
+                call_hg_procedure("my_procedure", [arg])
 
                 query = mock.call_args[0][1]
                 # Arguments are concatenated without sanitization
@@ -117,8 +108,7 @@ class TestSqlInjectionPrevention:
         for payload in union_payloads:
             query = f"SELECT * FROM products WHERE id = '{payload}'"
 
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="result"):
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
                 try:
                     result = execute_hg_select_sql(query)
                     assert isinstance(result, str)
@@ -137,8 +127,7 @@ class TestSqlInjectionPrevention:
         for payload in comment_payloads:
             query = f"SELECT * FROM users WHERE username = '{payload}'"
 
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="result"):
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
                 try:
                     result = execute_hg_select_sql(query)
                     assert isinstance(result, str)
@@ -155,8 +144,7 @@ class TestSqlInjectionPrevention:
 
         for payload in stacked_payloads:
             # Each payload starts with SELECT, so it passes validation
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="result"):
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
                 try:
                     result = execute_hg_select_sql(payload)
                     assert isinstance(result, str)
@@ -176,8 +164,7 @@ class TestSqlInjectionPrevention:
 
         for payload in time_payloads:
             # These would be injected via parameters, not directly
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="result") as mock:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
                 try:
                     # Attempt via procedure call
                     result = call_hg_procedure("test_proc", [payload])
@@ -208,8 +195,9 @@ class TestSqlInjectionAssertions:
         ]
 
         for payload in dangerous_payloads:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="Error: relation does not exist") as mock:
+            with patch(
+                "hologres_mcp_server.server.handle_call_tool", return_value="Error: relation does not exist"
+            ) as mock:
                 # Inject payload as table name
                 result = gather_hg_table_statistics(schema_name="public", table=payload)
 
@@ -264,8 +252,7 @@ class TestSqlInjectionAssertions:
         # Mock result with extra columns (simulating successful injection)
         mock_result = "id,name\n1,user1\nadminpass,admin@email.com"
 
-        with patch("hologres_mcp_server.server.handle_call_tool",
-                   return_value=mock_result):
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value=mock_result):
             result = execute_hg_select_sql(union_query)
 
             # Assert: Result format is consistent (header + data)
@@ -285,8 +272,7 @@ class TestSqlInjectionAssertions:
         ]
 
         for payload in numeric_payloads:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="Error: syntax error") as mock:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="Error: syntax error") as mock:
                 result = gather_hg_table_statistics(schema_name="public", table=payload)
 
                 # Assert: Query includes the payload (it's interpolated)
@@ -308,8 +294,7 @@ class TestSqlInjectionDocumentation:
 
     def test_document_parameter_interpolation(self):
         """Document that parameters are directly interpolated into SQL."""
-        with patch("hologres_mcp_server.server.handle_call_tool",
-                   return_value="success") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
             # Show how table name is interpolated
             gather_hg_table_statistics(schema_name="public", table="users")
 
@@ -324,9 +309,8 @@ class TestSqlInjectionDocumentation:
             ("table with spaces", "Table with spaces"),
         ]
 
-        for table_name, description in special_names:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="success") as mock:
+        for table_name, _description in special_names:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 gather_hg_table_statistics(schema_name="public", table=table_name)
 
                 query = mock.call_args[0][1]
@@ -335,8 +319,7 @@ class TestSqlInjectionDocumentation:
 
     def test_document_identifier_quoting(self):
         """Document that identifiers are not automatically quoted."""
-        with patch("hologres_mcp_server.server.handle_call_tool",
-                   return_value="success") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
             # Current implementation doesn't quote identifiers
             show_hg_table_ddl(schema_name="my schema", table="my table")
 
@@ -358,8 +341,7 @@ class TestSafeIdentifierPatterns:
         ]
 
         for schema, table in safe_identifiers:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="success") as mock:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 gather_hg_table_statistics(schema_name=schema, table=table)
 
                 query = mock.call_args[0][1]
@@ -374,8 +356,7 @@ class TestSafeIdentifierPatterns:
         ]
 
         for schema, table in dangerous_identifiers:
-            with patch("hologres_mcp_server.server.handle_call_tool",
-                       return_value="success") as mock:
+            with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 # This documents that dangerous patterns are not filtered
                 gather_hg_table_statistics(schema_name=schema, table=table)
 

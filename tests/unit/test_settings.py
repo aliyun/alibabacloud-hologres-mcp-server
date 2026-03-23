@@ -3,10 +3,11 @@ Tests for settings module.
 """
 
 import os
-import pytest
 from unittest.mock import patch
 
-from hologres_mcp_server.settings import get_db_config, SERVER_VERSION
+import pytest
+
+from hologres_mcp_server.settings import SERVER_VERSION, get_db_config
 
 
 class TestServerVersion:
@@ -19,6 +20,7 @@ class TestServerVersion:
     def test_server_version_format(self):
         """SERVER_VERSION should follow semantic versioning format."""
         import re
+
         assert re.match(r"^\d+\.\d+\.\d+$", SERVER_VERSION)
 
 

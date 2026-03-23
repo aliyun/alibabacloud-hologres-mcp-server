@@ -6,11 +6,10 @@ These tests use threading and mocking to simulate concurrent database operations
 without requiring a real database connection.
 """
 
-import pytest
-import threading
 import concurrent.futures
-from unittest.mock import patch, MagicMock
+import threading
 import time
+from unittest.mock import MagicMock, patch
 
 from hologres_mcp_server.utils import (
     connect_with_retry,
@@ -119,7 +118,7 @@ class TestConcurrentConnections:
             try:
                 with patch("psycopg.connect", side_effect=flaky_connect):
                     with patch("time.sleep"):  # Speed up retries
-                        conn = connect_with_retry(retries=2)
+                        connect_with_retry(retries=2)
                         with lock:
                             success_count += 1
             except Exception:
@@ -159,10 +158,7 @@ class TestConcurrentQueries:
         def worker(query_id):
             try:
                 with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
-                    result = handle_call_tool(
-                        "execute_hg_select_sql",
-                        f"SELECT * FROM table_{query_id}"
-                    )
+                    result = handle_call_tool("execute_hg_select_sql", f"SELECT * FROM table_{query_id}")
                     with lock:
                         results.append((query_id, result))
             except Exception as e:
@@ -202,12 +198,8 @@ class TestConcurrentQueries:
 
         def select_worker(query_id):
             try:
-                with patch("hologres_mcp_server.utils.connect_with_retry",
-                           return_value=setup_mock(is_select=True)):
-                    result = handle_call_tool(
-                        "execute_hg_select_sql",
-                        f"SELECT {query_id}"
-                    )
+                with patch("hologres_mcp_server.utils.connect_with_retry", return_value=setup_mock(is_select=True)):
+                    result = handle_call_tool("execute_hg_select_sql", f"SELECT {query_id}")
                     with lock:
                         results["select"].append(result)
             except Exception as e:
@@ -216,12 +208,8 @@ class TestConcurrentQueries:
 
         def dml_worker(query_id):
             try:
-                with patch("hologres_mcp_server.utils.connect_with_retry",
-                           return_value=setup_mock(rowcount=5)):
-                    result = handle_call_tool(
-                        "execute_hg_dml_sql",
-                        f"UPDATE table SET value = {query_id}"
-                    )
+                with patch("hologres_mcp_server.utils.connect_with_retry", return_value=setup_mock(rowcount=5)):
+                    result = handle_call_tool("execute_hg_dml_sql", f"UPDATE table SET value = {query_id}")
                     with lock:
                         results["dml"].append(result)
             except Exception as e:
@@ -230,12 +218,8 @@ class TestConcurrentQueries:
 
         def ddl_worker(query_id):
             try:
-                with patch("hologres_mcp_server.utils.connect_with_retry",
-                           return_value=setup_mock()):
-                    result = handle_call_tool(
-                        "execute_hg_ddl_sql",
-                        f"CREATE TABLE test_{query_id} (id INT)"
-                    )
+                with patch("hologres_mcp_server.utils.connect_with_retry", return_value=setup_mock()):
+                    result = handle_call_tool("execute_hg_ddl_sql", f"CREATE TABLE test_{query_id} (id INT)")
                     with lock:
                         results["ddl"].append(result)
             except Exception as e:
@@ -284,10 +268,7 @@ class TestConcurrentQueries:
                     current = shared_resource["value"]
 
                 with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
-                    result = handle_call_tool(
-                        "execute_hg_select_sql",
-                        f"SELECT {current}"
-                    )
+                    result = handle_call_tool("execute_hg_select_sql", f"SELECT {current}")
                     results.append((worker_id, current, result))
             except Exception as e:
                 errors.append((worker_id, str(e)))
@@ -328,8 +309,7 @@ class TestConcurrentResourceAccess:
             try:
                 with patch("hologres_mcp_server.utils.connect_with_retry", return_value=mock_conn):
                     result = handle_read_resource(
-                        f"resource_{resource_id}",
-                        "SELECT schema_name FROM information_schema.schemata"
+                        f"resource_{resource_id}", "SELECT schema_name FROM information_schema.schemata"
                     )
                     with lock:
                         results.append((resource_id, result))
@@ -378,10 +358,7 @@ class TestConcurrentResourceAccess:
         def read_worker(worker_id):
             try:
                 with patch("hologres_mcp_server.utils.connect_with_retry", return_value=setup_read_mock()):
-                    result = handle_read_resource(
-                        f"read_{worker_id}",
-                        "SELECT data FROM table"
-                    )
+                    result = handle_read_resource(f"read_{worker_id}", "SELECT data FROM table")
                     with lock:
                         read_results.append(result)
             except Exception as e:
@@ -391,10 +368,7 @@ class TestConcurrentResourceAccess:
         def write_worker(worker_id):
             try:
                 with patch("hologres_mcp_server.utils.connect_with_retry", return_value=setup_write_mock()):
-                    result = handle_call_tool(
-                        "execute_hg_dml_sql",
-                        f"UPDATE table SET data = 'value_{worker_id}'"
-                    )
+                    result = handle_call_tool("execute_hg_dml_sql", f"UPDATE table SET data = 'value_{worker_id}'")
                     with lock:
                         write_results.append(result)
             except Exception as e:

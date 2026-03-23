@@ -10,7 +10,6 @@ Run with: pytest tests/integration/test_mcp_integration.py -v -m integration
 import pytest
 from mcp import ClientSession
 
-
 # ============================================================================
 # Test Markers
 # ============================================================================
@@ -21,6 +20,7 @@ pytestmark = pytest.mark.integration
 # ============================================================================
 # MCP Connection Tests
 # ============================================================================
+
 
 class TestMCPConnection:
     """Tests for MCP server connection and basic functionality."""
@@ -106,6 +106,7 @@ class TestMCPConnection:
 # MCP Resources Tests
 # ============================================================================
 
+
 class TestMCPResources:
     """Tests for MCP resource reading functionality."""
 
@@ -120,28 +121,20 @@ class TestMCPResources:
         # Should contain at least one schema (typically 'public')
         assert len(content.text.strip()) > 0
 
-    async def test_list_tables_in_schema(
-        self, mcp_session: ClientSession, test_schema: str
-    ):
+    async def test_list_tables_in_schema(self, mcp_session: ClientSession, test_schema: str):
         """Test reading the tables resource for a specific schema."""
-        result = await mcp_session.read_resource(
-            f"hologres:///{test_schema}/tables"
-        )
+        result = await mcp_session.read_resource(f"hologres:///{test_schema}/tables")
 
         assert result is not None
         assert hasattr(result, "contents")
         # The result might be empty if no tables exist in the schema
 
-    async def test_get_table_ddl(
-        self, mcp_session: ClientSession, test_schema: str, test_table: str
-    ):
+    async def test_get_table_ddl(self, mcp_session: ClientSession, test_schema: str, test_table: str):
         """Test reading the DDL resource for a specific table."""
         if test_table is None:
             pytest.skip("No test table available")
 
-        result = await mcp_session.read_resource(
-            f"hologres:///{test_schema}/{test_table}/ddl"
-        )
+        result = await mcp_session.read_resource(f"hologres:///{test_schema}/{test_table}/ddl")
 
         assert result is not None
         assert hasattr(result, "contents")
@@ -150,28 +143,20 @@ class TestMCPResources:
         # DDL should contain CREATE statement
         assert "CREATE" in content.text.upper() or "No DDL found" in content.text
 
-    async def test_get_table_statistics(
-        self, mcp_session: ClientSession, test_schema: str, test_table: str
-    ):
+    async def test_get_table_statistics(self, mcp_session: ClientSession, test_schema: str, test_table: str):
         """Test reading the statistics resource for a specific table."""
         if test_table is None:
             pytest.skip("No test table available")
 
-        result = await mcp_session.read_resource(
-            f"hologres:///{test_schema}/{test_table}/statistic"
-        )
+        result = await mcp_session.read_resource(f"hologres:///{test_schema}/{test_table}/statistic")
 
         assert result is not None
         assert hasattr(result, "contents")
         # Statistics might not exist for all tables
 
-    async def test_get_system_info_hg_instance_version(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_system_info_hg_instance_version(self, mcp_session: ClientSession):
         """Test reading system resource for Hologres instance version."""
-        result = await mcp_session.read_resource(
-            "system:///hg_instance_version"
-        )
+        result = await mcp_session.read_resource("system:///hg_instance_version")
 
         assert result is not None
         assert hasattr(result, "contents")
@@ -180,35 +165,23 @@ class TestMCPResources:
         # Version should be a version string
         assert len(content.text.strip()) > 0
 
-    async def test_get_system_info_missing_stats_tables(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_system_info_missing_stats_tables(self, mcp_session: ClientSession):
         """Test reading system resource for missing statistics tables."""
-        result = await mcp_session.read_resource(
-            "system:///missing_stats_tables"
-        )
+        result = await mcp_session.read_resource("system:///missing_stats_tables")
 
         assert result is not None
         assert hasattr(result, "contents")
 
-    async def test_get_system_info_stat_activity(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_system_info_stat_activity(self, mcp_session: ClientSession):
         """Test reading system resource for current activity."""
-        result = await mcp_session.read_resource(
-            "system:///stat_activity"
-        )
+        result = await mcp_session.read_resource("system:///stat_activity")
 
         assert result is not None
         assert hasattr(result, "contents")
 
-    async def test_get_system_info_guc_value(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_system_info_guc_value(self, mcp_session: ClientSession):
         """Test reading system resource for GUC value."""
-        result = await mcp_session.read_resource(
-            "system:///guc_value/hg_version"
-        )
+        result = await mcp_session.read_resource("system:///guc_value/hg_version")
 
         assert result is not None
         assert hasattr(result, "contents")
@@ -216,20 +189,14 @@ class TestMCPResources:
         assert content.text is not None
         assert "hg_version" in content.text
 
-    async def test_get_system_info_query_log(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_system_info_query_log(self, mcp_session: ClientSession):
         """Test reading system resource for query log."""
-        result = await mcp_session.read_resource(
-            "system:///query_log/latest/5"
-        )
+        result = await mcp_session.read_resource("system:///query_log/latest/5")
 
         assert result is not None
         assert hasattr(result, "contents")
 
-    async def test_get_table_partitions_partitioned(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_get_table_partitions_partitioned(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test reading partitions resource for a partitioned table."""
         table_name = f"{integration_test_prefix}partitioned_table"
 
@@ -243,7 +210,7 @@ class TestMCPResources:
                     name TEXT
                 ) PARTITION BY LIST (id)
                 """
-            }
+            },
         )
 
         try:
@@ -256,7 +223,7 @@ class TestMCPResources:
                     PARTITION OF public.{table_name}
                     FOR VALUES IN (1)
                     """
-                }
+                },
             )
 
             await mcp_session.call_tool(
@@ -267,13 +234,11 @@ class TestMCPResources:
                     PARTITION OF public.{table_name}
                     FOR VALUES IN (2)
                     """
-                }
+                },
             )
 
             # Read partitions
-            result = await mcp_session.read_resource(
-                f"hologres:///public/{table_name}/partitions"
-            )
+            result = await mcp_session.read_resource(f"hologres:///public/{table_name}/partitions")
 
             assert result is not None
             assert hasattr(result, "contents")
@@ -284,21 +249,14 @@ class TestMCPResources:
         finally:
             # Cleanup - drop partitions first
             await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}_part1"}
+                "execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}_part1"}
             )
             await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}_part2"}
+                "execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}_part2"}
             )
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
-    async def test_get_table_partitions_non_partitioned(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_get_table_partitions_non_partitioned(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test reading partitions resource for a non-partitioned table."""
         table_name = f"{integration_test_prefix}non_partitioned_table"
 
@@ -312,14 +270,12 @@ class TestMCPResources:
                     name TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Read partitions - should return empty for non-partitioned table
-            result = await mcp_session.read_resource(
-                f"hologres:///public/{table_name}/partitions"
-            )
+            result = await mcp_session.read_resource(f"hologres:///public/{table_name}/partitions")
 
             assert result is not None
             assert hasattr(result, "contents")
@@ -329,26 +285,17 @@ class TestMCPResources:
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
-    async def test_get_query_log_user(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_user(self, mcp_session: ClientSession):
         """Test reading query log by user name."""
-        result = await mcp_session.read_resource(
-            "system:///query_log/user/test_user/10"
-        )
+        result = await mcp_session.read_resource("system:///query_log/user/test_user/10")
 
         assert result is not None
         assert hasattr(result, "contents")
         # Result might be "No query logs found" if user hasn't run queries
 
-    async def test_get_query_log_user_empty(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_user_empty(self, mcp_session: ClientSession):
         """Test reading query log with empty user name.
 
         Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
@@ -357,28 +304,20 @@ class TestMCPResources:
         from mcp.shared.exceptions import McpError
 
         with pytest.raises(McpError) as exc_info:
-            await mcp_session.read_resource(
-                "system:///query_log/user//10"
-            )
+            await mcp_session.read_resource("system:///query_log/user//10")
 
         # FastMCP rejects this at routing level - URI template cannot match
         assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
 
-    async def test_get_query_log_application(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_application(self, mcp_session: ClientSession):
         """Test reading query log by application name."""
-        result = await mcp_session.read_resource(
-            "system:///query_log/application/test_app/10"
-        )
+        result = await mcp_session.read_resource("system:///query_log/application/test_app/10")
 
         assert result is not None
         assert hasattr(result, "contents")
         # Result might be "No query logs found" if app hasn't run queries
 
-    async def test_get_query_log_application_empty(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_application_empty(self, mcp_session: ClientSession):
         """Test reading query log with empty application name.
 
         Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
@@ -387,28 +326,20 @@ class TestMCPResources:
         from mcp.shared.exceptions import McpError
 
         with pytest.raises(McpError) as exc_info:
-            await mcp_session.read_resource(
-                "system:///query_log/application//10"
-            )
+            await mcp_session.read_resource("system:///query_log/application//10")
 
         # FastMCP rejects this at routing level - URI template cannot match
         assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
 
-    async def test_get_query_log_failed(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_failed(self, mcp_session: ClientSession):
         """Test reading failed query log within an interval."""
-        result = await mcp_session.read_resource(
-            "system:///query_log/failed/1 day/10"
-        )
+        result = await mcp_session.read_resource("system:///query_log/failed/1 day/10")
 
         assert result is not None
         assert hasattr(result, "contents")
         # Result might be "No query logs found" if no failed queries
 
-    async def test_get_query_log_failed_empty_interval(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_query_log_failed_empty_interval(self, mcp_session: ClientSession):
         """Test reading failed query log with empty interval.
 
         Note: FastMCP returns 'Unknown resource' for URIs with empty path segments
@@ -417,9 +348,7 @@ class TestMCPResources:
         from mcp.shared.exceptions import McpError
 
         with pytest.raises(McpError) as exc_info:
-            await mcp_session.read_resource(
-                "system:///query_log/failed//10"
-            )
+            await mcp_session.read_resource("system:///query_log/failed//10")
 
         # FastMCP rejects this at routing level - URI template cannot match
         assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
@@ -428,6 +357,7 @@ class TestMCPResources:
 # ============================================================================
 # MCP Tools Tests (Read-Only)
 # ============================================================================
+
 
 class TestMCPTools:
     """Tests for MCP tool calls (read-only operations)."""
@@ -445,14 +375,9 @@ class TestMCPTools:
         # Should contain at least 'public' schema
         assert "public" in text_content.lower() or len(text_content.strip()) > 0
 
-    async def test_list_hg_tables(
-        self, mcp_session: ClientSession, test_schema: str
-    ):
+    async def test_list_hg_tables(self, mcp_session: ClientSession, test_schema: str):
         """Test list_hg_tables_in_a_schema tool."""
-        result = await mcp_session.call_tool(
-            "list_hg_tables_in_a_schema",
-            {"schema_name": test_schema}
-        )
+        result = await mcp_session.call_tool("list_hg_tables_in_a_schema", {"schema_name": test_schema})
 
         assert result is not None
         assert hasattr(result, "content")
@@ -461,8 +386,7 @@ class TestMCPTools:
     async def test_execute_select(self, mcp_session: ClientSession):
         """Test execute_hg_select_sql tool with a simple query."""
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT current_database() AS db, current_user AS usr"}
+            "execute_hg_select_sql", {"query": "SELECT current_database() AS db, current_user AS usr"}
         )
 
         assert result is not None
@@ -483,7 +407,7 @@ class TestMCPTools:
                 )
                 SELECT * FROM test_data
                 """
-            }
+            },
         )
 
         assert result is not None
@@ -494,8 +418,7 @@ class TestMCPTools:
     async def test_execute_select_serverless(self, mcp_session: ClientSession):
         """Test execute_hg_select_sql_with_serverless tool."""
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql_with_serverless",
-            {"query": "SELECT current_database() AS db"}
+            "execute_hg_select_sql_with_serverless", {"query": "SELECT current_database() AS db"}
         )
 
         assert result is not None
@@ -512,7 +435,7 @@ class TestMCPTools:
                 )
                 SELECT * FROM test_data
                 """
-            }
+            },
         )
 
         assert result is not None
@@ -523,8 +446,7 @@ class TestMCPTools:
     async def test_get_query_plan(self, mcp_session: ClientSession):
         """Test get_hg_query_plan tool."""
         result = await mcp_session.call_tool(
-            "get_hg_query_plan",
-            {"query": "SELECT * FROM information_schema.tables LIMIT 5"}
+            "get_hg_query_plan", {"query": "SELECT * FROM information_schema.tables LIMIT 5"}
         )
 
         assert result is not None
@@ -536,27 +458,19 @@ class TestMCPTools:
 
     async def test_get_execution_plan(self, mcp_session: ClientSession):
         """Test get_hg_execution_plan tool."""
-        result = await mcp_session.call_tool(
-            "get_hg_execution_plan",
-            {"query": "SELECT 1 AS test"}
-        )
+        result = await mcp_session.call_tool("get_hg_execution_plan", {"query": "SELECT 1 AS test"})
 
         assert result is not None
         assert hasattr(result, "content")
         text_content = result.content[0].text
         assert text_content is not None
 
-    async def test_show_table_ddl(
-        self, mcp_session: ClientSession, test_schema: str, test_table: str
-    ):
+    async def test_show_table_ddl(self, mcp_session: ClientSession, test_schema: str, test_table: str):
         """Test show_hg_table_ddl tool."""
         if test_table is None:
             pytest.skip("No test table available")
 
-        result = await mcp_session.call_tool(
-            "show_hg_table_ddl",
-            {"schema_name": test_schema, "table": test_table}
-        )
+        result = await mcp_session.call_tool("show_hg_table_ddl", {"schema_name": test_schema, "table": test_table})
 
         assert result is not None
         assert hasattr(result, "content")
@@ -566,8 +480,7 @@ class TestMCPTools:
     async def test_execute_select_invalid_sql(self, mcp_session: ClientSession):
         """Test that invalid SQL returns an error."""
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT * FROM nonexistent_table_xyz_12345"}
+            "execute_hg_select_sql", {"query": "SELECT * FROM nonexistent_table_xyz_12345"}
         )
 
         assert result is not None
@@ -576,14 +489,9 @@ class TestMCPTools:
         text_content = result.content[0].text
         assert "error" in text_content.lower() or "Error" in text_content
 
-    async def test_execute_select_non_select_rejected(
-        self, mcp_session: ClientSession
-    ):
+    async def test_execute_select_non_select_rejected(self, mcp_session: ClientSession):
         """Test that non-SELECT statements are rejected."""
-        result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "INSERT INTO test VALUES (1)"}
-        )
+        result = await mcp_session.call_tool("execute_hg_select_sql", {"query": "INSERT INTO test VALUES (1)"})
 
         assert result is not None
         assert hasattr(result, "isError")
@@ -594,12 +502,11 @@ class TestMCPTools:
 # MCP Procedure Tools Tests
 # ============================================================================
 
+
 class TestMCPProcedureTools:
     """Tests for stored procedure tool calls."""
 
-    async def test_call_procedure_no_args(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_call_procedure_no_args(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test calling a stored procedure with no arguments."""
         procedure_name = f"{integration_test_prefix}simple_proc"
 
@@ -615,14 +522,11 @@ class TestMCPProcedureTools:
                 END;
                 $$ LANGUAGE PLPGSQL
                 """
-            }
+            },
         )
 
         try:
-            result = await mcp_session.call_tool(
-                "call_hg_procedure",
-                {"procedure_name": f"public.{procedure_name}"}
-            )
+            result = await mcp_session.call_tool("call_hg_procedure", {"procedure_name": f"public.{procedure_name}"})
 
             assert result is not None
             assert hasattr(result, "content")
@@ -630,13 +534,10 @@ class TestMCPProcedureTools:
         finally:
             # Cleanup
             await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}()"}
+                "execute_hg_ddl_sql", {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}()"}
             )
 
-    async def test_call_procedure_with_args(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_call_procedure_with_args(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test calling a stored procedure with arguments."""
         procedure_name = f"{integration_test_prefix}args_proc"
 
@@ -652,16 +553,12 @@ class TestMCPProcedureTools:
                 END;
                 $$ LANGUAGE PLPGSQL
                 """
-            }
+            },
         )
 
         try:
             result = await mcp_session.call_tool(
-                "call_hg_procedure",
-                {
-                    "procedure_name": f"public.{procedure_name}",
-                    "arguments": ["1", "'test_name'"]
-                }
+                "call_hg_procedure", {"procedure_name": f"public.{procedure_name}", "arguments": ["1", "'test_name'"]}
             )
 
             assert result is not None
@@ -669,17 +566,13 @@ class TestMCPProcedureTools:
         finally:
             # Cleanup
             await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}(INT, TEXT)"}
+                "execute_hg_ddl_sql", {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}(INT, TEXT)"}
             )
 
-    async def test_call_nonexistent_procedure(
-        self, mcp_session: ClientSession
-    ):
+    async def test_call_nonexistent_procedure(self, mcp_session: ClientSession):
         """Test calling a procedure that does not exist."""
         result = await mcp_session.call_tool(
-            "call_hg_procedure",
-            {"procedure_name": "public.nonexistent_procedure_xyz_12345"}
+            "call_hg_procedure", {"procedure_name": "public.nonexistent_procedure_xyz_12345"}
         )
 
         assert result is not None
@@ -693,12 +586,11 @@ class TestMCPProcedureTools:
 # MCP MaxCompute Tools Tests
 # ============================================================================
 
+
 class TestMCPMaxComputeTools:
     """Tests for MaxCompute foreign table tool calls."""
 
-    async def test_create_maxcompute_foreign_table_skip(
-        self, mcp_session: ClientSession, integration_env: dict
-    ):
+    async def test_create_maxcompute_foreign_table_skip(self, mcp_session: ClientSession, integration_env: dict):
         """Test that MaxCompute foreign table creation is skipped without configuration.
 
         This test is skipped if MaxCompute configuration is not provided.
@@ -712,7 +604,9 @@ class TestMCPMaxComputeTools:
         maxcompute_table = os.getenv("HOLOGRES_MAXCOMPUTE_TABLE")
 
         if not maxcompute_project or not maxcompute_table:
-            pytest.skip("MaxCompute configuration not provided. Set HOLOGRES_MAXCOMPUTE_PROJECT and HOLOGRES_MAXCOMPUTE_TABLE to run this test.")
+            pytest.skip(
+                "MaxCompute configuration not provided. Set HOLOGRES_MAXCOMPUTE_PROJECT and HOLOGRES_MAXCOMPUTE_TABLE to run this test."
+            )
 
         # If configuration is provided, attempt to create the foreign table
         result = await mcp_session.call_tool(
@@ -721,8 +615,8 @@ class TestMCPMaxComputeTools:
                 "maxcompute_project": maxcompute_project,
                 "maxcompute_tables": [maxcompute_table],
                 "maxcompute_schema": "default",
-                "local_schema": "public"
-            }
+                "local_schema": "public",
+            },
         )
 
         assert result is not None
@@ -733,12 +627,11 @@ class TestMCPMaxComputeTools:
 # MCP DDL Tools Tests (Modifies Database)
 # ============================================================================
 
+
 class TestMCPDDLTools:
     """Tests for MCP DDL tool calls (modifies database objects)."""
 
-    async def test_create_and_drop_table(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_create_and_drop_table(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test CREATE and DROP table operations."""
         table_name = f"{integration_test_prefix}table"
 
@@ -753,31 +646,25 @@ class TestMCPDDLTools:
                     created_at TIMESTAMPTZ DEFAULT NOW()
                 )
                 """
-            }
+            },
         )
 
         assert create_result is not None
         assert hasattr(create_result, "content")
 
         # Verify table exists by listing tables
-        list_result = await mcp_session.call_tool(
-            "list_hg_tables_in_a_schema",
-            {"schema_name": "public"}
-        )
+        list_result = await mcp_session.call_tool("list_hg_tables_in_a_schema", {"schema_name": "public"})
         assert table_name in list_result.content[0].text
 
         # Drop table
         drop_result = await mcp_session.call_tool(
-            "execute_hg_ddl_sql",
-            {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
+            "execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
         )
 
         assert drop_result is not None
         assert hasattr(drop_result, "content")
 
-    async def test_create_and_drop_view(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_create_and_drop_view(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test CREATE and DROP view operations."""
         view_name = f"{integration_test_prefix}view"
 
@@ -789,7 +676,7 @@ class TestMCPDDLTools:
                 CREATE OR REPLACE VIEW public.{view_name} AS
                 SELECT current_database() AS db_name
                 """
-            }
+            },
         )
 
         assert create_result is not None
@@ -797,16 +684,13 @@ class TestMCPDDLTools:
 
         # Drop view
         drop_result = await mcp_session.call_tool(
-            "execute_hg_ddl_sql",
-            {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
+            "execute_hg_ddl_sql", {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
         )
 
         assert drop_result is not None
         assert hasattr(drop_result, "content")
 
-    async def test_alter_table(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_alter_table(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test ALTER table operations."""
         table_name = f"{integration_test_prefix}alter_test"
 
@@ -819,14 +703,14 @@ class TestMCPDDLTools:
                     id INT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Alter table - add column
             alter_result = await mcp_session.call_tool(
                 "execute_hg_ddl_sql",
-                {"query": f"ALTER TABLE public.{table_name} ADD COLUMN IF NOT EXISTS new_col TEXT"}
+                {"query": f"ALTER TABLE public.{table_name} ADD COLUMN IF NOT EXISTS new_col TEXT"},
             )
 
             assert alter_result is not None
@@ -834,14 +718,9 @@ class TestMCPDDLTools:
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
-    async def test_comment_on_table(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_comment_on_table(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test COMMENT ON table operations."""
         table_name = f"{integration_test_prefix}comment_test"
 
@@ -855,14 +734,14 @@ class TestMCPDDLTools:
                     name TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Add comment
             comment_result = await mcp_session.call_tool(
                 "execute_hg_ddl_sql",
-                {"query": f"COMMENT ON TABLE public.{table_name} IS 'Test table for integration tests'"}
+                {"query": f"COMMENT ON TABLE public.{table_name} IS 'Test table for integration tests'"},
             )
 
             assert comment_result is not None
@@ -870,17 +749,11 @@ class TestMCPDDLTools:
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
     async def test_ddl_non_ddl_rejected(self, mcp_session: ClientSession):
         """Test that non-DDL statements are rejected."""
-        result = await mcp_session.call_tool(
-            "execute_hg_ddl_sql",
-            {"query": "SELECT 1"}
-        )
+        result = await mcp_session.call_tool("execute_hg_ddl_sql", {"query": "SELECT 1"})
 
         assert result is not None
         assert hasattr(result, "isError")
@@ -891,12 +764,11 @@ class TestMCPDDLTools:
 # MCP DML Tools Tests (Modifies Data)
 # ============================================================================
 
+
 class TestMCPDMLTools:
     """Tests for MCP DML tool calls (modifies data)."""
 
-    async def test_insert_update_delete(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_insert_update_delete(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test INSERT, UPDATE, and DELETE operations in sequence."""
         table_name = f"{integration_test_prefix}dml_test"
 
@@ -911,7 +783,7 @@ class TestMCPDMLTools:
                     value INT
                 )
                 """
-            }
+            },
         )
 
         try:
@@ -923,7 +795,7 @@ class TestMCPDMLTools:
                     INSERT INTO public.{table_name} (id, name, value)
                     VALUES (1, 'test1', 100), (2, 'test2', 200)
                     """
-                }
+                },
             )
 
             assert insert_result is not None
@@ -932,8 +804,7 @@ class TestMCPDMLTools:
 
             # Verify insert
             select_result = await mcp_session.call_tool(
-                "execute_hg_select_sql",
-                {"query": f"SELECT * FROM public.{table_name} ORDER BY id"}
+                "execute_hg_select_sql", {"query": f"SELECT * FROM public.{table_name} ORDER BY id"}
             )
             assert "test1" in select_result.content[0].text
 
@@ -946,7 +817,7 @@ class TestMCPDMLTools:
                     SET value = 150
                     WHERE id = 1
                     """
-                }
+                },
             )
 
             assert update_result is not None
@@ -954,15 +825,13 @@ class TestMCPDMLTools:
 
             # Verify update
             verify_result = await mcp_session.call_tool(
-                "execute_hg_select_sql",
-                {"query": f"SELECT value FROM public.{table_name} WHERE id = 1"}
+                "execute_hg_select_sql", {"query": f"SELECT value FROM public.{table_name} WHERE id = 1"}
             )
             assert "150" in verify_result.content[0].text
 
             # DELETE
             delete_result = await mcp_session.call_tool(
-                "execute_hg_dml_sql",
-                {"query": f"DELETE FROM public.{table_name} WHERE id = 2"}
+                "execute_hg_dml_sql", {"query": f"DELETE FROM public.{table_name} WHERE id = 2"}
             )
 
             assert delete_result is not None
@@ -970,21 +839,15 @@ class TestMCPDMLTools:
 
             # Verify delete
             count_result = await mcp_session.call_tool(
-                "execute_hg_select_sql",
-                {"query": f"SELECT COUNT(*) AS cnt FROM public.{table_name}"}
+                "execute_hg_select_sql", {"query": f"SELECT COUNT(*) AS cnt FROM public.{table_name}"}
             )
             assert "1" in count_result.content[0].text  # Only 1 row left
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
-    async def test_gather_statistics(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_gather_statistics(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test gather_hg_table_statistics tool."""
         table_name = f"{integration_test_prefix}stats_test"
 
@@ -998,22 +861,18 @@ class TestMCPDMLTools:
                     name TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Insert some data
             await mcp_session.call_tool(
-                "execute_hg_dml_sql",
-                {
-                    "query": f"INSERT INTO public.{table_name} VALUES (1, 'test'), (2, 'test2')"
-                }
+                "execute_hg_dml_sql", {"query": f"INSERT INTO public.{table_name} VALUES (1, 'test'), (2, 'test2')"}
             )
 
             # Gather statistics
             stats_result = await mcp_session.call_tool(
-                "gather_hg_table_statistics",
-                {"schema_name": "public", "table": table_name}
+                "gather_hg_table_statistics", {"schema_name": "public", "table": table_name}
             )
 
             assert stats_result is not None
@@ -1021,17 +880,11 @@ class TestMCPDMLTools:
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
     async def test_dml_non_dml_rejected(self, mcp_session: ClientSession):
         """Test that non-DML statements are rejected."""
-        result = await mcp_session.call_tool(
-            "execute_hg_dml_sql",
-            {"query": "SELECT 1"}
-        )
+        result = await mcp_session.call_tool("execute_hg_dml_sql", {"query": "SELECT 1"})
 
         assert result is not None
         assert hasattr(result, "isError")
@@ -1041,6 +894,7 @@ class TestMCPDMLTools:
 # ============================================================================
 # Error Handling Tests
 # ============================================================================
+
 
 class TestErrorHandling:
     """Tests for error handling and edge cases."""
@@ -1055,13 +909,11 @@ class TestErrorHandling:
         # Should raise an McpError with "Unknown resource" message
         assert "Unknown resource" in str(exc_info.value) or "unknown" in str(exc_info.value).lower()
 
-    async def test_tool_with_missing_required_params(
-        self, mcp_session: ClientSession
-    ):
+    async def test_tool_with_missing_required_params(self, mcp_session: ClientSession):
         """Test calling a tool without required parameters."""
         result = await mcp_session.call_tool(
             "execute_hg_select_sql",
-            {}  # Missing 'query' parameter
+            {},  # Missing 'query' parameter
         )
 
         assert result is not None
@@ -1070,9 +922,7 @@ class TestErrorHandling:
 
     async def test_system_info_invalid_guc(self, mcp_session: ClientSession):
         """Test reading an invalid GUC value."""
-        result = await mcp_session.read_resource(
-            "system:///guc_value/nonexistent_guc_xyz_12345"
-        )
+        result = await mcp_session.read_resource("system:///guc_value/nonexistent_guc_xyz_12345")
 
         assert result is not None
         # Should handle the error gracefully
@@ -1081,6 +931,7 @@ class TestErrorHandling:
 # ============================================================================
 # MCP Prompts Tests
 # ============================================================================
+
 
 class TestMCPPrompts:
     """Tests for MCP prompt functionality."""
@@ -1092,10 +943,7 @@ class TestMCPPrompts:
         if test_table is None:
             pytest.skip("No test table available")
 
-        result = await mcp_session.get_prompt(
-            "analyze_table_performance",
-            {"schema": test_schema, "table": test_table}
-        )
+        result = await mcp_session.get_prompt("analyze_table_performance", {"schema": test_schema, "table": test_table})
 
         assert result is not None
         assert hasattr(result, "messages")
@@ -1110,10 +958,7 @@ class TestMCPPrompts:
         """Test optimize_query prompt generation."""
         test_query = "SELECT * FROM users WHERE id = 1"
 
-        result = await mcp_session.get_prompt(
-            "optimize_query",
-            {"query": test_query}
-        )
+        result = await mcp_session.get_prompt("optimize_query", {"query": test_query})
 
         assert result is not None
         assert hasattr(result, "messages")
@@ -1123,14 +968,9 @@ class TestMCPPrompts:
         # Should mention optimization-related keywords
         assert "optimize" in prompt_text.lower() or "query" in prompt_text.lower()
 
-    async def test_get_explore_schema_prompt(
-        self, mcp_session: ClientSession, test_schema: str
-    ):
+    async def test_get_explore_schema_prompt(self, mcp_session: ClientSession, test_schema: str):
         """Test explore_schema prompt generation."""
-        result = await mcp_session.get_prompt(
-            "explore_schema",
-            {"schema": test_schema}
-        )
+        result = await mcp_session.get_prompt("explore_schema", {"schema": test_schema})
 
         assert result is not None
         assert hasattr(result, "messages")
@@ -1140,9 +980,7 @@ class TestMCPPrompts:
         # Should mention schema exploration keywords
         assert "schema" in prompt_text.lower() or "explore" in prompt_text.lower()
 
-    async def test_get_prompt_with_default_parameter(
-        self, mcp_session: ClientSession
-    ):
+    async def test_get_prompt_with_default_parameter(self, mcp_session: ClientSession):
         """Test explore_schema prompt with default parameter value."""
         # explore_schema has a default value of "public" for schema parameter
         result = await mcp_session.get_prompt("explore_schema", {})
@@ -1158,6 +996,7 @@ class TestMCPPrompts:
 # MCP Concurrency Tests
 # ============================================================================
 
+
 class TestMCPConcurrency:
     """Tests for concurrent MCP operations."""
 
@@ -1167,10 +1006,7 @@ class TestMCPConcurrency:
 
         # Execute 5 concurrent SELECT queries
         queries = [
-            mcp_session.call_tool(
-                "execute_hg_select_sql",
-                {"query": f"SELECT {i} AS id, 'test{i}' AS name"}
-            )
+            mcp_session.call_tool("execute_hg_select_sql", {"query": f"SELECT {i} AS id, 'test{i}' AS name"})
             for i in range(5)
         ]
 
@@ -1183,9 +1019,7 @@ class TestMCPConcurrency:
             assert hasattr(result, "content")
             assert str(i) in result.content[0].text
 
-    async def test_concurrent_mixed_operations(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_concurrent_mixed_operations(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test concurrent read and write operations."""
         import asyncio
 
@@ -1201,21 +1035,17 @@ class TestMCPConcurrency:
                     value TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Concurrent operations: 1 INSERT + 2 SELECTs
             insert_task = mcp_session.call_tool(
-                "execute_hg_dml_sql",
-                {"query": f"INSERT INTO public.{table_name} VALUES (1, 'concurrent_test')"}
+                "execute_hg_dml_sql", {"query": f"INSERT INTO public.{table_name} VALUES (1, 'concurrent_test')"}
             )
 
             select_tasks = [
-                mcp_session.call_tool(
-                    "execute_hg_select_sql",
-                    {"query": f"SELECT * FROM public.{table_name}"}
-                )
+                mcp_session.call_tool("execute_hg_select_sql", {"query": f"SELECT * FROM public.{table_name}"})
                 for _ in range(2)
             ]
 
@@ -1232,10 +1062,7 @@ class TestMCPConcurrency:
 
         finally:
             # Cleanup
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
     async def test_concurrent_resource_reads(self, mcp_session: ClientSession):
         """Test concurrent resource reads."""
@@ -1249,10 +1076,7 @@ class TestMCPConcurrency:
             "system:///stat_activity",
         ]
 
-        tasks = [
-            mcp_session.read_resource(uri)
-            for uri in resources
-        ]
+        tasks = [mcp_session.read_resource(uri) for uri in resources]
 
         results = await asyncio.gather(*tasks)
 
@@ -1267,14 +1091,14 @@ class TestMCPConcurrency:
 # MCP Boundary Condition Tests (Extended)
 # ============================================================================
 
+
 class TestMCPBoundaryConditions:
     """Tests for boundary conditions and edge cases."""
 
     async def test_select_with_unicode(self, mcp_session: ClientSession):
         """Test SELECT with Unicode characters in query."""
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT '中文测试' AS chinese, '🔥' AS emoji, '日本語' AS japanese"}
+            "execute_hg_select_sql", {"query": "SELECT '中文测试' AS chinese, '🔥' AS emoji, '日本語' AS japanese"}
         )
 
         assert result is not None
@@ -1287,10 +1111,7 @@ class TestMCPBoundaryConditions:
 
     async def test_empty_result_set(self, mcp_session: ClientSession):
         """Test query that returns empty result."""
-        result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT 1 AS id WHERE FALSE"}
-        )
+        result = await mcp_session.call_tool("execute_hg_select_sql", {"query": "SELECT 1 AS id WHERE FALSE"})
 
         assert result is not None
         assert hasattr(result, "content")
@@ -1301,8 +1122,7 @@ class TestMCPBoundaryConditions:
     async def test_select_with_null_values(self, mcp_session: ClientSession):
         """Test SELECT with NULL values."""
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT NULL AS null_col, 'value' AS non_null_col"}
+            "execute_hg_select_sql", {"query": "SELECT NULL AS null_col, 'value' AS non_null_col"}
         )
 
         assert result is not None
@@ -1311,14 +1131,11 @@ class TestMCPBoundaryConditions:
         text_content = result.content[0].text
         assert text_content is not None
 
-    async def test_select_with_special_sql_characters(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_select_with_special_sql_characters(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test handling of special characters in SQL strings."""
         # Test with strings containing quotes, semicolons, etc.
         result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": "SELECT 'test''s value' AS quoted, 'a;b' AS semicolon"}
+            "execute_hg_select_sql", {"query": "SELECT 'test''s value' AS quoted, 'a;b' AS semicolon"}
         )
 
         assert result is not None
@@ -1331,6 +1148,7 @@ class TestMCPBoundaryConditions:
 # ============================================================================
 # MCP Performance Tests
 # ============================================================================
+
 
 class TestMCPPerformance:
     """Tests for performance scenarios."""
@@ -1352,7 +1170,7 @@ class TestMCPPerformance:
                     i * 100 AS value
                 FROM generate_series(1, 1000) AS i
                 """
-            }
+            },
         )
 
         elapsed_time = time.time() - start_time
@@ -1362,7 +1180,7 @@ class TestMCPPerformance:
         text_content = result.content[0].text
 
         # Verify we got a reasonable amount of data
-        lines = text_content.strip().split('\n')
+        lines = text_content.strip().split("\n")
         assert len(lines) >= 1000  # Should have at least 1000 rows
 
         # Performance check - should complete within reasonable time
@@ -1374,10 +1192,7 @@ class TestMCPPerformance:
         columns = [f"i AS col{i}" for i in range(1, 51)]
         query = f"SELECT {', '.join(columns)} FROM generate_series(1, 10) AS i"
 
-        result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": query}
-        )
+        result = await mcp_session.call_tool("execute_hg_select_sql", {"query": query})
 
         assert result is not None
         assert hasattr(result, "content")
@@ -1413,7 +1228,7 @@ class TestMCPPerformance:
                 ORDER BY u.user_id
                 LIMIT 10
                 """
-            }
+            },
         )
 
         assert result is not None
@@ -1428,6 +1243,7 @@ class TestMCPPerformance:
 # ============================================================================
 # VIEW DDL Comment Inference Tests
 # ============================================================================
+
 
 class TestMCPViewCommentInference:
     """Tests for VIEW DDL comment inference functionality."""
@@ -1454,22 +1270,17 @@ class TestMCPViewCommentInference:
                     description TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Add column comments to source table
             await mcp_session.call_tool(
                 "execute_hg_ddl_sql",
-                {
-                    "query": f"COMMENT ON COLUMN public.{source_table}.id IS 'Primary key identifier'"
-                }
+                {"query": f"COMMENT ON COLUMN public.{source_table}.id IS 'Primary key identifier'"},
             )
             await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {
-                    "query": f"COMMENT ON COLUMN public.{source_table}.name IS 'Name of the entity'"
-                }
+                "execute_hg_ddl_sql", {"query": f"COMMENT ON COLUMN public.{source_table}.name IS 'Name of the entity'"}
             )
 
             # Step 2: Create a view referencing the source table
@@ -1481,14 +1292,13 @@ class TestMCPViewCommentInference:
                     SELECT t.id, t.name, t.description
                     FROM public.{source_table} t
                     """
-                }
+                },
             )
 
             try:
                 # Step 3: Get VIEW DDL using tool - should trigger comment inference
                 ddl_result = await mcp_session.call_tool(
-                    "show_hg_table_ddl",
-                    {"schema_name": "public", "table": view_name}
+                    "show_hg_table_ddl", {"schema_name": "public", "table": view_name}
                 )
 
                 assert ddl_result is not None
@@ -1499,9 +1309,7 @@ class TestMCPViewCommentInference:
                 assert "VIEW" in text_content.upper() or "view" in text_content.lower()
 
                 # Step 4: Also test via resource endpoint
-                resource_result = await mcp_session.read_resource(
-                    f"hologres:///public/{view_name}/ddl"
-                )
+                resource_result = await mcp_session.read_resource(f"hologres:///public/{view_name}/ddl")
 
                 assert resource_result is not None
                 assert hasattr(resource_result, "contents")
@@ -1512,22 +1320,17 @@ class TestMCPViewCommentInference:
 
             finally:
                 # Cleanup view
-                await mcp_session.call_tool(
-                    "execute_hg_ddl_sql",
-                    {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
-                )
+                await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP VIEW IF EXISTS public.{view_name}"})
 
         finally:
             # Cleanup source table
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{source_table}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{source_table}"})
 
 
 # ============================================================================
 # Parameter Validation Tests
 # ============================================================================
+
 
 class TestMCPParameterValidation:
     """Tests for parameter validation in tools and resources."""
@@ -1542,24 +1345,20 @@ class TestMCPParameterValidation:
         # Test with non-integer row_limits
         # FastMCP should handle this as either an error or return validation message
         try:
-            result = await mcp_session.read_resource(
-                "system:///query_log/latest/invalid"
-            )
+            result = await mcp_session.read_resource("system:///query_log/latest/invalid")
             # If no exception, check for error message in content
             if hasattr(result, "contents"):
                 text = result.contents[0].text
                 # Should contain error message about invalid format
                 assert "invalid" in text.lower() or "error" in text.lower() or "integer" in text.lower()
-        except McpError as e:
+        except McpError:
             # McpError is also acceptable for invalid parameters
             pass
 
     async def test_query_log_negative_row_limits(self, mcp_session: ClientSession):
         """Test that negative row_limits parameter is handled gracefully."""
         # Test with negative row_limits
-        result = await mcp_session.read_resource(
-            "system:///query_log/latest/-5"
-        )
+        result = await mcp_session.read_resource("system:///query_log/latest/-5")
 
         assert result is not None
         assert hasattr(result, "contents")
@@ -1572,12 +1371,11 @@ class TestMCPParameterValidation:
 # Resource Empty Results Tests
 # ============================================================================
 
+
 class TestMCPResourceEmptyResults:
     """Tests for resource endpoints with empty or not-found results."""
 
-    async def test_table_statistics_not_found(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_table_statistics_not_found(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test statistics resource for a table without statistics.
 
         This tests the empty result path in server.py lines 206-207.
@@ -1594,14 +1392,12 @@ class TestMCPResourceEmptyResults:
                     name TEXT
                 )
                 """
-            }
+            },
         )
 
         try:
             # Get statistics - should return "No statistics found" message
-            result = await mcp_session.read_resource(
-                f"hologres:///public/{table_name}/statistic"
-            )
+            result = await mcp_session.read_resource(f"hologres:///public/{table_name}/statistic")
 
             assert result is not None
             assert hasattr(result, "contents")
@@ -1611,32 +1407,27 @@ class TestMCPResourceEmptyResults:
             assert "no statistics" in text.lower() or "statistic" in text.lower() or len(text.strip()) > 0
 
         finally:
-            await mcp_session.call_tool(
-                "execute_hg_ddl_sql",
-                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
-            )
+            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
     async def test_guc_value_not_found(self, mcp_session: ClientSession):
         """Test GUC resource for a non-existent GUC.
 
         This tests the empty result path in server.py lines 286-287.
         """
-        result = await mcp_session.read_resource(
-            "system:///guc_value/nonexistent_guc_xyz_12345"
-        )
+        result = await mcp_session.read_resource("system:///guc_value/nonexistent_guc_xyz_12345")
 
         assert result is not None
         assert hasattr(result, "contents")
         text = result.contents[0].text
 
         # Should indicate GUC not found or error
-        assert "no guc" in text.lower() or "not found" in text.lower() or "error" in text.lower() or len(text.strip()) > 0
+        assert (
+            "no guc" in text.lower() or "not found" in text.lower() or "error" in text.lower() or len(text.strip()) > 0
+        )
 
     async def test_table_ddl_not_found(self, mcp_session: ClientSession):
         """Test DDL resource for a non-existent table."""
-        result = await mcp_session.read_resource(
-            "hologres:///public/nonexistent_table_xyz_12345/ddl"
-        )
+        result = await mcp_session.read_resource("hologres:///public/nonexistent_table_xyz_12345/ddl")
 
         assert result is not None
         assert hasattr(result, "contents")
@@ -1650,14 +1441,14 @@ class TestMCPResourceEmptyResults:
 # Tool Error Paths Tests
 # ============================================================================
 
+
 class TestMCPToolErrorPaths:
     """Tests for tool error handling paths."""
 
     async def test_query_plan_invalid_query(self, mcp_session: ClientSession):
         """Test get_hg_query_plan with an invalid query."""
         result = await mcp_session.call_tool(
-            "get_hg_query_plan",
-            {"query": "SELECT * FROM nonexistent_table_xyz_12345"}
+            "get_hg_query_plan", {"query": "SELECT * FROM nonexistent_table_xyz_12345"}
         )
 
         assert result is not None
@@ -1670,10 +1461,7 @@ class TestMCPToolErrorPaths:
 
     async def test_execution_plan_failure(self, mcp_session: ClientSession):
         """Test get_hg_execution_plan with a query that might fail during execution."""
-        result = await mcp_session.call_tool(
-            "get_hg_execution_plan",
-            {"query": "SELECT 1/0 AS division_by_zero"}
-        )
+        result = await mcp_session.call_tool("get_hg_execution_plan", {"query": "SELECT 1/0 AS division_by_zero"})
 
         assert result is not None
         assert hasattr(result, "content")
@@ -1685,8 +1473,7 @@ class TestMCPToolErrorPaths:
     async def test_gather_statistics_nonexistent_table(self, mcp_session: ClientSession):
         """Test gather_hg_table_statistics on a non-existent table."""
         result = await mcp_session.call_tool(
-            "gather_hg_table_statistics",
-            {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
+            "gather_hg_table_statistics", {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
         )
 
         assert result is not None
@@ -1694,13 +1481,14 @@ class TestMCPToolErrorPaths:
         text_content = result.content[0].text
 
         # Should indicate error or contain error message
-        assert "error" in text_content.lower() or "does not exist" in text_content.lower() or len(text_content.strip()) > 0
+        assert (
+            "error" in text_content.lower() or "does not exist" in text_content.lower() or len(text_content.strip()) > 0
+        )
 
     async def test_show_ddl_nonexistent_table(self, mcp_session: ClientSession):
         """Test show_hg_table_ddl on a non-existent table."""
         result = await mcp_session.call_tool(
-            "show_hg_table_ddl",
-            {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
+            "show_hg_table_ddl", {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
         )
 
         assert result is not None
@@ -1714,6 +1502,7 @@ class TestMCPToolErrorPaths:
 # ============================================================================
 # Foreign Table and Boundary Conditions Tests
 # ============================================================================
+
 
 class TestMCPForeignTableAndBoundaries:
     """Tests for foreign tables and boundary conditions."""
@@ -1733,7 +1522,7 @@ class TestMCPForeignTableAndBoundaries:
                     level5 AS (SELECT id * 2 AS id FROM level4)
                 SELECT * FROM level5
                 """
-            }
+            },
         )
 
         assert result is not None
@@ -1743,9 +1532,7 @@ class TestMCPForeignTableAndBoundaries:
         # Should return 16 (1 * 2^4)
         assert "16" in text_content
 
-    async def test_view_without_source_table(
-        self, mcp_session: ClientSession, integration_test_prefix: str
-    ):
+    async def test_view_without_source_table(self, mcp_session: ClientSession, integration_test_prefix: str):
         """Test creating a view that references a non-existent source table."""
         view_name = f"{integration_test_prefix}broken_view"
 
@@ -1757,7 +1544,7 @@ class TestMCPForeignTableAndBoundaries:
                 CREATE OR REPLACE VIEW public.{view_name} AS
                 SELECT id FROM public.nonexistent_source_table_xyz
                 """
-            }
+            },
         )
 
         # Hologres might create the view anyway or return error
@@ -1766,10 +1553,7 @@ class TestMCPForeignTableAndBoundaries:
         assert hasattr(result, "content")
 
         # Cleanup if view was created
-        await mcp_session.call_tool(
-            "execute_hg_ddl_sql",
-            {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
-        )
+        await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP VIEW IF EXISTS public.{view_name}"})
 
     async def test_complex_subquery(self, mcp_session: ClientSession):
         """Test query with complex nested subqueries."""
@@ -1782,7 +1566,7 @@ class TestMCPForeignTableAndBoundaries:
                     (SELECT COUNT(*) FROM (SELECT 1 AS x UNION ALL SELECT 2 AS x) AS inner_table) AS inner_count
                 FROM (SELECT 10 AS outer_val) AS t
                 """
-            }
+            },
         )
 
         assert result is not None
@@ -1796,10 +1580,7 @@ class TestMCPForeignTableAndBoundaries:
         columns = [f"{i} AS col{i}" for i in range(1, 101)]
         query = f"SELECT {', '.join(columns)}"
 
-        result = await mcp_session.call_tool(
-            "execute_hg_select_sql",
-            {"query": query}
-        )
+        result = await mcp_session.call_tool("execute_hg_select_sql", {"query": query})
 
         assert result is not None
         assert hasattr(result, "content")

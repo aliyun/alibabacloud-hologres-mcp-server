@@ -4,24 +4,25 @@ Pytest configuration and shared fixtures for Hologres MCP Server tests.
 
 import os
 import sys
-import pytest
-import pytest_asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from dotenv import load_dotenv
 
+import pytest
+import pytest_asyncio
+from dotenv import load_dotenv
 
 # ============================================================================
 # Async Support Configuration
 # ============================================================================
 
 # Ensure pytest-asyncio works correctly
-pytest_plugins = ('pytest_asyncio',)
+pytest_plugins = ("pytest_asyncio",)
 
 
 # ============================================================================
 # Environment Fixtures (for Unit Tests)
 # ============================================================================
+
 
 @pytest.fixture
 def mock_env_basic():
@@ -121,6 +122,7 @@ def mock_env_minimal():
 # Database Connection Mocks
 # ============================================================================
 
+
 @pytest.fixture
 def mock_cursor():
     """Create a mock database cursor."""
@@ -165,6 +167,7 @@ def mock_connect_with_retry(mock_connection):
 # Query Result Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_select_result():
     """Sample SELECT query result."""
@@ -200,6 +203,7 @@ def sample_table_list():
 # Tool Result Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def expected_select_result_format():
     """Expected format for SELECT tool result."""
@@ -215,6 +219,7 @@ def expected_dml_result_format():
 # ============================================================================
 # Integration Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def integration_env():
@@ -258,12 +263,10 @@ def mcp_server_params(integration_env):
     MCP server connection parameters for integration tests.
     Returns StdioServerParameters configured with Hologres credentials.
     """
-    from mcp import ClientSession, StdioServerParameters
+    from mcp import StdioServerParameters
 
     # Get the server script path
-    server_script = str(
-        Path(__file__).parent.parent / "src" / "hologres_mcp_server" / "server.py"
-    )
+    server_script = str(Path(__file__).parent.parent / "src" / "hologres_mcp_server" / "server.py")
 
     # Hologres database connection environment variables
     hologres_env = {
@@ -345,6 +348,7 @@ def integration_test_prefix():
 # Edge Case Fixtures for Extended Unit Tests
 # ============================================================================
 
+
 @pytest.fixture
 def mock_env_with_long_names():
     """Environment variables with very long names for testing edge cases."""
@@ -421,39 +425,31 @@ def sql_injection_payloads():
         "1' OR '1'='1",
         "admin'--",
         "' UNION SELECT * FROM users --",
-
         # Comment-based injection
         "/* comment */",
         "-- comment",
         "# comment",
-
         # Stacked queries
         "SELECT * FROM users; DROP TABLE users;",
-
         # Time-based injection
         "'; WAITFOR DELAY '0:0:5' --",
         "'; SELECT SLEEP(5) --",
         "1; SELECT pg_sleep(5);",
-
         # Union-based injection
         "' UNION SELECT NULL --",
         "' UNION SELECT NULL, NULL --",
         "' UNION ALL SELECT NULL --",
-
         # Boolean-based injection
         "' AND 1=1 --",
         "' AND 1=2 --",
         "' OR 1=1 --",
-
         # Function-based injection
         "'; EXEC xp_cmdshell('dir') --",
         "'; SELECT * FROM information_schema.tables --",
-
         # Schema/table name injection
         "users; DROP TABLE users",
         "users' OR '1'='1",
         "users; DELETE FROM users WHERE '1'='1",
-
         # Numeric injection
         "1 OR 1=1",
         "1; DROP TABLE users",
@@ -473,7 +469,7 @@ def edge_case_schema_names():
         "schema-with-dashes",
         "schema_with_underscores",
         "schema.with.dots",
-        "schema\"with\"quotes",
+        'schema"with"quotes',
         "schema'with'apostrophes",
         "schema with spaces",
         "schema;with;semicolons",

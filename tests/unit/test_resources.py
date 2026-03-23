@@ -17,23 +17,24 @@ Resources (11 total):
 - get_query_log_failed(interval, row_limits) -> system:///query_log/failed/{interval}/{row_limits}
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from hologres_mcp_server.server import (
-    list_schemas,
-    list_tables_in_schema,
-    get_table_ddl,
-    get_table_statistics,
-    get_table_partitions,
+    get_guc_value,
     get_hg_instance_version,
     get_missing_stats_tables,
-    get_stat_activity,
-    get_guc_value,
-    get_query_log_latest,
-    get_query_log_user,
     get_query_log_application,
     get_query_log_failed,
+    get_query_log_latest,
+    get_query_log_user,
+    get_stat_activity,
+    get_table_ddl,
+    get_table_partitions,
+    get_table_statistics,
+    list_schemas,
+    list_tables_in_schema,
 )
 
 
@@ -454,8 +455,9 @@ class TestResourceErrorHandling:
         iterates over each character. The result is the error string with
         newlines between each character.
         """
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: Connection refused"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: Connection refused"
+        ):
             result = list_schemas()
 
             # The error string is iterated character by character
@@ -464,8 +466,10 @@ class TestResourceErrorHandling:
 
     def test_list_schemas_query_error(self):
         """Test list_schemas with query error."""
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: relation does not exist"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource",
+            return_value="Error executing query: relation does not exist",
+        ):
             result = list_schemas()
 
             assert isinstance(result, str)
@@ -476,8 +480,9 @@ class TestResourceErrorHandling:
         Note: This will raise IndexError because the code tries to access
         table[0] and table[1] on each character of the error string.
         """
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: Connection refused"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: Connection refused"
+        ):
             # The function will raise IndexError when trying to access
             # table[1] on single characters
             try:
@@ -490,8 +495,9 @@ class TestResourceErrorHandling:
 
     def test_get_table_ddl_connection_error(self):
         """Test get_table_ddl with connection error."""
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: Connection refused"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: Connection refused"
+        ):
             result = get_table_ddl("public", "users")
 
             # get_table_ddl checks `if ddl and ddl[0]` which will be True
@@ -501,8 +507,9 @@ class TestResourceErrorHandling:
 
     def test_get_table_statistics_error(self):
         """Test get_table_statistics with error response."""
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: permission denied"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: permission denied"
+        ):
             result = get_table_statistics("public", "users")
 
             # The error string is iterated, creating a header with the error
@@ -510,8 +517,10 @@ class TestResourceErrorHandling:
 
     def test_get_table_partitions_error(self):
         """Test get_table_partitions with error response."""
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: relation does not exist"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource",
+            return_value="Error executing query: relation does not exist",
+        ):
             result = get_table_partitions("public", "nonexistent")
 
             assert isinstance(result, str)
@@ -523,17 +532,20 @@ class TestResourceErrorHandling:
         access index [1]. When handle_read_resource returns an error string,
         this causes an IndexError.
         """
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: function not found"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: function not found"
+        ):
             # The function will raise IndexError when trying to split
             # the error string and access index [1]
             with pytest.raises(IndexError):
-                result = get_hg_instance_version()
+                get_hg_instance_version()
 
     def test_get_guc_value_nonexistent(self):
         """Test get_guc_value with non-existent GUC name."""
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: unrecognized configuration parameter"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource",
+            return_value="Error executing query: unrecognized configuration parameter",
+        ):
             result = get_guc_value("nonexistent_guc_12345")
 
             # The error string is processed, showing partial content
@@ -542,8 +554,7 @@ class TestResourceErrorHandling:
     def test_get_guc_value_sql_injection(self, sql_injection_payloads):
         """Test get_guc_value with SQL injection attempts in GUC name."""
         for payload in sql_injection_payloads[:3]:  # Test a subset
-            with patch("hologres_mcp_server.server.handle_read_resource",
-                       return_value=[("value",)]):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=[("value",)]):
                 result = get_guc_value(payload)
 
                 # GUC name is directly interpolated into SHOW statement
@@ -559,8 +570,9 @@ class TestResourceErrorHandling:
         """
         # This test demonstrates that the error handling flow
         # goes through the int() conversion first
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value="Error executing query: Connection refused"):
+        with patch(
+            "hologres_mcp_server.server.handle_read_resource", return_value="Error executing query: Connection refused"
+        ):
             # The function actually tries int("10") first which succeeds,
             # then the error string causes issues later
             result = get_query_log_latest("10")
@@ -596,8 +608,7 @@ class TestResourceBoundaryConditions:
         mock_result = [(1, "SELECT 1", "SUCCESS", None)]
         mock_headers = ["id", "query", "status", "error"]
 
-        with patch("hologres_mcp_server.server.handle_read_resource",
-                   return_value=(mock_result, mock_headers)):
+        with patch("hologres_mcp_server.server.handle_read_resource", return_value=(mock_result, mock_headers)):
             result = get_query_log_latest(very_large_limit)
 
             # Should handle large limit
@@ -619,8 +630,7 @@ class TestResourceBoundaryConditions:
             mock_result = [(1, "SELECT 1", username, None)]
             mock_headers = ["id", "query", "user", "time"]
 
-            with patch("hologres_mcp_server.server.handle_read_resource",
-                       return_value=(mock_result, mock_headers)):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=(mock_result, mock_headers)):
                 result = get_query_log_user(username, "10")
 
                 # Should handle special characters
@@ -634,8 +644,7 @@ class TestResourceBoundaryConditions:
             mock_result = []
             mock_headers = ["id", "query", "status", "error"]
 
-            with patch("hologres_mcp_server.server.handle_read_resource",
-                       return_value=(mock_result, mock_headers)):
+            with patch("hologres_mcp_server.server.handle_read_resource", return_value=(mock_result, mock_headers)):
                 result = get_query_log_failed(interval, "10")
 
                 # Should attempt query with the interval

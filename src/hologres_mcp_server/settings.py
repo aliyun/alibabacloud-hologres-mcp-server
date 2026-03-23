@@ -4,7 +4,6 @@ Settings module for Hologres MCP Server.
 
 import os
 
-
 SERVER_VERSION = "0.2.0"
 
 
@@ -27,9 +26,9 @@ def get_db_config():
         "password": password,
         "options": options,
         "dbname": os.getenv("HOLOGRES_DATABASE"),
-        "application_name": f"hologres-mcp-server-{SERVER_VERSION}"
+        "application_name": f"hologres-mcp-server-{SERVER_VERSION}",
     }
     if not all([config["user"], config["password"], config["dbname"]]):
         raise ValueError("Missing required database configuration.")
-    
+
     return config

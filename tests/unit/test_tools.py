@@ -16,19 +16,20 @@ Tools (12 total):
 - show_hg_table_ddl
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from hologres_mcp_server.server import (
-    execute_hg_select_sql,
-    execute_hg_select_sql_with_serverless,
-    execute_hg_dml_sql,
-    execute_hg_ddl_sql,
-    gather_hg_table_statistics,
-    get_hg_query_plan,
-    get_hg_execution_plan,
     call_hg_procedure,
     create_hg_maxcompute_foreign_table,
+    execute_hg_ddl_sql,
+    execute_hg_dml_sql,
+    execute_hg_select_sql,
+    execute_hg_select_sql_with_serverless,
+    gather_hg_table_statistics,
+    get_hg_execution_plan,
+    get_hg_query_plan,
     list_hg_schemas,
     list_hg_tables_in_a_schema,
     show_hg_table_ddl,
@@ -47,13 +48,13 @@ class TestExecuteHgSelectSql:
 
     def test_valid_select_with_whitespace(self):
         """Test SELECT with leading whitespace."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
             result = execute_hg_select_sql("   SELECT * FROM users")
             assert result == "result"
 
     def test_valid_with_cte(self):
         """Test WITH ... SELECT query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
             result = execute_hg_select_sql("WITH cte AS (SELECT 1) SELECT * FROM cte")
             assert result == "result"
 
@@ -81,7 +82,9 @@ class TestExecuteHgSelectSqlWithServerless:
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
             result = execute_hg_select_sql_with_serverless("SELECT * FROM large_table")
             assert result == "result"
-            mock.assert_called_once_with("execute_hg_select_sql_with_serverless", "SELECT * FROM large_table", serverless=True)
+            mock.assert_called_once_with(
+                "execute_hg_select_sql_with_serverless", "SELECT * FROM large_table", serverless=True
+            )
 
     def test_serverless_flag_passed(self):
         """Test serverless flag is correctly passed."""
@@ -91,7 +94,7 @@ class TestExecuteHgSelectSqlWithServerless:
 
     def test_valid_with_cte(self):
         """Test WITH ... SELECT query with serverless."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="result"):
             result = execute_hg_select_sql_with_serverless("WITH cte AS (SELECT 1) SELECT * FROM cte")
             assert result == "result"
 
@@ -113,13 +116,13 @@ class TestExecuteHgDmlSql:
 
     def test_valid_update(self):
         """Test valid UPDATE query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="2 rows affected") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="2 rows affected"):
             result = execute_hg_dml_sql("UPDATE users SET name = 'test'")
             assert result == "2 rows affected"
 
     def test_valid_delete(self):
         """Test valid DELETE query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="1 rows affected") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="1 rows affected"):
             result = execute_hg_dml_sql("DELETE FROM users WHERE id = 1")
             assert result == "1 rows affected"
 
@@ -146,19 +149,19 @@ class TestExecuteHgDdlSql:
 
     def test_valid_alter(self):
         """Test valid ALTER TABLE query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
             result = execute_hg_ddl_sql("ALTER TABLE users ADD COLUMN age INT")
             assert result == "success"
 
     def test_valid_drop(self):
         """Test valid DROP TABLE query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
             result = execute_hg_ddl_sql("DROP TABLE test")
             assert result == "success"
 
     def test_valid_comment_on(self):
         """Test valid COMMENT ON query."""
-        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
             result = execute_hg_ddl_sql("COMMENT ON TABLE users IS 'User table'")
             assert result == "success"
 
@@ -300,8 +303,7 @@ class TestCreateHgMaxcomputeForeignTable:
         """Test basic foreign table creation query."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
             result = create_hg_maxcompute_foreign_table(
-                maxcompute_project="my_project",
-                maxcompute_tables=["table1", "table2"]
+                maxcompute_project="my_project", maxcompute_tables=["table1", "table2"]
             )
             assert result == "success"
 
@@ -314,10 +316,7 @@ class TestCreateHgMaxcomputeForeignTable:
     def test_default_schema_values(self):
         """Test default schema values are used."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            create_hg_maxcompute_foreign_table(
-                maxcompute_project="my_project",
-                maxcompute_tables=["table1"]
-            )
+            create_hg_maxcompute_foreign_table(maxcompute_project="my_project", maxcompute_tables=["table1"])
 
             query = mock.call_args[0][1]
             # Default maxcompute_schema is "default"
@@ -332,7 +331,7 @@ class TestCreateHgMaxcomputeForeignTable:
                 maxcompute_project="my_project",
                 maxcompute_tables=["table1"],
                 maxcompute_schema="my_schema",
-                local_schema="analytics"
+                local_schema="analytics",
             )
 
             query = mock.call_args[0][1]
@@ -342,10 +341,7 @@ class TestCreateHgMaxcomputeForeignTable:
     def test_single_table(self):
         """Test with single table."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            create_hg_maxcompute_foreign_table(
-                maxcompute_project="project",
-                maxcompute_tables=["single_table"]
-            )
+            create_hg_maxcompute_foreign_table(maxcompute_project="project", maxcompute_tables=["single_table"])
 
             query = mock.call_args[0][1]
             assert "single_table" in query
@@ -452,7 +448,7 @@ class TestToolParameterValidation:
         """Test gather_hg_table_statistics with empty schema name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
             # Empty schema - the function doesn't validate, it just passes through
-            result = gather_hg_table_statistics(schema_name="", table="users")
+            gather_hg_table_statistics(schema_name="", table="users")
 
             # Check that the query was formed with empty schema
             query = mock.call_args[0][1]
@@ -461,7 +457,7 @@ class TestToolParameterValidation:
     def test_gather_stats_empty_table(self):
         """Test gather_hg_table_statistics with empty table name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_name="public", table="")
+            gather_hg_table_statistics(schema_name="public", table="")
 
             query = mock.call_args[0][1]
             assert query == "ANALYZE public."
@@ -471,7 +467,7 @@ class TestToolParameterValidation:
         long_name = "a" * 1000
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_name=long_name, table=long_name)
+            gather_hg_table_statistics(schema_name=long_name, table=long_name)
 
             query = mock.call_args[0][1]
             assert long_name in query
@@ -482,7 +478,7 @@ class TestToolParameterValidation:
         special_table = "table;with;semicolons"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_name=special_schema, table=special_table)
+            gather_hg_table_statistics(schema_name=special_schema, table=special_table)
 
             query = mock.call_args[0][1]
             assert special_schema in query
@@ -493,7 +489,7 @@ class TestToolParameterValidation:
         for payload in sql_injection_payloads[:5]:  # Test a subset
             with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
                 # Use injection payload as schema/table name
-                result = gather_hg_table_statistics(schema_name="public", table=payload)
+                gather_hg_table_statistics(schema_name="public", table=payload)
 
                 query = mock.call_args[0][1]
                 # The payload is directly interpolated - potential security issue
@@ -502,7 +498,7 @@ class TestToolParameterValidation:
     def test_call_procedure_empty_name(self):
         """Test call_hg_procedure with empty procedure name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
-            result = call_hg_procedure("")
+            call_hg_procedure("")
 
             query = mock.call_args[0][1]
             assert query == "CALL ()"  # Empty procedure name
@@ -511,7 +507,7 @@ class TestToolParameterValidation:
         """Test call_hg_procedure with SQL injection in arguments."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
             # Injection in procedure arguments
-            result = call_hg_procedure("my_procedure", ["'; DROP TABLE users; --"])
+            call_hg_procedure("my_procedure", ["'; DROP TABLE users; --"])
 
             query = mock.call_args[0][1]
             assert "DROP TABLE" in query  # Injection payload is included
@@ -519,10 +515,7 @@ class TestToolParameterValidation:
     def test_maxcompute_foreign_table_empty_project(self):
         """Test create_hg_maxcompute_foreign_table with empty project."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = create_hg_maxcompute_foreign_table(
-                maxcompute_project="",
-                maxcompute_tables=["table1"]
-            )
+            create_hg_maxcompute_foreign_table(maxcompute_project="", maxcompute_tables=["table1"])
 
             query = mock.call_args[0][1]
             # Empty project results in "#" in the schema name (project#schema format)
@@ -531,10 +524,7 @@ class TestToolParameterValidation:
     def test_maxcompute_foreign_table_empty_tables(self):
         """Test create_hg_maxcompute_foreign_table with empty table list."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = create_hg_maxcompute_foreign_table(
-                maxcompute_project="my_project",
-                maxcompute_tables=[]
-            )
+            create_hg_maxcompute_foreign_table(maxcompute_project="my_project", maxcompute_tables=[])
 
             query = mock.call_args[0][1]
             # Empty table list results in "LIMIT TO ()"
@@ -543,7 +533,7 @@ class TestToolParameterValidation:
     def test_list_tables_empty_schema(self):
         """Test list_hg_tables_in_a_schema with empty schema name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="") as mock:
-            result = list_hg_tables_in_a_schema(schema_name="")
+            list_hg_tables_in_a_schema(schema_name="")
 
             query = mock.call_args[0][1]
             # Empty schema is embedded in query
@@ -559,7 +549,7 @@ class TestToolBoundaryConditions:
         unicode_table = "表格名称"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_name=unicode_schema, table=unicode_table)
+            gather_hg_table_statistics(schema_name=unicode_schema, table=unicode_table)
 
             query = mock.call_args[0][1]
             # Unicode characters should be preserved in the query
@@ -572,7 +562,7 @@ class TestToolBoundaryConditions:
         schema_with_null = "public\x00malicious"
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="success") as mock:
-            result = gather_hg_table_statistics(schema_name=schema_with_null, table="users")
+            gather_hg_table_statistics(schema_name=schema_with_null, table="users")
 
             query = mock.call_args[0][1]
             # Null byte should be in the query (potential truncation risk)
@@ -598,10 +588,7 @@ class TestToolBoundaryConditions:
         # 当前行为：None 参数会导致 TypeError
         # FastMCP 的参数验证应该确保传入的是列表
         with pytest.raises(TypeError):
-            create_hg_maxcompute_foreign_table(
-                maxcompute_project="my_project",
-                maxcompute_tables=None
-            )
+            create_hg_maxcompute_foreign_table(maxcompute_project="my_project", maxcompute_tables=None)
 
     def test_very_long_sql_query(self):
         """测试超长 SQL 查询。"""
@@ -609,7 +596,7 @@ class TestToolBoundaryConditions:
         long_query = "SELECT * FROM users WHERE " + " AND ".join([f"id{i} = {i}" for i in range(1000)])
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
-            result = execute_hg_select_sql(long_query)
+            execute_hg_select_sql(long_query)
 
             # Query should be accepted even if very long
             assert mock.called
@@ -626,7 +613,7 @@ class TestToolBoundaryConditions:
 
         for query in special_queries:
             with patch("hologres_mcp_server.server.handle_call_tool", return_value="result") as mock:
-                result = execute_hg_select_sql(query)
+                execute_hg_select_sql(query)
 
                 # Special characters should be preserved
                 assert mock.called
@@ -648,7 +635,7 @@ class TestShowHgTableDdlExtended:
     def test_ddl_with_special_characters(self):
         """Test DDL with special characters in table name."""
         with patch("hologres_mcp_server.server.handle_call_tool", return_value="DDL content") as mock:
-            result = show_hg_table_ddl(schema_name="my-schema", table="table;with;special")
+            show_hg_table_ddl(schema_name="my-schema", table="table;with;special")
 
             query = mock.call_args[0][1]
             # Special characters are included in query
@@ -658,15 +645,15 @@ class TestShowHgTableDdlExtended:
     def test_ddl_error_handling(self):
         """Test DDL error handling paths."""
         # Test with connection error
-        with patch("hologres_mcp_server.server.handle_call_tool",
-                   return_value="Error executing query: Connection failed"):
+        with patch(
+            "hologres_mcp_server.server.handle_call_tool", return_value="Error executing query: Connection failed"
+        ):
             result = show_hg_table_ddl(schema_name="public", table="users")
 
             assert "Error" in result or "Connection failed" in result
 
         # Test with permission error
-        with patch("hologres_mcp_server.server.handle_call_tool",
-                   return_value="Error: permission denied"):
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="Error: permission denied"):
             result = show_hg_table_ddl(schema_name="restricted", table="secret_table")
 
             assert "Error" in result or "permission" in result
@@ -688,7 +675,9 @@ class TestShowHgTableDdlExtended:
         ddl_tuple = [(view_ddl,)]
 
         # Comments from try_infer_view_comments
-        inferred_comments = "\n-- Infer view column comments from related tables\nCOMMENT ON COLUMN public.my_view.id IS 'User ID';"
+        inferred_comments = (
+            "\n-- Infer view column comments from related tables\nCOMMENT ON COLUMN public.my_view.id IS 'User ID';"
+        )
 
         with patch("hologres_mcp_server.server.handle_call_tool", return_value=tool_result):
             with patch("hologres_mcp_server.server.handle_read_resource", return_value=ddl_tuple):

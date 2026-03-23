@@ -2,8 +2,9 @@
 Tests for package entry point in __init__.py.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class TestPackageMain:

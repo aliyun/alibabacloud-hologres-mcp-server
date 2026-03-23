@@ -3,20 +3,22 @@ Hologres MCP Server - FastMCP Implementation
 Migrated from low-level mcp.server.Server to mcp.server.fastmcp.FastMCP
 """
 
-from typing import Annotated, Optional
+from typing import Annotated
+
 from mcp.server.fastmcp import FastMCP
+
 from hologres_mcp_server.utils import (
-    try_infer_view_comments,
-    handle_read_resource,
-    handle_call_tool,
-    validate_select_query,
-    validate_dml_query,
-    validate_ddl_query,
-    validate_positive_integer,
+    SYSTEM_SCHEMAS,
     format_tabular_result,
     get_list_schemas_query,
     get_list_tables_query,
-    SYSTEM_SCHEMAS,
+    handle_call_tool,
+    handle_read_resource,
+    try_infer_view_comments,
+    validate_ddl_query,
+    validate_dml_query,
+    validate_positive_integer,
+    validate_select_query,
 )
 
 # Initialize FastMCP server
@@ -27,10 +29,9 @@ app = FastMCP("hologres-mcp-server")
 # TOOLS - 12 tools migrated
 # ============================================================================
 
+
 @app.tool()
-def execute_hg_select_sql(
-    query: Annotated[str, "The (SELECT) SQL query to execute in Hologres database."]
-) -> str:
+def execute_hg_select_sql(query: Annotated[str, "The (SELECT) SQL query to execute in Hologres database."]) -> str:
     """Execute SELECT SQL to query data from Hologres database."""
     validate_select_query(query)
     return handle_call_tool("execute_hg_select_sql", query, serverless=False)
@@ -38,7 +39,7 @@ def execute_hg_select_sql(
 
 @app.tool()
 def execute_hg_select_sql_with_serverless(
-    query: Annotated[str, "The (SELECT) SQL query to execute with serverless computing in Hologres database"]
+    query: Annotated[str, "The (SELECT) SQL query to execute with serverless computing in Hologres database"],
 ) -> str:
     """Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like 'Total memory used by all existing queries exceeded memory limitation' occurs during execute_hg_select_sql execution, you can re-execute the SQL with this tool."""
     validate_select_query(query)
@@ -46,18 +47,14 @@ def execute_hg_select_sql_with_serverless(
 
 
 @app.tool()
-def execute_hg_dml_sql(
-    query: Annotated[str, "The DML SQL query to execute in Hologres database"]
-) -> str:
+def execute_hg_dml_sql(query: Annotated[str, "The DML SQL query to execute in Hologres database"]) -> str:
     """Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres database."""
     validate_dml_query(query)
     return handle_call_tool("execute_hg_dml_sql", query, serverless=False)
 
 
 @app.tool()
-def execute_hg_ddl_sql(
-    query: Annotated[str, "The DDL SQL query to execute in Hologres database"]
-) -> str:
+def execute_hg_ddl_sql(query: Annotated[str, "The DDL SQL query to execute in Hologres database"]) -> str:
     """Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres database."""
     validate_ddl_query(query)
     return handle_call_tool("execute_hg_ddl_sql", query, serverless=False)
@@ -66,7 +63,7 @@ def execute_hg_ddl_sql(
 @app.tool()
 def gather_hg_table_statistics(
     schema_name: Annotated[str, "Schema name in Hologres database"],
-    table: Annotated[str, "Table name in Hologres database"]
+    table: Annotated[str, "Table name in Hologres database"],
 ) -> str:
     """Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans."""
     query = f"ANALYZE {schema_name}.{table}"
@@ -74,18 +71,14 @@ def gather_hg_table_statistics(
 
 
 @app.tool()
-def get_hg_query_plan(
-    query: Annotated[str, "The SQL query to analyze in Hologres database"]
-) -> str:
+def get_hg_query_plan(query: Annotated[str, "The SQL query to analyze in Hologres database"]) -> str:
     """Get query plan for a SQL query in Hologres database."""
     explain_query = f"EXPLAIN {query}"
     return handle_call_tool("get_hg_query_plan", explain_query, serverless=False)
 
 
 @app.tool()
-def get_hg_execution_plan(
-    query: Annotated[str, "The SQL query to analyze in Hologres database"]
-) -> str:
+def get_hg_execution_plan(query: Annotated[str, "The SQL query to analyze in Hologres database"]) -> str:
     """Get actual execution plan with runtime statistics for a SQL query in Hologres database."""
     explain_query = f"EXPLAIN ANALYZE {query}"
     return handle_call_tool("get_hg_execution_plan", explain_query, serverless=False)
@@ -94,10 +87,10 @@ def get_hg_execution_plan(
 @app.tool()
 def call_hg_procedure(
     procedure_name: Annotated[str, "The name of the stored procedure to call in Hologres database"],
-    arguments: Annotated[Optional[list[str]], "The arguments to pass to the stored procedure in Hologres database"] = None
+    arguments: Annotated[list[str] | None, "The arguments to pass to the stored procedure in Hologres database"] = None,
 ) -> str:
     """Call a stored procedure in Hologres database."""
-    args_str = ', '.join(arguments) if arguments else ''
+    args_str = ", ".join(arguments) if arguments else ""
     query = f"CALL {procedure_name}({args_str})"
     return handle_call_tool("call_hg_procedure", query, serverless=False)
 
@@ -107,7 +100,7 @@ def create_hg_maxcompute_foreign_table(
     maxcompute_project: Annotated[str, "The MaxCompute project name (required)"],
     maxcompute_tables: Annotated[list[str], "The MaxCompute table names (required)"],
     maxcompute_schema: Annotated[str, "The MaxCompute schema name (optional, default: 'default')"] = "default",
-    local_schema: Annotated[str, "The local schema name in Hologres (optional, default: 'public')"] = "public"
+    local_schema: Annotated[str, "The local schema name in Hologres (optional, default: 'public')"] = "public",
 ) -> str:
     """Create a MaxCompute foreign table in Hologres database to accelerate queries on MaxCompute data."""
     maxcompute_table_list = ", ".join(maxcompute_tables)
@@ -128,7 +121,7 @@ def list_hg_schemas() -> str:
 
 @app.tool()
 def list_hg_tables_in_a_schema(
-    schema_name: Annotated[str, "Schema name to list tables from in Hologres database"]
+    schema_name: Annotated[str, "Schema name to list tables from in Hologres database"],
 ) -> str:
     """List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table)."""
     return handle_call_tool("list_hg_tables_in_a_schema", get_list_tables_query(schema_name), serverless=False)
@@ -137,16 +130,16 @@ def list_hg_tables_in_a_schema(
 @app.tool()
 def show_hg_table_ddl(
     schema_name: Annotated[str, "Schema name in Hologres database"],
-    table: Annotated[str, "Table name in Hologres database"]
+    table: Annotated[str, "Table name in Hologres database"],
 ) -> str:
     """Show DDL script for a table, view, or foreign table in Hologres database."""
-    query = f"SELECT hg_dump_script('\"{schema_name}\".\"{table}\"')"
+    query = f'SELECT hg_dump_script(\'"{schema_name}"."{table}"\')'
     result = handle_call_tool("show_hg_table_ddl", query, serverless=False)
 
     if "Type: VIEW" in result:
         ddl = handle_read_resource("list_ddl", query)
         if ddl and ddl[0]:
-            view_content = ddl[0][0].replace('\n\nEND;', '')
+            view_content = ddl[0][0].replace("\n\nEND;", "")
             comments = try_infer_view_comments(schema_name, table)
             return view_content + comments + "\n\nEND."
     return result
@@ -155,6 +148,7 @@ def show_hg_table_ddl(
 # ============================================================================
 # RESOURCES - 6 resources migrated
 # ============================================================================
+
 
 @app.resource("hologres:///schemas")
 def list_schemas() -> str:
@@ -173,12 +167,12 @@ def list_tables_in_schema(schema: str) -> str:
 @app.resource("hologres:///{schema}/{table}/ddl")
 def get_table_ddl(schema: str, table: str) -> str:
     """Get the DDL script of a table in a specific schema in Hologres database."""
-    query = f"SELECT hg_dump_script('\"{schema}\".\"{table}\"')"
+    query = f'SELECT hg_dump_script(\'"{schema}"."{table}"\')'
     ddl = handle_read_resource("list_ddl", query)
 
     if ddl and ddl[0]:
         if "Type: VIEW" in ddl[0][0]:
-            view_content = ddl[0][0].replace('\n\nEND;', '')
+            view_content = ddl[0][0].replace("\n\nEND;", "")
             comments = try_infer_view_comments(schema, table)
             return view_content + comments + "\n\nEND;"
         else:
@@ -240,7 +234,7 @@ def get_hg_instance_version() -> str:
     """Get Hologres instance version."""
     query = "SELECT HG_VERSION();"
     version = handle_read_resource("get_instance_version", query)[0][0]
-    version_number = version.split(' ')[1]
+    version_number = version.split(" ")[1]
     return version_number
 
 
@@ -362,6 +356,7 @@ def get_query_log_failed(interval: str, row_limits: str) -> str:
 # PROMPTS - New feature in FastMCP
 # ============================================================================
 
+
 @app.prompt()
 def analyze_table_performance(schema: str, table: str) -> str:
     """Generate a prompt to analyze table performance in Hologres."""
@@ -378,6 +373,7 @@ Focus on:
 - Partition strategy (if applicable)
 - Statistics freshness
 - Missing statistics alerts"""
+
 
 @app.prompt()
 def optimize_query(query: str) -> str:
@@ -399,6 +395,7 @@ Consider:
 - Distribution skew
 - Memory usage
 - Serverless computing option for large queries"""
+
 
 @app.prompt()
 def explore_schema(schema: str = "public") -> str:

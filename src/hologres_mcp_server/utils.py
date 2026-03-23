@@ -1,10 +1,11 @@
+import re
+import time
+
+import pglast
 import psycopg
 from psycopg import sql
-import pglast
-import time
-import re
-from hologres_mcp_server.settings import get_db_config
 
+from hologres_mcp_server.settings import get_db_config
 
 # Pre-compiled regex patterns for SQL validation
 WITH_SELECT_PATTERN = re.compile(r"^\s*WITH\s+.*?SELECT\b", re.IGNORECASE | re.DOTALL)
@@ -84,24 +85,31 @@ def handle_call_tool(tool_name, query, serverless=False):
     except Exception as e:
         return f"Error executing query: {str(e)}"
 
+
 def get_view_definition(cursor, schema_name, view_name):
-    cursor.execute(sql.SQL("""
+    cursor.execute(
+        sql.SQL("""
         SELECT definition
         FROM pg_views
         WHERE schemaname = %s AND viewname = %s
-    """), [schema_name, view_name])
+    """),
+        [schema_name, view_name],
+    )
     result = cursor.fetchone()
     return result[0] if result else None
 
 
 def get_column_comment(cursor, schema_name, table_name, column_name):
-    cursor.execute(sql.SQL("""
+    cursor.execute(
+        sql.SQL("""
         SELECT col_description(att.attrelid, att.attnum)
         FROM pg_attribute att
         JOIN pg_class cls ON att.attrelid = cls.oid
         JOIN pg_namespace nsp ON cls.relnamespace = nsp.oid
         WHERE cls.relname = %s AND att.attname = %s AND nsp.nspname = %s
-    """), [table_name, column_name, schema_name])
+    """),
+        [table_name, column_name, schema_name],
+    )
     result = cursor.fetchone()
     return result[0] if result else None
 
@@ -126,13 +134,18 @@ def try_infer_view_comments(schema_name, view_name):
                                     source_table = target.val.fields[0].sval
                                     source_column = target.val.fields[1].sval
                                     target_column = target.name or source_column
-                                    column_comment = get_column_comment(cursor, schema_name, source_table, source_column)
+                                    column_comment = get_column_comment(
+                                        cursor, schema_name, source_table, source_column
+                                    )
                                     if column_comment:
-                                        cursor.execute(sql.SQL("""
+                                        cursor.execute(
+                                            sql.SQL("""
                                             SELECT col_description((SELECT oid FROM pg_class WHERE relname = %s AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = %s)), attnum)
                                             FROM pg_attribute
                                             WHERE attname = %s AND attrelid = (SELECT oid FROM pg_class WHERE relname = %s AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = %s))
-                                        """), [view_name, schema_name, target_column, view_name, schema_name])
+                                        """),
+                                            [view_name, schema_name, target_column, view_name, schema_name],
+                                        )
                                         view_column_comment = cursor.fetchone()
                                         if not view_column_comment or view_column_comment[0] is None:
                                             statement = f"COMMENT ON COLUMN {schema_name}.{view_name}.{target_column} IS '{column_comment}';"
@@ -141,13 +154,14 @@ def try_infer_view_comments(schema_name, view_name):
                     comment_statements.insert(0, "-- Infer view column comments from related tables")
                 return "\n".join(comment_statements)
 
-    except Exception as e:
+    except Exception:
         return ""
 
 
 # ============================================================================
 # SQL Validation Helpers
 # ============================================================================
+
 
 def validate_select_query(query: str) -> None:
     """Validate that query is SELECT or WITH...SELECT. Raises ValueError if not."""
@@ -186,6 +200,7 @@ def validate_positive_integer(value: str, param_name: str = "Row limits") -> tup
 # Result Formatting Helpers
 # ============================================================================
 
+
 def format_tabular_result(rows: list, headers: list) -> str:
     """Format query results as tab-separated values with headers."""
     result = ["\t".join(headers)]
@@ -198,6 +213,7 @@ def format_tabular_result(rows: list, headers: list) -> str:
 # ============================================================================
 # Query Generators
 # ============================================================================
+
 
 def get_list_schemas_query() -> str:
     """Return the SQL query for listing schemas."""
