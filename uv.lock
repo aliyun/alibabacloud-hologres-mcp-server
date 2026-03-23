@@ -378,7 +378,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "mcp", specifier = ">=1.4.1" },
+    { name = "mcp", specifier = ">=1.23.0" },
     { name = "pglast", specifier = ">=7.5" },
     { name = "psycopg", specifier = ">=3.1.0" },
     { name = "psycopg-binary", specifier = ">=3.1.0" },
