@@ -15,6 +15,10 @@
 - Added "Code Quality" section to README with ruff usage instructions
 - Updated version references in release workflow examples
 
+### Dependencies
+- Upgraded `mcp` dependency from 1.4.1 to **1.23.0**
+- Updated `h11` indirect dependency to 0.16.0 (security fix)
+
 ## Version 0.2.0
 ### Breaking Changes
 The following tools have renamed their `schema` parameter to `schema_name` to avoid Pydantic field shadowing warnings:
@@ -137,7 +141,7 @@ Hologres MCP Server serves as a universal interface between AI Agents and Hologr
 ### Dependencies
 - Python 3.10 or higher
 - Required packages
-  - mcp >= 1.4.0
+  - mcp >= 1.23.0
   - psycopg >= 3.1.0
 
 ### Configuration
