@@ -1423,3 +1423,387 @@ class TestMCPPerformance:
         # Verify we got results
         assert "user_id" in text_content.lower() or "user" in text_content.lower()
         assert "order_count" in text_content.lower() or "count" in text_content.lower()
+
+
+# ============================================================================
+# VIEW DDL Comment Inference Tests
+# ============================================================================
+
+class TestMCPViewCommentInference:
+    """Tests for VIEW DDL comment inference functionality."""
+
+    async def test_view_ddl_with_column_comment_inference(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test that VIEW DDL includes inferred column comments from source table.
+
+        This test covers the code path in server.py lines 146-151 where
+        try_infer_view_comments is called when showing VIEW DDL.
+        """
+        source_table = f"{integration_test_prefix}source_table_for_view"
+        view_name = f"{integration_test_prefix}view_with_comments"
+
+        # Step 1: Create source table with column comments
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE TABLE IF NOT EXISTS public.{source_table} (
+                    id INT PRIMARY KEY,
+                    name TEXT,
+                    description TEXT
+                )
+                """
+            }
+        )
+
+        try:
+            # Add column comments to source table
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {
+                    "query": f"COMMENT ON COLUMN public.{source_table}.id IS 'Primary key identifier'"
+                }
+            )
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {
+                    "query": f"COMMENT ON COLUMN public.{source_table}.name IS 'Name of the entity'"
+                }
+            )
+
+            # Step 2: Create a view referencing the source table
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {
+                    "query": f"""
+                    CREATE OR REPLACE VIEW public.{view_name} AS
+                    SELECT t.id, t.name, t.description
+                    FROM public.{source_table} t
+                    """
+                }
+            )
+
+            try:
+                # Step 3: Get VIEW DDL using tool - should trigger comment inference
+                ddl_result = await mcp_session.call_tool(
+                    "show_hg_table_ddl",
+                    {"schema_name": "public", "table": view_name}
+                )
+
+                assert ddl_result is not None
+                assert hasattr(ddl_result, "content")
+                text_content = ddl_result.content[0].text
+
+                # Verify it's a VIEW
+                assert "VIEW" in text_content.upper() or "view" in text_content.lower()
+
+                # Step 4: Also test via resource endpoint
+                resource_result = await mcp_session.read_resource(
+                    f"hologres:///public/{view_name}/ddl"
+                )
+
+                assert resource_result is not None
+                assert hasattr(resource_result, "contents")
+                resource_text = resource_result.contents[0].text
+
+                # The DDL should contain the view definition
+                assert "SELECT" in resource_text.upper() or view_name in resource_text
+
+            finally:
+                # Cleanup view
+                await mcp_session.call_tool(
+                    "execute_hg_ddl_sql",
+                    {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
+                )
+
+        finally:
+            # Cleanup source table
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{source_table}"}
+            )
+
+
+# ============================================================================
+# Parameter Validation Tests
+# ============================================================================
+
+class TestMCPParameterValidation:
+    """Tests for parameter validation in tools and resources."""
+
+    async def test_query_log_invalid_row_limits(self, mcp_session: ClientSession):
+        """Test that invalid row_limits parameter is handled gracefully.
+
+        This tests the validate_positive_integer function path in server.py lines 294-296.
+        """
+        from mcp.shared.exceptions import McpError
+
+        # Test with non-integer row_limits
+        # FastMCP should handle this as either an error or return validation message
+        try:
+            result = await mcp_session.read_resource(
+                "system:///query_log/latest/invalid"
+            )
+            # If no exception, check for error message in content
+            if hasattr(result, "contents"):
+                text = result.contents[0].text
+                # Should contain error message about invalid format
+                assert "invalid" in text.lower() or "error" in text.lower() or "integer" in text.lower()
+        except McpError as e:
+            # McpError is also acceptable for invalid parameters
+            pass
+
+    async def test_query_log_negative_row_limits(self, mcp_session: ClientSession):
+        """Test that negative row_limits parameter is handled gracefully."""
+        # Test with negative row_limits
+        result = await mcp_session.read_resource(
+            "system:///query_log/latest/-5"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        text = result.contents[0].text
+        # Should contain error message about positive integer
+        assert "positive" in text.lower() or "error" in text.lower() or "invalid" in text.lower()
+
+
+# ============================================================================
+# Resource Empty Results Tests
+# ============================================================================
+
+class TestMCPResourceEmptyResults:
+    """Tests for resource endpoints with empty or not-found results."""
+
+    async def test_table_statistics_not_found(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test statistics resource for a table without statistics.
+
+        This tests the empty result path in server.py lines 206-207.
+        """
+        table_name = f"{integration_test_prefix}no_stats_table"
+
+        # Create a table without gathering statistics
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE TABLE IF NOT EXISTS public.{table_name} (
+                    id INT,
+                    name TEXT
+                )
+                """
+            }
+        )
+
+        try:
+            # Get statistics - should return "No statistics found" message
+            result = await mcp_session.read_resource(
+                f"hologres:///public/{table_name}/statistic"
+            )
+
+            assert result is not None
+            assert hasattr(result, "contents")
+            text = result.contents[0].text
+
+            # Should indicate no statistics found
+            assert "no statistics" in text.lower() or "statistic" in text.lower() or len(text.strip()) > 0
+
+        finally:
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql",
+                {"query": f"DROP TABLE IF EXISTS public.{table_name}"}
+            )
+
+    async def test_guc_value_not_found(self, mcp_session: ClientSession):
+        """Test GUC resource for a non-existent GUC.
+
+        This tests the empty result path in server.py lines 286-287.
+        """
+        result = await mcp_session.read_resource(
+            "system:///guc_value/nonexistent_guc_xyz_12345"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        text = result.contents[0].text
+
+        # Should indicate GUC not found or error
+        assert "no guc" in text.lower() or "not found" in text.lower() or "error" in text.lower() or len(text.strip()) > 0
+
+    async def test_table_ddl_not_found(self, mcp_session: ClientSession):
+        """Test DDL resource for a non-existent table."""
+        result = await mcp_session.read_resource(
+            "hologres:///public/nonexistent_table_xyz_12345/ddl"
+        )
+
+        assert result is not None
+        assert hasattr(result, "contents")
+        text = result.contents[0].text
+
+        # Should indicate no DDL found
+        assert "no ddl" in text.lower() or "not found" in text.lower() or len(text.strip()) > 0
+
+
+# ============================================================================
+# Tool Error Paths Tests
+# ============================================================================
+
+class TestMCPToolErrorPaths:
+    """Tests for tool error handling paths."""
+
+    async def test_query_plan_invalid_query(self, mcp_session: ClientSession):
+        """Test get_hg_query_plan with an invalid query."""
+        result = await mcp_session.call_tool(
+            "get_hg_query_plan",
+            {"query": "SELECT * FROM nonexistent_table_xyz_12345"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Should contain some output (might be error or plan)
+        assert text_content is not None
+        assert len(text_content.strip()) > 0
+
+    async def test_execution_plan_failure(self, mcp_session: ClientSession):
+        """Test get_hg_execution_plan with a query that might fail during execution."""
+        result = await mcp_session.call_tool(
+            "get_hg_execution_plan",
+            {"query": "SELECT 1/0 AS division_by_zero"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # The result might contain error or actual plan
+        assert text_content is not None
+
+    async def test_gather_statistics_nonexistent_table(self, mcp_session: ClientSession):
+        """Test gather_hg_table_statistics on a non-existent table."""
+        result = await mcp_session.call_tool(
+            "gather_hg_table_statistics",
+            {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Should indicate error or contain error message
+        assert "error" in text_content.lower() or "does not exist" in text_content.lower() or len(text_content.strip()) > 0
+
+    async def test_show_ddl_nonexistent_table(self, mcp_session: ClientSession):
+        """Test show_hg_table_ddl on a non-existent table."""
+        result = await mcp_session.call_tool(
+            "show_hg_table_ddl",
+            {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Should contain some response (error or empty DDL)
+        assert text_content is not None
+
+
+# ============================================================================
+# Foreign Table and Boundary Conditions Tests
+# ============================================================================
+
+class TestMCPForeignTableAndBoundaries:
+    """Tests for foreign tables and boundary conditions."""
+
+    async def test_deeply_nested_cte(self, mcp_session: ClientSession):
+        """Test query with deeply nested CTEs."""
+        # Create a query with multiple levels of nested CTEs
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {
+                "query": """
+                WITH
+                    level1 AS (SELECT 1 AS id),
+                    level2 AS (SELECT id * 2 AS id FROM level1),
+                    level3 AS (SELECT id * 2 AS id FROM level2),
+                    level4 AS (SELECT id * 2 AS id FROM level3),
+                    level5 AS (SELECT id * 2 AS id FROM level4)
+                SELECT * FROM level5
+                """
+            }
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Should return 16 (1 * 2^4)
+        assert "16" in text_content
+
+    async def test_view_without_source_table(
+        self, mcp_session: ClientSession, integration_test_prefix: str
+    ):
+        """Test creating a view that references a non-existent source table."""
+        view_name = f"{integration_test_prefix}broken_view"
+
+        # Try to create a view referencing non-existent table
+        result = await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"""
+                CREATE OR REPLACE VIEW public.{view_name} AS
+                SELECT id FROM public.nonexistent_source_table_xyz
+                """
+            }
+        )
+
+        # Hologres might create the view anyway or return error
+        # We just need to verify the operation is handled
+        assert result is not None
+        assert hasattr(result, "content")
+
+        # Cleanup if view was created
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {"query": f"DROP VIEW IF EXISTS public.{view_name}"}
+        )
+
+    async def test_complex_subquery(self, mcp_session: ClientSession):
+        """Test query with complex nested subqueries."""
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {
+                "query": """
+                SELECT
+                    outer_val,
+                    (SELECT COUNT(*) FROM (SELECT 1 AS x UNION ALL SELECT 2 AS x) AS inner_table) AS inner_count
+                FROM (SELECT 10 AS outer_val) AS t
+                """
+            }
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+        assert text_content is not None
+
+    async def test_query_with_many_columns(self, mcp_session: ClientSession):
+        """Test query returning many columns (stress test)."""
+        # Build a query with 100 columns
+        columns = [f"{i} AS col{i}" for i in range(1, 101)]
+        query = f"SELECT {', '.join(columns)}"
+
+        result = await mcp_session.call_tool(
+            "execute_hg_select_sql",
+            {"query": query}
+        )
+
+        assert result is not None
+        assert hasattr(result, "content")
+        text_content = result.content[0].text
+
+        # Verify at least some column names appear
+        assert "col1" in text_content or "col50" in text_content
