@@ -103,6 +103,19 @@ Use uvx mode
 }
 ```
 
+## Using with Claude Code
+
+```bash
+# Add to Claude Code
+claude mcp add hologres-mcp-server \
+  -e HOLOGRES_HOST=<your_host> \
+  -e HOLOGRES_PORT=<your_port> \
+  -e HOLOGRES_USER=<your_access_id> \
+  -e HOLOGRES_PASSWORD=<your_access_key> \
+  -e HOLOGRES_DATABASE=<your_database> \
+  -- uvx hologres-mcp-server
+```
+
 ## Components
 
 ### Tools
@@ -297,4 +310,11 @@ twine upload dist/*
 # 5. Tag the release
 git tag -a v0.2.1 -m "Release v0.2.1"
 git push origin v0.2.1
+```
+
+### Update CLI Feature
+
+```bash
+# Use FastMCP framework to generate CLI code and Skill
+uv run fastmcp generate-cli hologres-mcp-server hologres_mcp_cli/hologres_mcp_cli.py -f
 ```

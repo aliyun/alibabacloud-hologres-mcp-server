@@ -97,6 +97,19 @@ pip install hologres-mcp-server
 }
 ```
 
+## 在 Claude Code 中使用
+
+```bash
+# 添加到 Claude Code
+claude mcp add hologres-mcp-server \
+  -e HOLOGRES_HOST=<your_host> \
+  -e HOLOGRES_PORT=<your_port> \
+  -e HOLOGRES_USER=<your_access_id> \
+  -e HOLOGRES_PASSWORD=<your_access_key> \
+  -e HOLOGRES_DATABASE=<your_database> \
+  -- uvx hologres-mcp-server
+```
+
 ## 组件
 ### 工具
 - `execute_hg_select_sql` ：在 Hologres 数据库中执行 SELECT SQL 查询
@@ -290,4 +303,11 @@ twine upload dist/*
 # 5. 打标签
 git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
+```
+
+### 更新 cli 功能
+
+```bash
+# 使用 FastMCP 框架，生成 cli 代码和 Skill
+uv run fastmcp generate-cli hologres-mcp-server hologres_mcp_cli/hologres_mcp_cli.py -f
 ```
