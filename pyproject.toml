@@ -1,6 +1,6 @@
 [project]
 name = "hologres-mcp-server"
-version = "0.2.1"
+version = "0.3.0"
 description = "A MCP Server for Hologres"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -14,12 +14,11 @@ classifiers = [
  "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
- "httpx>=0.28.1",
- "mcp>=1.23.0",
- "python-dotenv>=1.0.1",
- "psycopg>=3.1.0",
- "psycopg-binary>=3.1.0",
- "pglast>=7.5"
+    "fastmcp>=3.0.0",
+    "python-dotenv>=1.0.1",
+    "psycopg>=3.1.0",
+    "psycopg-binary>=3.1.0",
+    "pglast>=7.5",
 ]
 [[project.authors]]
 name = "TimothyDing"
@@ -65,7 +64,6 @@ branch = true
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
-    "*/server_legacy.py",
 ]
 
 [tool.coverage.report]
