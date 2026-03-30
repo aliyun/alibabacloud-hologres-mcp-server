@@ -136,6 +136,27 @@ class TestExecuteHgDmlSql:
         with pytest.raises(ValueError, match="must be a DML statement"):
             execute_hg_dml_sql("CREATE TABLE test (id INT)")
 
+    def test_valid_refresh_dynamic_table(self):
+        """Test valid REFRESH DYNAMIC TABLE query."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="Dynamic table refreshed") as mock:
+            result = execute_hg_dml_sql("REFRESH DYNAMIC TABLE public.my_table")
+            assert result == "Dynamic table refreshed"
+            mock.assert_called_once_with(
+                "execute_hg_dml_sql", "REFRESH DYNAMIC TABLE public.my_table", serverless=False
+            )
+
+    def test_valid_refresh_overwrite_dynamic_table(self):
+        """Test valid REFRESH OVERWRITE DYNAMIC TABLE query."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH OVERWRITE DYNAMIC TABLE public.my_table")
+            assert result == "success"
+
+    def test_valid_refresh_with_partition(self):
+        """Test REFRESH DYNAMIC TABLE with PARTITION clause."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH DYNAMIC TABLE public.my_table PARTITION (ds = '2024-01-01')")
+            assert result == "success"
+
 
 class TestExecuteHgDdlSql:
     """Tests for execute_hg_ddl_sql tool."""
@@ -174,6 +195,11 @@ class TestExecuteHgDdlSql:
         """Test DML query is rejected."""
         with pytest.raises(ValueError, match="must be a DDL statement"):
             execute_hg_ddl_sql("INSERT INTO users VALUES (1)")
+
+    def test_invalid_refresh(self):
+        """Test REFRESH query is rejected by DDL tool (REFRESH is DML, not DDL)."""
+        with pytest.raises(ValueError, match="must be a DDL statement"):
+            execute_hg_ddl_sql("REFRESH DYNAMIC TABLE public.my_table")
 
 
 class TestGatherHgTableStatistics:

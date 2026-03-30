@@ -241,6 +241,44 @@ class TestDmlValidation:
         with pytest.raises(ValueError, match="must be a DML statement"):
             execute_hg_dml_sql("DROP TABLE users")
 
+    # === REFRESH DYNAMIC TABLE Statements ===
+
+    def test_dml_validation_refresh_dynamic_table(self):
+        """Test basic REFRESH DYNAMIC TABLE passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH DYNAMIC TABLE public.my_table")
+            assert result == "success"
+
+    def test_dml_validation_refresh_with_partition(self):
+        """Test REFRESH DYNAMIC TABLE with PARTITION passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH DYNAMIC TABLE public.my_table PARTITION (ds = '2024-01-01')")
+            assert result == "success"
+
+    def test_dml_validation_refresh_overwrite(self):
+        """Test REFRESH OVERWRITE DYNAMIC TABLE passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH OVERWRITE DYNAMIC TABLE public.my_table")
+            assert result == "success"
+
+    def test_dml_validation_refresh_case_insensitive(self):
+        """Test case insensitivity for REFRESH keyword."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("refresh dynamic table public.my_table")
+            assert result == "success"
+
+    def test_dml_validation_refresh_with_leading_whitespace(self):
+        """Test REFRESH with leading whitespace passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("   REFRESH DYNAMIC TABLE public.my_table")
+            assert result == "success"
+
+    def test_dml_validation_refresh_with_options(self):
+        """Test REFRESH DYNAMIC TABLE with WITH clause passes validation."""
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="success"):
+            result = execute_hg_dml_sql("REFRESH DYNAMIC TABLE public.my_table WITH (refresh_mode = 'full')")
+            assert result == "success"
+
 
 class TestDdlValidation:
     """Tests for DDL statement validation in execute_hg_ddl_sql."""

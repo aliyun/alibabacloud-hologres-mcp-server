@@ -73,7 +73,7 @@ def execute_hg_select_sql_with_serverless(
 
 @app.tool(tags={"dml"})
 def execute_hg_dml_sql(query: Annotated[str, "The DML SQL query to execute in Hologres database"]) -> str:
-    """Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres database."""
+    """Execute (INSERT, UPDATE, DELETE, REFRESH DYNAMIC TABLE) SQL to insert, update, delete data, and refresh dynamic tables in Hologres database."""
     validate_dml_query(query)
     return handle_call_tool("execute_hg_dml_sql", query, serverless=False)
 

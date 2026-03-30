@@ -12,7 +12,7 @@ WITH_SELECT_PATTERN = re.compile(r"^\s*WITH\s+.*?SELECT\b", re.IGNORECASE | re.D
 SELECT_PATTERN = re.compile(r"^\s*SELECT\b", re.IGNORECASE)
 
 # SQL statement type keywords
-DML_KEYWORDS = ("INSERT", "UPDATE", "DELETE")
+DML_KEYWORDS = ("INSERT", "UPDATE", "DELETE", "REFRESH")
 DDL_KEYWORDS = ("CREATE", "ALTER", "DROP", "COMMENT ON")
 
 # System schemas to exclude from listings
@@ -171,7 +171,7 @@ def validate_select_query(query: str) -> None:
 
 
 def validate_dml_query(query: str) -> None:
-    """Validate that query starts with INSERT/UPDATE/DELETE. Raises ValueError if not."""
+    """Validate that query starts with INSERT/UPDATE/DELETE/REFRESH. Raises ValueError if not."""
     normalized = query.strip().upper()
     if not any(normalized.startswith(keyword) for keyword in DML_KEYWORDS):
         raise ValueError(f"Query must be a DML statement ({', '.join(DML_KEYWORDS)})")
