@@ -16,7 +16,7 @@ from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 
 # Modify this to change how the CLI connects to the MCP server.
-CLIENT_SPEC = StdioTransport(command='uvx', args=['hologres-mcp-server'], env={'HOLOGRES_HOST': 'hgpostcn-cn-elo48alqy013-cn-hangzhou.hologres.aliyuncs.com', 'HOLOGRES_PORT': '80', 'HOLOGRES_USER': 'BASIC$agent', 'HOLOGRES_PASSWORD': 'Leeyd#1988', 'HOLOGRES_DATABASE': 'tpch'})
+CLIENT_SPEC = StdioTransport(command='uvx', args=['hologres-mcp-server'], env={'HOLOGRES_HOST': 'hgxxx-xx-xxx-xx-xxx.hologres.aliyuncs.com', 'HOLOGRES_PORT': '80', 'HOLOGRES_USER': 'xxx', 'HOLOGRES_PASSWORD': 'xxx', 'HOLOGRES_DATABASE': 'xxx'})
 
 app = cyclopts.App(name="hologres-mcp-server", help="CLI for hologres-mcp-server MCP server")
 call_tool_app = cyclopts.App(name="call-tool", help="Call a tool on the server")
