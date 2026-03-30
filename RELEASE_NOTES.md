@@ -1,5 +1,13 @@
 # Release Notes
 
+## Version 1.0.2
+
+### New Features
+- **REFRESH DYNAMIC TABLE Support**: Added support for `REFRESH DYNAMIC TABLE` SQL statement in the `execute_hg_dml_sql` tool
+  - Supports all REFRESH variants including `REFRESH OVERWRITE`, `PARTITION`, and `WITH` clauses
+  - Enables AI Agents to trigger Dynamic Table refresh operations
+  - See [Hologres REFRESH DYNAMIC TABLE Documentation](https://help.aliyun.com/zh/hologres/user-guide/refresh-dynamic-table) for more details
+
 ## Version 1.0.1
 
 ### Security

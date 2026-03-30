@@ -10,13 +10,22 @@ from typing import Annotated
 
 import cyclopts
 import mcp.types
-from rich.console import Console
-
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
+from rich.console import Console
 
 # Modify this to change how the CLI connects to the MCP server.
-CLIENT_SPEC = StdioTransport(command='uvx', args=['hologres-mcp-server'], env={'HOLOGRES_HOST': 'your-hologres-instance.hologres.aliyuncs.com', 'HOLOGRES_PORT': '80', 'HOLOGRES_USER': 'your_username', 'HOLOGRES_PASSWORD': 'your_password', 'HOLOGRES_DATABASE': 'your_database'})
+CLIENT_SPEC = StdioTransport(
+    command="uvx",
+    args=["hologres-mcp-server"],
+    env={
+        "HOLOGRES_HOST": "your-hologres-instance.hologres.aliyuncs.com",
+        "HOLOGRES_PORT": "80",
+        "HOLOGRES_USER": "your_username",
+        "HOLOGRES_PASSWORD": "your_password",
+        "HOLOGRES_DATABASE": "your_database",
+    },
+)
 
 app = cyclopts.App(name="hologres-mcp-server", help="CLI for hologres-mcp-server MCP server")
 call_tool_app = cyclopts.App(name="call-tool", help="Call a tool on the server")
@@ -56,11 +65,7 @@ def _print_tool_result(result):
 
 async def _call_tool(tool_name: str, arguments: dict) -> None:
     # Filter out None values and empty lists (defaults for optional array params)
-    filtered = {
-        k: v
-        for k, v in arguments.items()
-        if v is not None and (not isinstance(v, list) or len(v) > 0)
-    }
+    filtered = {k: v for k, v in arguments.items() if v is not None and (not isinstance(v, list) or len(v) > 0)}
     async with Client(CLIENT_SPEC) as client:
         result = await client.call_tool(tool_name, filtered, raise_on_error=False)
         _print_tool_result(result)
@@ -179,119 +184,140 @@ async def get_prompt(
 # Tool commands (generated from server schema)
 # ---------------------------------------------------------------------------
 
-@call_tool_app.command(name='execute_hg_select_sql')
+
+@call_tool_app.command(name="execute_hg_select_sql")
 async def execute_hg_select_sql(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The (SELECT) SQL query to execute in Hologres database.")],
 ) -> None:
-    '''Execute SELECT SQL to query data from Hologres database.'''
-    await _call_tool('execute_hg_select_sql', {'query': query})
+    """Execute SELECT SQL to query data from Hologres database."""
+    await _call_tool("execute_hg_select_sql", {"query": query})
 
 
-@call_tool_app.command(name='execute_hg_select_sql_with_serverless')
+@call_tool_app.command(name="execute_hg_select_sql_with_serverless")
 async def execute_hg_select_sql_with_serverless(
     *,
-    query: Annotated[str, cyclopts.Parameter(help="The (SELECT) SQL query to execute with serverless computing in Hologres database")],
+    query: Annotated[
+        str, cyclopts.Parameter(help="The (SELECT) SQL query to execute with serverless computing in Hologres database")
+    ],
 ) -> None:
-    '''Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like \'Total memory used by all existing queries exceeded memory limitation\' occurs during execute_hg_select_sql execution, you can re-execute the SQL with this tool.'''
-    await _call_tool('execute_hg_select_sql_with_serverless', {'query': query})
+    """Use Serverless Computing resources to execute SELECT SQL to query data in Hologres database. When the error like \'Total memory used by all existing queries exceeded memory limitation\' occurs during execute_hg_select_sql execution, you can re-execute the SQL with this tool."""
+    await _call_tool("execute_hg_select_sql_with_serverless", {"query": query})
 
 
-@call_tool_app.command(name='execute_hg_dml_sql')
+@call_tool_app.command(name="execute_hg_dml_sql")
 async def execute_hg_dml_sql(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The DML SQL query to execute in Hologres database")],
 ) -> None:
-    '''Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres database.'''
-    await _call_tool('execute_hg_dml_sql', {'query': query})
+    """Execute (INSERT, UPDATE, DELETE) SQL to insert, update, and delete data in Hologres database."""
+    await _call_tool("execute_hg_dml_sql", {"query": query})
 
 
-@call_tool_app.command(name='execute_hg_ddl_sql')
+@call_tool_app.command(name="execute_hg_ddl_sql")
 async def execute_hg_ddl_sql(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The DDL SQL query to execute in Hologres database")],
 ) -> None:
-    '''Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres database.'''
-    await _call_tool('execute_hg_ddl_sql', {'query': query})
+    """Execute (CREATE, ALTER, DROP) SQL statements to CREATE, ALTER, or DROP tables, views, procedures, GUCs etc. in Hologres database."""
+    await _call_tool("execute_hg_ddl_sql", {"query": query})
 
 
-@call_tool_app.command(name='gather_hg_table_statistics')
+@call_tool_app.command(name="gather_hg_table_statistics")
 async def gather_hg_table_statistics(
     *,
     schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
     table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
 ) -> None:
-    '''Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans.'''
-    await _call_tool('gather_hg_table_statistics', {'schema_name': schema_name, 'table': table})
+    """Execute the ANALYZE TABLE command to have Hologres collect table statistics, enabling QO to generate better query plans."""
+    await _call_tool("gather_hg_table_statistics", {"schema_name": schema_name, "table": table})
 
 
-@call_tool_app.command(name='get_hg_query_plan')
+@call_tool_app.command(name="get_hg_query_plan")
 async def get_hg_query_plan(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The SQL query to analyze in Hologres database")],
 ) -> None:
-    '''Get query plan for a SQL query in Hologres database.'''
-    await _call_tool('get_hg_query_plan', {'query': query})
+    """Get query plan for a SQL query in Hologres database."""
+    await _call_tool("get_hg_query_plan", {"query": query})
 
 
-@call_tool_app.command(name='get_hg_execution_plan')
+@call_tool_app.command(name="get_hg_execution_plan")
 async def get_hg_execution_plan(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The SQL query to analyze in Hologres database")],
 ) -> None:
-    '''Get actual execution plan with runtime statistics for a SQL query in Hologres database.'''
-    await _call_tool('get_hg_execution_plan', {'query': query})
+    """Get actual execution plan with runtime statistics for a SQL query in Hologres database."""
+    await _call_tool("get_hg_execution_plan", {"query": query})
 
 
-@call_tool_app.command(name='call_hg_procedure')
+@call_tool_app.command(name="call_hg_procedure")
 async def call_hg_procedure(
     *,
-    procedure_name: Annotated[str, cyclopts.Parameter(help="The name of the stored procedure to call in Hologres database")],
-    arguments: Annotated[str | None, cyclopts.Parameter(help="The arguments to pass to the stored procedure in Hologres database\\nJSON Schema: {\n                            \"anyOf\": [\n                              {\n                                \"items\": {\n                                  \"type\": \"string\"\n                                },\n                                \"type\": \"array\"\n                              },\n                              {\n                                \"type\": \"null\"\n                              }\n                            ],\n                            \"default\": null,\n                            \"description\": \"The arguments to pass to the stored procedure in Hologres database\"\n                          }")] = None,
+    procedure_name: Annotated[
+        str, cyclopts.Parameter(help="The name of the stored procedure to call in Hologres database")
+    ],
+    arguments: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            help='The arguments to pass to the stored procedure in Hologres database\\nJSON Schema: {\n                            "anyOf": [\n                              {\n                                "items": {\n                                  "type": "string"\n                                },\n                                "type": "array"\n                              },\n                              {\n                                "type": "null"\n                              }\n                            ],\n                            "default": null,\n                            "description": "The arguments to pass to the stored procedure in Hologres database"\n                          }'
+        ),
+    ] = None,
 ) -> None:
-    '''Call a stored procedure in Hologres database.'''
+    """Call a stored procedure in Hologres database."""
     # Parse JSON parameters
     arguments_parsed = json.loads(arguments) if isinstance(arguments, str) else arguments
 
-    await _call_tool('call_hg_procedure', {'procedure_name': procedure_name, 'arguments': arguments_parsed})
+    await _call_tool("call_hg_procedure", {"procedure_name": procedure_name, "arguments": arguments_parsed})
 
 
-@call_tool_app.command(name='create_hg_maxcompute_foreign_table')
+@call_tool_app.command(name="create_hg_maxcompute_foreign_table")
 async def create_hg_maxcompute_foreign_table(
     *,
     maxcompute_project: Annotated[str, cyclopts.Parameter(help="The MaxCompute project name (required)")],
     maxcompute_tables: Annotated[list[str], cyclopts.Parameter(help="The MaxCompute table names (required)")],
-    maxcompute_schema: Annotated[str, cyclopts.Parameter(help="The MaxCompute schema name (optional, default: 'default')")] = 'default',
-    local_schema: Annotated[str, cyclopts.Parameter(help="The local schema name in Hologres (optional, default: 'public')")] = 'public',
+    maxcompute_schema: Annotated[
+        str, cyclopts.Parameter(help="The MaxCompute schema name (optional, default: 'default')")
+    ] = "default",
+    local_schema: Annotated[
+        str, cyclopts.Parameter(help="The local schema name in Hologres (optional, default: 'public')")
+    ] = "public",
 ) -> None:
-    '''Create a MaxCompute foreign table in Hologres database to accelerate queries on MaxCompute data.'''
-    await _call_tool('create_hg_maxcompute_foreign_table', {'maxcompute_project': maxcompute_project, 'maxcompute_tables': maxcompute_tables, 'maxcompute_schema': maxcompute_schema, 'local_schema': local_schema})
+    """Create a MaxCompute foreign table in Hologres database to accelerate queries on MaxCompute data."""
+    await _call_tool(
+        "create_hg_maxcompute_foreign_table",
+        {
+            "maxcompute_project": maxcompute_project,
+            "maxcompute_tables": maxcompute_tables,
+            "maxcompute_schema": maxcompute_schema,
+            "local_schema": local_schema,
+        },
+    )
 
 
-@call_tool_app.command(name='list_hg_schemas')
-async def list_hg_schemas(
-) -> None:
-    '''List all schemas in the current Hologres database, excluding system schemas.'''
-    await _call_tool('list_hg_schemas', {})
+@call_tool_app.command(name="list_hg_schemas")
+async def list_hg_schemas() -> None:
+    """List all schemas in the current Hologres database, excluding system schemas."""
+    await _call_tool("list_hg_schemas", {})
 
 
-@call_tool_app.command(name='list_hg_tables_in_a_schema')
+@call_tool_app.command(name="list_hg_tables_in_a_schema")
 async def list_hg_tables_in_a_schema(
     *,
     schema_name: Annotated[str, cyclopts.Parameter(help="Schema name to list tables from in Hologres database")],
 ) -> None:
-    '''List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table).'''
-    await _call_tool('list_hg_tables_in_a_schema', {'schema_name': schema_name})
+    """List all tables in a specific schema in the current Hologres database, including their types (table, view, foreign table, partitioned table)."""
+    await _call_tool("list_hg_tables_in_a_schema", {"schema_name": schema_name})
 
 
-@call_tool_app.command(name='show_hg_table_ddl')
+@call_tool_app.command(name="show_hg_table_ddl")
 async def show_hg_table_ddl(
     *,
     schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
     table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
 ) -> None:
-    '''Show DDL script for a table, view, or foreign table in Hologres database.'''
-    await _call_tool('show_hg_table_ddl', {'schema_name': schema_name, 'table': table})
+    """Show DDL script for a table, view, or foreign table in Hologres database."""
+    await _call_tool("show_hg_table_ddl", {"schema_name": schema_name, "table": table})
 
 
 if __name__ == "__main__":

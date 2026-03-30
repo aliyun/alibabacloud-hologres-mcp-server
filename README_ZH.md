@@ -301,8 +301,8 @@ uv build
 twine upload dist/*
 
 # 5. 打标签
-git tag -a v1.0.1 -m "Release v1.0.1"
-git push origin v1.0.1
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
 ```
 
 ### 更新 cli 功能
