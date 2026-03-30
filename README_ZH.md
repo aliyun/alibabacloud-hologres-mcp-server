@@ -265,13 +265,13 @@ python -m build
 
 ```bash
 # 安装 twine
-pip install twine
+uv pip install twine
 
 # 上传到 PyPI
-twine upload dist/*
+uv run twine upload dist/*
 
 # 或先上传到测试 PyPI 进行验证
-twine upload --repository testpypi dist/*
+uv run twine upload --repository testpypi dist/*
 ```
 
 ### 发版流程
