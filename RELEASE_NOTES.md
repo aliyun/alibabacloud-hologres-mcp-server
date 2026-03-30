@@ -1,5 +1,19 @@
 # Release Notes
 
+## Version 1.0.0
+
+### Breaking Changes
+- **Framework Migration**: Completely migrated from `mcp` library to **FastMCP v3.0.0** framework
+  - All tools, resources, and prompts now use FastMCP decorators
+  - Simplified and more maintainable codebase
+
+### New Features
+- Added new system resource: `system:///guc_value/{guc_name}` - Get GUC (Grand Unified Configuration) value
+
+### Dependencies
+- Replaced `mcp` dependency with `fastmcp>=3.0.0`
+- Updated version to 1.0.0
+
 ## Version 0.2.1
 
 ### Code Quality

@@ -225,6 +225,7 @@ uv run pytest tests/ -v
 ```bash
 # 安装开发依赖
 uv sync --dev
+uv pip install ruff
 
 # 检查代码风格
 uv run ruff check .

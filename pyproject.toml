@@ -1,6 +1,6 @@
 [project]
 name = "hologres-mcp-server"
-version = "0.3.0"
+version = "1.0.0"
 description = "A MCP Server for Hologres"
 readme = "README.md"
 license = { text = "Apache-2.0" }

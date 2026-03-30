@@ -238,6 +238,7 @@ This project uses [ruff](https://docs.astral.sh/ruff/) for code linting and form
 ```bash
 # Install dev dependencies
 uv sync --dev
+uv pip install ruff
 
 # Check code style
 uv run ruff check .
