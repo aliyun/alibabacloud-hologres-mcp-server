@@ -1,5 +1,11 @@
 # Release Notes
 
+## Version 1.0.1
+
+### Security
+- **CVE-2026-34073**: Updated `cryptography` dependency from 46.0.5 to 46.0.6
+  - Fixed a bug where name constraints were not applied to peer names during verification when the leaf certificate contains a wildcard DNS SAN
+
 ## Version 1.0.0
 
 ### Breaking Changes

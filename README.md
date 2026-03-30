@@ -308,8 +308,8 @@ uv build
 twine upload dist/*
 
 # 5. Tag the release
-git tag -a v0.2.1 -m "Release v0.2.1"
-git push origin v0.2.1
+git tag -a v1.0.1 -m "Release v1.0.1"
+git push origin v1.0.1
 ```
 
 ### Update CLI Feature
