@@ -158,6 +158,9 @@ pip install hologres-mcp-server
 - SQL 注入防护
 
 ```bash
+# 安装依赖
+uv pip install pytest pytest-cov pytest-asyncio
+
 # 运行所有单元测试
 uv run pytest tests/unit/ -v
 
@@ -206,6 +209,9 @@ HOLOGRES_DATABASE=your_database
 3. 运行集成测试：
 
 ```bash
+# 安装依赖
+uv pip install pytest pytest-cov pytest-asyncio
+
 # 运行所有集成测试
 uv run pytest tests/integration/ -v -m integration
 
@@ -282,6 +288,6 @@ uv build
 twine upload dist/*
 
 # 5. 打标签
-git tag -a v0.2.1 -m "Release v0.2.1"
-git push origin v0.2.1
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
 ```

@@ -9,7 +9,7 @@ from fastmcp.server.lifespan import lifespan
 
 from hologres_mcp_server.settings import SERVER_VERSION
 from hologres_mcp_server.utils import (
-    SYSTEM_SCHEMAS,
+    SYSTEM_SCHEMAS_EXCLUDED,
     connect_with_retry,
     format_tabular_result,
     get_list_schemas_query,
@@ -164,14 +164,50 @@ def show_hg_table_ddl(
     if "Type: VIEW" in result:
         ddl = handle_read_resource("list_ddl", query)
         if ddl and ddl[0]:
-            view_content = ddl[0][0].replace("\n\nEND;", "")
-            comments = try_infer_view_comments(schema_name, table)
-            return view_content + comments + "\n\nEND."
+            return _build_view_ddl_with_comments(schema_name, table, ddl[0][0])
     return result
 
 
 # ============================================================================
-# RESOURCES - 6 resources migrated
+# RESOURCES - Helpers
+# ============================================================================
+
+
+def _query_resource_as_table(resource_name, query, empty_message="No data found"):
+    """Execute a resource query and return formatted tabular output.
+
+    Handles error strings from handle_read_resource gracefully.
+    """
+    result = handle_read_resource(resource_name, query, with_headers=True)
+    if isinstance(result, str):
+        return result
+    rows, headers = result
+    if not rows:
+        return empty_message
+    return format_tabular_result(rows, headers)
+
+
+def _query_log_resource(resource_name, where_clauses, row_limits):
+    """Shared handler for query log resources."""
+    limit, error = validate_positive_integer(row_limits)
+    if error:
+        return error
+    where_sql = " AND ".join(where_clauses)
+    if where_sql:
+        where_sql = " WHERE " + where_sql
+    query = f"SELECT * FROM hologres.hg_query_log{where_sql} ORDER BY query_start DESC LIMIT {limit}"
+    return _query_resource_as_table(resource_name, query, "No query logs found")
+
+
+def _build_view_ddl_with_comments(schema, table, raw_ddl):
+    """Process view DDL: strip trailing END;, infer comments, reassemble."""
+    view_content = raw_ddl.replace("\n\nEND;", "")
+    comments = try_infer_view_comments(schema, table)
+    return view_content + comments + "\n\nEND;"
+
+
+# ============================================================================
+# RESOURCES - Resource handlers
 # ============================================================================
 
 
@@ -197,11 +233,8 @@ def get_table_ddl(schema: str, table: str) -> str:
 
     if ddl and ddl[0]:
         if "Type: VIEW" in ddl[0][0]:
-            view_content = ddl[0][0].replace("\n\nEND;", "")
-            comments = try_infer_view_comments(schema, table)
-            return view_content + comments + "\n\nEND;"
-        else:
-            return ddl[0][0]
+            return _build_view_ddl_with_comments(schema, table, ddl[0][0])
+        return ddl[0][0]
     return f"No DDL found for {schema}.{table}"
 
 
@@ -226,10 +259,7 @@ def get_table_statistics(schema: str, table: str) -> str:
         return f"No statistics found for {schema}.{table}"
 
     headers = ["Schema", "Table", "Schema Version", "Stats Version", "Total Rows", "Analyze Time"]
-    result = ["\t".join(headers)]
-    for row in rows:
-        result.append("\t".join(map(str, row)))
-    return "\n".join(result)
+    return format_tabular_result(rows, headers)
 
 
 @app.resource("hologres:///{schema}/{table}/partitions")
@@ -266,33 +296,20 @@ def get_hg_instance_version() -> str:
 @app.resource("system:///missing_stats_tables")
 def get_missing_stats_tables() -> str:
     """Get tables with missing statistics."""
-    excluded = "', '".join(SYSTEM_SCHEMAS)
     query = f"""
         SELECT *
         FROM hologres_statistic.hg_stats_missing
-        WHERE schemaname NOT IN ('{excluded}')
+        WHERE schemaname NOT IN ('{SYSTEM_SCHEMAS_EXCLUDED}')
         ORDER BY schemaname, tablename;
     """
-    result = handle_read_resource("get_missing_stats_tables", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No tables found with missing statistics"
-    return format_tabular_result(rows, headers)
+    return _query_resource_as_table("get_missing_stats_tables", query, "No tables found with missing statistics")
 
 
 @app.resource("system:///stat_activity")
 def get_stat_activity() -> str:
     """Get current database activity."""
     query = "SELECT * FROM hg_stat_activity ORDER BY pid;"
-    result = handle_read_resource("get_stat_activity", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No queries found with current running status"
-    return format_tabular_result(rows, headers)
+    return _query_resource_as_table("get_stat_activity", query, "No queries found with current running status")
 
 
 @app.resource("system:///guc_value/{guc_name}")
@@ -310,17 +327,7 @@ def get_guc_value(guc_name: str) -> str:
 @app.resource("system:///query_log/latest/{row_limits}")
 def get_query_log_latest(row_limits: str) -> str:
     """Get latest query log entries."""
-    limit, error = validate_positive_integer(row_limits)
-    if error:
-        return error
-    query = f"SELECT * FROM hologres.hg_query_log ORDER BY query_start DESC LIMIT {limit}"
-    result = handle_read_resource("get_latest_query_log", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No query logs found"
-    return format_tabular_result(rows, headers)
+    return _query_log_resource("get_latest_query_log", [], row_limits)
 
 
 @app.resource("system:///query_log/user/{user_name}/{row_limits}")
@@ -328,17 +335,7 @@ def get_query_log_user(user_name: str, row_limits: str) -> str:
     """Get query log entries for a specific user."""
     if not user_name:
         return "Username cannot be empty"
-    limit, error = validate_positive_integer(row_limits)
-    if error:
-        return error
-    query = f"SELECT * FROM hologres.hg_query_log WHERE usename = '{user_name}' ORDER BY query_start DESC LIMIT {limit}"
-    result = handle_read_resource("get_user_query_log", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No query logs found"
-    return format_tabular_result(rows, headers)
+    return _query_log_resource("get_user_query_log", [f"usename = '{user_name}'"], row_limits)
 
 
 @app.resource("system:///query_log/application/{application_name}/{row_limits}")
@@ -346,17 +343,7 @@ def get_query_log_application(application_name: str, row_limits: str) -> str:
     """Get query log entries for a specific application."""
     if not application_name:
         return "Application name cannot be empty"
-    limit, error = validate_positive_integer(row_limits)
-    if error:
-        return error
-    query = f"SELECT * FROM hologres.hg_query_log WHERE application_name = '{application_name}' ORDER BY query_start DESC LIMIT {limit}"
-    result = handle_read_resource("get_application_query_log", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No query logs found"
-    return format_tabular_result(rows, headers)
+    return _query_log_resource("get_application_query_log", [f"application_name = '{application_name}'"], row_limits)
 
 
 @app.resource("system:///query_log/failed/{interval}/{row_limits}")
@@ -364,17 +351,9 @@ def get_query_log_failed(interval: str, row_limits: str) -> str:
     """Get failed query log entries within a time interval."""
     if not interval:
         return "Interval cannot be empty"
-    limit, error = validate_positive_integer(row_limits)
-    if error:
-        return error
-    query = f"SELECT * FROM hologres.hg_query_log WHERE status = 'FAILED' AND query_start >= NOW() - INTERVAL '{interval}' ORDER BY query_start DESC LIMIT {limit}"
-    result = handle_read_resource("get_failed_query_log", query, with_headers=True)
-    if isinstance(result, str):
-        return result
-    rows, headers = result
-    if not rows:
-        return "No query logs found"
-    return format_tabular_result(rows, headers)
+    return _query_log_resource(
+        "get_failed_query_log", ["status = 'FAILED'", f"query_start >= NOW() - INTERVAL '{interval}'"], row_limits
+    )
 
 
 # ============================================================================

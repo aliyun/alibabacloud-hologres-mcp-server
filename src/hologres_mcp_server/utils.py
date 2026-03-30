@@ -17,6 +17,7 @@ DDL_KEYWORDS = ("CREATE", "ALTER", "DROP", "COMMENT ON")
 
 # System schemas to exclude from listings
 SYSTEM_SCHEMAS = ("pg_catalog", "information_schema", "hologres", "hologres_statistic", "hologres_streaming_mv")
+SYSTEM_SCHEMAS_EXCLUDED = "', '".join(SYSTEM_SCHEMAS)
 
 # Default connection retry settings
 DEFAULT_RETRY_COUNT = 3
@@ -70,7 +71,7 @@ def handle_call_tool(tool_name, query, serverless=False):
                 cursor.execute(query)
 
                 if tool_name == "gather_hg_table_statistics":
-                    return f"Successfully {query}"
+                    return f"Successfully executed {query}"
 
                 if cursor.description:
                     columns = [desc[0] for desc in cursor.description]
@@ -171,13 +172,15 @@ def validate_select_query(query: str) -> None:
 
 def validate_dml_query(query: str) -> None:
     """Validate that query starts with INSERT/UPDATE/DELETE. Raises ValueError if not."""
-    if not any(query.strip().upper().startswith(keyword) for keyword in DML_KEYWORDS):
+    normalized = query.strip().upper()
+    if not any(normalized.startswith(keyword) for keyword in DML_KEYWORDS):
         raise ValueError(f"Query must be a DML statement ({', '.join(DML_KEYWORDS)})")
 
 
 def validate_ddl_query(query: str) -> None:
     """Validate that query starts with CREATE/ALTER/DROP/COMMENT ON. Raises ValueError if not."""
-    if not any(query.strip().upper().startswith(keyword) for keyword in DDL_KEYWORDS):
+    normalized = query.strip().upper()
+    if not any(normalized.startswith(keyword) for keyword in DDL_KEYWORDS):
         raise ValueError(f"Query must be a DDL statement ({', '.join(DDL_KEYWORDS)})")
 
 
@@ -217,11 +220,10 @@ def format_tabular_result(rows: list, headers: list) -> str:
 
 def get_list_schemas_query() -> str:
     """Return the SQL query for listing schemas."""
-    excluded = "', '".join(SYSTEM_SCHEMAS)
     return f"""
         SELECT table_schema
         FROM information_schema.tables
-        WHERE table_schema NOT IN ('{excluded}')
+        WHERE table_schema NOT IN ('{SYSTEM_SCHEMAS_EXCLUDED}')
         GROUP BY table_schema
         ORDER BY table_schema;
     """
@@ -229,7 +231,6 @@ def get_list_schemas_query() -> str:
 
 def get_list_tables_query(schema_name: str) -> str:
     """Return the SQL query for listing tables in a schema."""
-    excluded = "', '".join(SYSTEM_SCHEMAS)
     return f"""
         SELECT
             tab.table_name,
@@ -245,7 +246,7 @@ def get_list_tables_query(schema_name: str) -> str:
         LEFT JOIN pg_inherits AS inh ON cls.oid = inh.inhrelid
         LEFT JOIN pg_partitioned_table AS p ON cls.oid = p.partrelid
         WHERE
-            tab.table_schema NOT IN ('{excluded}')
+            tab.table_schema NOT IN ('{SYSTEM_SCHEMAS_EXCLUDED}')
             AND tab.table_schema = '{schema_name}'
             AND (inh.inhrelid IS NULL OR NOT EXISTS (
                 SELECT 1

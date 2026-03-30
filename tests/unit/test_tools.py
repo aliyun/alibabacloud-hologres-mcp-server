@@ -690,7 +690,7 @@ class TestShowHgTableDdlExtended:
                     assert "COMMENT ON COLUMN public.my_view.id IS 'User ID';" in result
                     assert "-- Infer view column comments from related tables" in result
                     # Should end with '\n\nEND.' (added by the function)
-                    assert result.endswith("\n\nEND.")
+                    assert result.endswith("\n\nEND;")
 
     def test_view_ddl_with_empty_comments(self):
         """Test VIEW DDL processing when no comments are inferred."""
@@ -705,7 +705,7 @@ class TestShowHgTableDdlExtended:
 
                     # Should still have the view content
                     assert "CREATE VIEW simple_view" in result
-                    assert result.endswith("\n\nEND.")
+                    assert result.endswith("\n\nEND;")
 
     def test_view_ddl_handle_read_resource_empty(self):
         """Test VIEW DDL when handle_read_resource returns empty."""
