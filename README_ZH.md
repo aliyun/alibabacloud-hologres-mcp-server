@@ -146,6 +146,8 @@ claude mcp add hologres-mcp-server \
 - `list_hg_warehouses` ：列出所有计算组（warehouse），包含 CPU、内存、集群数、状态
 - `switch_hg_warehouse` ：切换当前会话的计算组
   - 参数：`warehouse_name`（字符串）
+- `get_hg_table_storage_size` ：查看表的存储大小明细，包含总量、数据、索引、元数据
+  - 参数：`schema_name`（字符串），`table`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

@@ -153,6 +153,8 @@ Since some Agents do not support resources and resource templates, the following
 * `list_hg_warehouses`: List all computing groups (warehouses) with their CPU, memory, cluster count, and status.
 * `switch_hg_warehouse`: Switch the current session's computing resource to a specified warehouse.
   - Parameters: `warehouse_name` (string)
+* `get_hg_table_storage_size`: Get storage size details of a table, including total, data, index, and metadata breakdown.
+  - Parameters: `schema_name` (string), `table` (string)
 
 ### Resources
 

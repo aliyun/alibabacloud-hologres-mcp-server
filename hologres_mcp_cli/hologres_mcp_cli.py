@@ -403,5 +403,15 @@ async def switch_hg_warehouse(
     await _call_tool("switch_hg_warehouse", {"warehouse_name": warehouse_name})
 
 
+@call_tool_app.command(name="get_hg_table_storage_size")
+async def get_hg_table_storage_size(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get storage size details of a table."""
+    await _call_tool("get_hg_table_storage_size", {"schema_name": schema_name, "table": table})
+
+
 if __name__ == "__main__":
     app()

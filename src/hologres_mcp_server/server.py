@@ -246,6 +246,15 @@ def switch_hg_warehouse(
     return _switch_warehouse(warehouse_name)
 
 
+@app.tool(tags={"analysis"})
+def get_hg_table_storage_size(
+    schema_name: Annotated[str, "Schema name in Hologres database"],
+    table: Annotated[str, "Table name in Hologres database"],
+) -> str:
+    """Get storage size details of a table, including total size, data, index, and metadata breakdown."""
+    return _get_table_storage_size(schema_name, table)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -685,6 +694,51 @@ def _switch_warehouse(warehouse_name):
                 return f"Successfully switched default warehouse to '{warehouse_name}'."
     except Exception as e:
         return f"Error switching warehouse: {str(e)}"
+
+
+def _get_table_storage_size(schema_name, table):
+    """Get storage size breakdown for a table."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                full_name = f'"{schema_name}"."{table}"'
+                # Total size
+                cursor.execute(f"SELECT pg_total_relation_size('{full_name}')")
+                total = cursor.fetchone()[0]
+                # Relation size (data only)
+                cursor.execute(f"SELECT pg_relation_size('{full_name}')")
+                data_size = cursor.fetchone()[0]
+
+                parts = [f"## Storage Size: {schema_name}.{table}", ""]
+                parts.append(f"- **Total**: {_format_bytes(total)}")
+                parts.append(f"- **Data**: {_format_bytes(data_size)}")
+                parts.append(f"- **Index + Meta**: {_format_bytes(total - data_size)}")
+
+                # Try hologres.hg_relation_size for detailed breakdown
+                try:
+                    cursor.execute(
+                        f"SELECT hologres.hg_relation_size('{full_name}', 'data')"
+                    )
+                    hg_data = cursor.fetchone()[0]
+                    cursor.execute(
+                        f"SELECT hologres.hg_relation_size('{full_name}', 'index')"
+                    )
+                    hg_index = cursor.fetchone()[0]
+                    cursor.execute(
+                        f"SELECT hologres.hg_relation_size('{full_name}', 'meta')"
+                    )
+                    hg_meta = cursor.fetchone()[0]
+                    parts.append("")
+                    parts.append("### Detailed Breakdown (hg_relation_size)")
+                    parts.append(f"- Data: {_format_bytes(hg_data)}")
+                    parts.append(f"- Index: {_format_bytes(hg_index)}")
+                    parts.append(f"- Meta: {_format_bytes(hg_meta)}")
+                except Exception:
+                    pass  # hg_relation_size not available in older versions
+
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting table storage size: {str(e)}"
 
 
 # ============================================================================
