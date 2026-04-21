@@ -180,6 +180,7 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `warehouse_name` (string)
 * `rebalance_hg_warehouse`: Trigger shard rebalancing for a computing group to eliminate data skew.
   - Parameters: `warehouse_name` (string)
+* `list_hg_data_masking_rules`: List all data masking rules configured via hg_anon extension (column-level and user-level).
 
 ### Resources
 

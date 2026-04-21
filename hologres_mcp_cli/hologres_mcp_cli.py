@@ -549,5 +549,11 @@ async def rebalance_hg_warehouse(
     await _call_tool("rebalance_hg_warehouse", {"warehouse_name": warehouse_name})
 
 
+@call_tool_app.command(name="list_hg_data_masking_rules")
+async def list_hg_data_masking_rules() -> None:
+    """List all data masking rules (column-level and user-level)."""
+    await _call_tool("list_hg_data_masking_rules", {})
+
+
 if __name__ == "__main__":
     app()

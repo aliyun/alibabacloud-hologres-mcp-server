@@ -380,6 +380,12 @@ def rebalance_hg_warehouse(
     return _rebalance_warehouse(warehouse_name)
 
 
+@app.tool(tags={"admin"})
+def list_hg_data_masking_rules() -> str:
+    """List all data masking rules configured via hg_anon extension, including column-level and user-level masking labels."""
+    return _list_data_masking_rules()
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1385,6 +1391,85 @@ def _rebalance_warehouse(warehouse_name):
                 return f"Shard rebalance triggered for warehouse '{warehouse_name}'. Result: {result}\nUse get_hg_warehouse_status to monitor progress."
     except Exception as e:
         return f"Error rebalancing warehouse: {str(e)}"
+
+
+def _list_data_masking_rules():
+    """List all data masking rules from hg_anon extension."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                parts = ["## Data Masking Rules"]
+
+                # Check if hg_anon is enabled
+                try:
+                    cursor.execute("SHOW hg_anon_enable")
+                    enabled = cursor.fetchone()[0]
+                    parts.append(f"\n**Masking Enabled**: {enabled}")
+                except Exception:
+                    parts.append("\n**Masking Enabled**: unknown (hg_anon extension may not be installed)")
+
+                # Get available labels
+                try:
+                    cursor.execute("SHOW hg_anon_labels")
+                    labels = cursor.fetchone()[0]
+                    parts.append(f"**Available Labels**: {labels}")
+                except Exception:
+                    pass
+
+                # Get column-level masking rules
+                try:
+                    cursor.execute(
+                        """
+                        SELECT c.relname AS table_name,
+                               a.attname AS column_name,
+                               s.provider,
+                               s.label
+                        FROM pg_seclabel s
+                        JOIN pg_class c ON s.objoid = c.oid
+                        JOIN pg_attribute a ON s.objoid = a.attrelid AND s.objsubid = a.attnum
+                        ORDER BY c.relname, a.attname
+                        """
+                    )
+                    col_rows = cursor.fetchall()
+                    parts.append("")
+                    parts.append("### Column-level Rules")
+                    if col_rows:
+                        parts.append("Table\tColumn\tProvider\tLabel")
+                        for row in col_rows:
+                            parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                        parts.append(f"\nTotal: {len(col_rows)} column rules")
+                    else:
+                        parts.append("No column-level masking rules configured.")
+                except Exception as e:
+                    parts.append(f"\nColumn rules query error: {str(e)}")
+
+                # Get user-level masking rules
+                try:
+                    cursor.execute(
+                        """
+                        SELECT u.usename AS user_name,
+                               s.label
+                        FROM pg_shseclabel s
+                        INNER JOIN pg_catalog.pg_user u ON s.objoid = u.usesysid
+                        ORDER BY u.usename
+                        """
+                    )
+                    user_rows = cursor.fetchall()
+                    parts.append("")
+                    parts.append("### User-level Rules")
+                    if user_rows:
+                        parts.append("User\tLabel")
+                        for row in user_rows:
+                            parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                        parts.append(f"\nTotal: {len(user_rows)} user rules")
+                    else:
+                        parts.append("No user-level masking rules configured.")
+                except Exception as e:
+                    parts.append(f"\nUser rules query error: {str(e)}")
+
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing data masking rules: {str(e)}"
 
 
 # ============================================================================
