@@ -20,6 +20,24 @@ pytest_plugins = ("pytest_asyncio",)
 
 
 # ============================================================================
+# Pool Reset (prevent pool from interfering with unit tests)
+# ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _reset_connection_pool():
+    """Disable the connection pool in unit tests to prevent threading issues."""
+    from hologres_mcp_server import utils
+    original_init_attempted = utils._pool_init_attempted
+    utils._pool_init_attempted = True
+    original_pool = utils._connection_pool
+    utils._connection_pool = None
+    yield
+    utils._pool_init_attempted = original_init_attempted
+    utils._connection_pool = original_pool
+
+
+# ============================================================================
 # Environment Fixtures (for Unit Tests)
 # ============================================================================
 
