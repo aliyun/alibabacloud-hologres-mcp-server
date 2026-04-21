@@ -139,6 +139,10 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string), `table` (string)
 * `query_and_plotly_chart`: Execute a SELECT SQL query and generate a chart (bar, line, scatter, pie, histogram, area). Returns query results and a base64-encoded PNG image.
   - Parameters: `query` (string), `chart_type` (string, default "bar"), `x_column` (string), `y_column` (string), `title` (string)
+* `analyze_hg_query_by_id`: Analyze a specific query's performance profile by its query_id from hg_query_log. Returns detailed metrics including duration, memory, CPU time, read/write stats.
+  - Parameters: `query_id` (string)
+* `get_hg_slow_queries`: Get slow queries from hg_query_log ordered by duration.
+  - Parameters: `min_duration_ms` (int, default 1000), `limit` (int, default 20)
 
 ### Resources
 

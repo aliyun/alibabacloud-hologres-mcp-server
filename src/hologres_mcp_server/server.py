@@ -182,6 +182,23 @@ def query_and_plotly_chart(
     return _query_and_chart(query, chart_type, x_column, y_column, title)
 
 
+@app.tool(tags={"analysis"})
+def analyze_hg_query_by_id(
+    query_id: Annotated[str, "The query_id from hg_query_log to analyze"],
+) -> str:
+    """Analyze a specific query's performance profile by its query_id from hg_query_log. Returns detailed metrics including duration, memory usage, CPU time, read/write stats, and execution plan."""
+    return _analyze_query_by_id(query_id)
+
+
+@app.tool(tags={"analysis"})
+def get_hg_slow_queries(
+    min_duration_ms: Annotated[int, "Minimum query duration in milliseconds to filter (default 1000)"] = 1000,
+    limit: Annotated[int, "Maximum number of queries to return (default 20)"] = 20,
+) -> str:
+    """Get slow queries from hg_query_log ordered by duration. Useful for identifying performance bottlenecks."""
+    return _get_slow_queries(min_duration_ms, limit)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -315,6 +332,104 @@ def _query_and_chart(query, chart_type, x_column, y_column, title):
 
     except Exception as e:
         return f"Error generating chart: {str(e)}"
+
+
+def _analyze_query_by_id(query_id):
+    """Analyze a query's performance profile from hg_query_log."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM hologres.hg_query_log WHERE query_id = %s",
+                    [query_id],
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return f"No query found with query_id: {query_id}"
+                headers = [desc[0] for desc in cursor.description]
+
+                parts = [f"## Query Profile: {query_id}", ""]
+
+                # Key metrics
+                data = dict(zip(headers, row, strict=False))
+                key_fields = [
+                    ("status", "Status"),
+                    ("duration", "Duration (ms)"),
+                    ("query_start", "Start Time"),
+                    ("usename", "User"),
+                    ("application_name", "Application"),
+                    ("read_bytes", "Read Bytes"),
+                    ("write_bytes", "Write Bytes"),
+                    ("memory_bytes", "Memory"),
+                    ("shuffle_bytes", "Shuffle Bytes"),
+                    ("cpu_time_ms", "CPU Time (ms)"),
+                    ("physical_reads", "Physical Reads"),
+                    ("query_detail", "Query"),
+                ]
+
+                parts.append("### Key Metrics")
+                for field, label in key_fields:
+                    if field in data and data[field] is not None:
+                        value = data[field]
+                        if "bytes" in field.lower() and isinstance(value, (int, float)):
+                            value = _format_bytes(value)
+                        parts.append(f"- **{label}**: {value}")
+
+                # All other fields
+                parts.append("")
+                parts.append("### All Fields")
+                for h, v in zip(headers, row, strict=False):
+                    if v is not None:
+                        parts.append(f"- {h}: {v}")
+
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error analyzing query: {str(e)}"
+
+
+def _get_slow_queries(min_duration_ms, limit):
+    """Get slow queries from hg_query_log."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT query_id, usename, status, duration, query_start,
+                           read_bytes, memory_bytes, cpu_time_ms,
+                           LEFT(query_detail, 200) as query_preview
+                    FROM hologres.hg_query_log
+                    WHERE duration >= %s
+                    ORDER BY duration DESC
+                    LIMIT %s
+                    """,
+                    [min_duration_ms, limit],
+                )
+                rows = cursor.fetchall()
+                if not rows:
+                    return f"No queries found with duration >= {min_duration_ms}ms."
+
+                headers = [desc[0] for desc in cursor.description]
+                parts = [f"## Slow Queries (duration >= {min_duration_ms}ms)", ""]
+                parts.append("\t".join(headers))
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                parts.append(f"\nTotal: {len(rows)} queries")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting slow queries: {str(e)}"
+
+
+def _format_bytes(bytes_val):
+    """Format bytes to human-readable string."""
+    try:
+        bytes_val = float(bytes_val)
+    except (TypeError, ValueError):
+        return str(bytes_val)
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if abs(bytes_val) < 1024.0:
+            return f"{bytes_val:.1f} {unit}"
+        bytes_val /= 1024.0
+    return f"{bytes_val:.1f} PB"
 
 
 # ============================================================================

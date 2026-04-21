@@ -333,5 +333,24 @@ async def query_and_plotly_chart(
     await _call_tool("query_and_plotly_chart", {"query": query, "chart_type": chart_type, "x_column": x_column, "y_column": y_column, "title": title})
 
 
+@call_tool_app.command(name="analyze_hg_query_by_id")
+async def analyze_hg_query_by_id(
+    *,
+    query_id: Annotated[str, cyclopts.Parameter(help="The query_id from hg_query_log to analyze")],
+) -> None:
+    """Analyze a specific query's performance profile by its query_id from hg_query_log."""
+    await _call_tool("analyze_hg_query_by_id", {"query_id": query_id})
+
+
+@call_tool_app.command(name="get_hg_slow_queries")
+async def get_hg_slow_queries(
+    *,
+    min_duration_ms: Annotated[int, cyclopts.Parameter(help="Minimum query duration in milliseconds to filter")] = 1000,
+    limit: Annotated[int, cyclopts.Parameter(help="Maximum number of queries to return")] = 20,
+) -> None:
+    """Get slow queries from hg_query_log ordered by duration."""
+    await _call_tool("get_hg_slow_queries", {"min_duration_ms": min_duration_ms, "limit": limit})
+
+
 if __name__ == "__main__":
     app()

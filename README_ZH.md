@@ -132,6 +132,10 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串），`table`（字符串）
 - `query_and_plotly_chart` ：执行 SELECT 查询并生成图表（bar/line/scatter/pie/histogram/area），返回查询结果和 base64 编码的 PNG 图片
   - 参数：`query`（字符串），`chart_type`（字符串，默认 "bar"），`x_column`（字符串），`y_column`（字符串），`title`（字符串）
+- `analyze_hg_query_by_id` ：通过 query_id 分析查询性能画像，返回耗时、内存、CPU、读写等详细指标
+  - 参数：`query_id`（字符串）
+- `get_hg_slow_queries` ：按耗时排序列出慢查询
+  - 参数：`min_duration_ms`（整数，默认 1000），`limit`（整数，默认 20）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板
