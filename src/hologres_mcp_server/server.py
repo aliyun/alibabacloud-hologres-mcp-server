@@ -232,6 +232,20 @@ def restore_hg_table_from_recyclebin(
     return _restore_from_recyclebin(schema_name, table_name)
 
 
+@app.tool(tags={"admin"})
+def list_hg_warehouses() -> str:
+    """List all computing groups (warehouses) in the Hologres instance, including their CPU, memory, cluster count, and status."""
+    return _list_warehouses()
+
+
+@app.tool(tags={"admin"})
+def switch_hg_warehouse(
+    warehouse_name: Annotated[str, "The warehouse (computing group) name to switch to"],
+) -> str:
+    """Switch the current session's computing resource to a specified warehouse (computing group). Use 'local' for the default computing group."""
+    return _switch_warehouse(warehouse_name)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -598,6 +612,79 @@ def _restore_from_recyclebin(schema_name, table_name):
                 return f"Successfully restored table '{schema_name}.{table_name}' (table_id={table_id}) from recycle bin."
     except Exception as e:
         return f"Error restoring table: {str(e)}"
+
+
+def _list_warehouses():
+    """List all computing groups (warehouses)."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                # Get current warehouse
+                cursor.execute("SHOW hg_computing_resource")
+                current = cursor.fetchone()[0] if cursor.description else "unknown"
+
+                # Get all warehouses
+                cursor.execute(
+                    """
+                    SELECT
+                        warehouse_id,
+                        warehouse_name,
+                        cpu,
+                        memory,
+                        cluster_count,
+                        status,
+                        is_default
+                    FROM hologres.hg_warehouses
+                    ORDER BY warehouse_id
+                    """
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return f"Current computing resource: {current}\nNo warehouses found (single-warehouse mode)."
+
+                parts = [
+                    "## Computing Groups (Warehouses)",
+                    f"Current: {current}",
+                    "",
+                    "ID\tName\tCPU\tMemory\tClusters\tStatus\tDefault",
+                ]
+                for row in rows:
+                    wh_id, name, cpu, mem, clusters, status, is_default = row
+                    default_str = "Yes" if is_default else "No"
+                    parts.append(f"{wh_id}\t{name}\t{cpu}\t{mem}\t{clusters}\t{status}\t{default_str}")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing warehouses: {str(e)}"
+
+
+def _switch_warehouse(warehouse_name):
+    """Switch the default warehouse (computing group)."""
+    try:
+        # For 'local' or 'serverless', use SET directly
+        if warehouse_name.lower() in ("local", "serverless"):
+            with connect_with_retry() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(f"SET hg_computing_resource = '{warehouse_name.lower()}'")
+                    return f"Successfully switched computing resource to '{warehouse_name.lower()}'."
+
+        # For named warehouses, validate first then use CALL
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                # Validate warehouse exists
+                cursor.execute(
+                    "SELECT warehouse_name FROM hologres.hg_warehouses WHERE warehouse_name = %s",
+                    [warehouse_name],
+                )
+                if not cursor.fetchone():
+                    return f"Warehouse '{warehouse_name}' not found. Use list_hg_warehouses to see available options."
+
+                # CALL doesn't support parameterized queries, use validated name
+                safe_name = warehouse_name.replace("'", "''")
+                cursor.execute(f"CALL hg_set_default_warehouse('{safe_name}')")
+                return f"Successfully switched default warehouse to '{warehouse_name}'."
+    except Exception as e:
+        return f"Error switching warehouse: {str(e)}"
 
 
 # ============================================================================

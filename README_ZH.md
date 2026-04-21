@@ -143,6 +143,9 @@ claude mcp add hologres-mcp-server \
 - `list_hg_recyclebin` ：列出回收站中可恢复的已删除表
 - `restore_hg_table_from_recyclebin` ：从回收站恢复已删除的表
   - 参数：`table_name`（字符串），`schema_name`（字符串，默认 "public"）
+- `list_hg_warehouses` ：列出所有计算组（warehouse），包含 CPU、内存、集群数、状态
+- `switch_hg_warehouse` ：切换当前会话的计算组
+  - 参数：`warehouse_name`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

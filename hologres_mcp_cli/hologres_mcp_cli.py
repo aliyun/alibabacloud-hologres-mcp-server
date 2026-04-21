@@ -388,5 +388,20 @@ async def restore_hg_table_from_recyclebin(
     await _call_tool("restore_hg_table_from_recyclebin", {"table_name": table_name, "schema_name": schema_name})
 
 
+@call_tool_app.command(name="list_hg_warehouses")
+async def list_hg_warehouses() -> None:
+    """List all computing groups (warehouses) in the Hologres instance."""
+    await _call_tool("list_hg_warehouses", {})
+
+
+@call_tool_app.command(name="switch_hg_warehouse")
+async def switch_hg_warehouse(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="The warehouse (computing group) name to switch to")],
+) -> None:
+    """Switch the current session's computing resource to a specified warehouse."""
+    await _call_tool("switch_hg_warehouse", {"warehouse_name": warehouse_name})
+
+
 if __name__ == "__main__":
     app()

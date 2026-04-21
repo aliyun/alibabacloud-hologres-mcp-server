@@ -150,6 +150,9 @@ Since some Agents do not support resources and resource templates, the following
 * `list_hg_recyclebin`: List all tables in the Hologres recycle bin (dropped tables that can be restored).
 * `restore_hg_table_from_recyclebin`: Restore a dropped table from the Hologres recycle bin.
   - Parameters: `table_name` (string), `schema_name` (string, default "public")
+* `list_hg_warehouses`: List all computing groups (warehouses) with their CPU, memory, cluster count, and status.
+* `switch_hg_warehouse`: Switch the current session's computing resource to a specified warehouse.
+  - Parameters: `warehouse_name` (string)
 
 ### Resources
 
