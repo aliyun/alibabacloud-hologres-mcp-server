@@ -413,5 +413,15 @@ async def get_hg_table_storage_size(
     await _call_tool("get_hg_table_storage_size", {"schema_name": schema_name, "table": table})
 
 
+@call_tool_app.command(name="cancel_hg_query")
+async def cancel_hg_query(
+    *,
+    pid: Annotated[int, cyclopts.Parameter(help="The process ID (pid) of the query to cancel")],
+    terminate: Annotated[bool, cyclopts.Parameter(help="Forcefully terminate the backend process")] = False,
+) -> None:
+    """Cancel or terminate a running query by its process ID."""
+    await _call_tool("cancel_hg_query", {"pid": pid, "terminate": terminate})
+
+
 if __name__ == "__main__":
     app()

@@ -155,6 +155,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `warehouse_name` (string)
 * `get_hg_table_storage_size`: Get storage size details of a table, including total, data, index, and metadata breakdown.
   - Parameters: `schema_name` (string), `table` (string)
+* `cancel_hg_query`: Cancel or terminate a running query by its process ID.
+  - Parameters: `pid` (int), `terminate` (bool, default false)
 
 ### Resources
 

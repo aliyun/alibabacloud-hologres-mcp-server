@@ -255,6 +255,15 @@ def get_hg_table_storage_size(
     return _get_table_storage_size(schema_name, table)
 
 
+@app.tool(tags={"admin"})
+def cancel_hg_query(
+    pid: Annotated[int, "The process ID (pid) of the query to cancel"],
+    terminate: Annotated[bool, "If True, forcefully terminate the backend process (default False, just cancel the query)"] = False,
+) -> str:
+    """Cancel or terminate a running query by its process ID. Use list_hg_active_queries to find the pid first."""
+    return _cancel_query(pid, terminate)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -739,6 +748,29 @@ def _get_table_storage_size(schema_name, table):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting table storage size: {str(e)}"
+
+
+def _cancel_query(pid, terminate=False):
+    """Cancel or terminate a running query."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                if terminate:
+                    cursor.execute("SELECT pg_terminate_backend(%s)", [pid])
+                    result = cursor.fetchone()[0]
+                    if result:
+                        return f"Successfully terminated backend process (pid={pid})."
+                    else:
+                        return f"Failed to terminate backend (pid={pid}). Process may not exist or already finished."
+                else:
+                    cursor.execute("SELECT pg_cancel_backend(%s)", [pid])
+                    result = cursor.fetchone()[0]
+                    if result:
+                        return f"Successfully cancelled query (pid={pid})."
+                    else:
+                        return f"Failed to cancel query (pid={pid}). Process may not exist or already finished."
+    except Exception as e:
+        return f"Error cancelling query: {str(e)}"
 
 
 # ============================================================================

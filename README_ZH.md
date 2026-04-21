@@ -148,6 +148,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`warehouse_name`（字符串）
 - `get_hg_table_storage_size` ：查看表的存储大小明细，包含总量、数据、索引、元数据
   - 参数：`schema_name`（字符串），`table`（字符串）
+- `cancel_hg_query` ：取消或终止正在运行的查询
+  - 参数：`pid`（整数），`terminate`（布尔值，默认 false）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板
