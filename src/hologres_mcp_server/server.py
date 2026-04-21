@@ -372,6 +372,14 @@ def get_hg_warehouse_status(
     return _get_warehouse_status(warehouse_name)
 
 
+@app.tool(tags={"admin"})
+def rebalance_hg_warehouse(
+    warehouse_name: Annotated[str, "Name of the warehouse (computing group) to rebalance"],
+) -> str:
+    """Trigger shard rebalancing for a computing group to eliminate data skew across nodes."""
+    return _rebalance_warehouse(warehouse_name)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1364,6 +1372,19 @@ def _get_warehouse_status(warehouse_name):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting warehouse status: {str(e)}"
+
+
+def _rebalance_warehouse(warehouse_name):
+    """Trigger shard rebalancing for a warehouse."""
+    try:
+        safe_name = warehouse_name.replace("'", "''")
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(f"SELECT hg_rebalance_warehouse('{safe_name}')")
+                result = cursor.fetchone()[0]
+                return f"Shard rebalance triggered for warehouse '{warehouse_name}'. Result: {result}\nUse get_hg_warehouse_status to monitor progress."
+    except Exception as e:
+        return f"Error rebalancing warehouse: {str(e)}"
 
 
 # ============================================================================

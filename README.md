@@ -178,6 +178,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `action` (string: "suspend", "resume", "restart", "rename", "resize"), `warehouse_name` (string), `cu` (int, for resize), `new_name` (string, for rename)
 * `get_hg_warehouse_status`: Get detailed running status and scaling progress of a computing group.
   - Parameters: `warehouse_name` (string)
+* `rebalance_hg_warehouse`: Trigger shard rebalancing for a computing group to eliminate data skew.
+  - Parameters: `warehouse_name` (string)
 
 ### Resources
 

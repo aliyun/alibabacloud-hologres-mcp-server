@@ -540,5 +540,14 @@ async def get_hg_warehouse_status(
     await _call_tool("get_hg_warehouse_status", {"warehouse_name": warehouse_name})
 
 
+@call_tool_app.command(name="rebalance_hg_warehouse")
+async def rebalance_hg_warehouse(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse to rebalance")],
+) -> None:
+    """Trigger shard rebalancing for a computing group."""
+    await _call_tool("rebalance_hg_warehouse", {"warehouse_name": warehouse_name})
+
+
 if __name__ == "__main__":
     app()

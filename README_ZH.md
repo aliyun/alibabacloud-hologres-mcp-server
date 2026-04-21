@@ -171,6 +171,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`action`（字符串："suspend"/"resume"/"restart"/"rename"/"resize"），`warehouse_name`（字符串），`cu`（整数，扩缩容时需要），`new_name`（字符串，重命名时需要）
 - `get_hg_warehouse_status` ：查看计算组的详细运行状态和扩缩容进度
   - 参数：`warehouse_name`（字符串）
+- `rebalance_hg_warehouse` ：触发计算组分片均衡，消除节点间数据倾斜
+  - 参数：`warehouse_name`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板
