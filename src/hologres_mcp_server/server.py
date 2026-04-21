@@ -52,7 +52,7 @@ app = FastMCP(
 
 
 # ============================================================================
-# TOOLS - 12 tools migrated
+# TOOLS - 39 tools
 # ============================================================================
 
 
@@ -396,6 +396,14 @@ def query_hg_external_files(
 ) -> str:
     """Query files directly from OSS using EXTERNAL_FILES function without creating foreign tables. Requires Hologres V4.1+. Supports CSV, Parquet, ORC formats."""
     return _query_external_files(path, format, columns, oss_endpoint, role_arn)
+
+
+@app.tool(tags={"admin"})
+def get_hg_guc_config(
+    guc_name: Annotated[str, "The GUC parameter name to query, e.g. 'hg_computing_resource', 'statement_timeout', 'hg_experimental_enable_fixed_dispatcher'"],
+) -> str:
+    """Get the current value of a GUC (Grand Unified Configuration) parameter."""
+    return _get_guc_config(guc_name)
 
 
 # ============================================================================
@@ -1522,6 +1530,18 @@ def _query_external_files(path, format, columns="", oss_endpoint="", role_arn=""
         if "EXTERNAL_FILES" in str(e) and "does not exist" in str(e):
             return "EXTERNAL_FILES function not available. Requires Hologres V4.1+."
         return f"Error querying external files: {str(e)}"
+
+
+def _get_guc_config(guc_name):
+    """Get the current value of a GUC parameter."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(f"SHOW {guc_name}")
+                value = cursor.fetchone()[0]
+                return f"**{guc_name}** = {value}"
+    except Exception as e:
+        return f"Error getting GUC '{guc_name}': {str(e)}"
 
 
 # ============================================================================

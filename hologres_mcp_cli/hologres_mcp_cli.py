@@ -568,5 +568,14 @@ async def query_hg_external_files(
     await _call_tool("query_hg_external_files", {"path": path, "format": format, "columns": columns, "oss_endpoint": oss_endpoint, "role_arn": role_arn})
 
 
+@call_tool_app.command(name="get_hg_guc_config")
+async def get_hg_guc_config(
+    *,
+    guc_name: Annotated[str, cyclopts.Parameter(help="The GUC parameter name to query")],
+) -> None:
+    """Get the current value of a GUC parameter."""
+    await _call_tool("get_hg_guc_config", {"guc_name": guc_name})
+
+
 if __name__ == "__main__":
     app()
