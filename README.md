@@ -168,6 +168,8 @@ Since some Agents do not support resources and resource templates, the following
 * `get_hg_lock_diagnostics`: Diagnose lock contention by showing blocking and waiting queries.
 * `get_hg_table_info_trend`: Get table storage trend from hg_table_info, showing daily storage size, file count, and row count changes.
   - Parameters: `schema_name` (string), `table` (string), `days` (int, default 7)
+* `manage_hg_query_queue`: Create, drop, or clear a Query Queue. Requires V3.0+ and superuser privileges.
+  - Parameters: `action` (string: "create", "drop", "clear"), `queue_name` (string), `max_concurrency` (int, for create), `max_queue_size` (int, for create)
 
 ### Resources
 

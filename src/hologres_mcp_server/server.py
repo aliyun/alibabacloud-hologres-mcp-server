@@ -318,6 +318,17 @@ def get_hg_table_info_trend(
     return _get_table_info_trend(schema_name, table, days)
 
 
+@app.tool(tags={"admin"})
+def manage_hg_query_queue(
+    action: Annotated[str, "Action: 'create', 'drop', or 'clear'"],
+    queue_name: Annotated[str, "Name of the query queue"],
+    max_concurrency: Annotated[int, "Max concurrency for the queue (required for 'create')"] = 0,
+    max_queue_size: Annotated[int, "Max queue size (required for 'create')"] = 0,
+) -> str:
+    """Create, drop, or clear a Query Queue. Requires Hologres V3.0+ and superuser privileges."""
+    return _manage_query_queue(action, queue_name, max_concurrency, max_queue_size)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1132,6 +1143,32 @@ def _get_table_info_trend(schema_name, table, days=7):
         if "does not exist" in str(e):
             return "hg_table_info not available. Requires Hologres V1.3+."
         return f"Error getting table info trend: {str(e)}"
+
+
+def _manage_query_queue(action, queue_name, max_concurrency=0, max_queue_size=0):
+    """Create, drop, or clear a Query Queue."""
+    try:
+        action = action.lower().strip()
+        safe_name = queue_name.replace("'", "''")
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                if action == "create":
+                    if max_concurrency <= 0 or max_queue_size <= 0:
+                        return "Error: max_concurrency and max_queue_size must be positive integers for 'create' action."
+                    cursor.execute(
+                        f"CALL hg_create_query_queue('{safe_name}', {int(max_concurrency)}, {int(max_queue_size)})"
+                    )
+                    return f"Successfully created query queue '{queue_name}' (max_concurrency={max_concurrency}, max_queue_size={max_queue_size})."
+                elif action == "drop":
+                    cursor.execute(f"CALL hg_drop_query_queue('{safe_name}')")
+                    return f"Successfully dropped query queue '{queue_name}'."
+                elif action == "clear":
+                    cursor.execute(f"CALL hg_clear_query_queue('{safe_name}')")
+                    return f"Successfully cleared all queued requests in queue '{queue_name}'."
+                else:
+                    return f"Unknown action '{action}'. Supported: 'create', 'drop', 'clear'."
+    except Exception as e:
+        return f"Error managing query queue: {str(e)}"
 
 
 # ============================================================================

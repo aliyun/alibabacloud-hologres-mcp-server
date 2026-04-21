@@ -481,5 +481,17 @@ async def get_hg_table_info_trend(
     await _call_tool("get_hg_table_info_trend", {"schema_name": schema_name, "table": table, "days": days})
 
 
+@call_tool_app.command(name="manage_hg_query_queue")
+async def manage_hg_query_queue(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'create', 'drop', or 'clear'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    max_concurrency: Annotated[int, cyclopts.Parameter(help="Max concurrency (required for 'create')")] = 0,
+    max_queue_size: Annotated[int, cyclopts.Parameter(help="Max queue size (required for 'create')")] = 0,
+) -> None:
+    """Create, drop, or clear a Query Queue."""
+    await _call_tool("manage_hg_query_queue", {"action": action, "queue_name": queue_name, "max_concurrency": max_concurrency, "max_queue_size": max_queue_size})
+
+
 if __name__ == "__main__":
     app()
