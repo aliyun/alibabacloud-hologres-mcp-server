@@ -113,14 +113,10 @@ def get_hg_execution_plan(query: Annotated[str, "The SQL query to analyze in Hol
 @app.tool(tags={"admin"})
 def call_hg_procedure(
     procedure_name: Annotated[str, "The name of the stored procedure to call in Hologres database"],
-    procedure_args: Annotated[list[str] | None, "The arguments to pass to the stored procedure in Hologres database"] = None,
+    arguments: Annotated[list[str] | None, "The arguments to pass to the stored procedure in Hologres database"] = None,
 ) -> str:
     """Call a stored procedure in Hologres database."""
-    if procedure_args and isinstance(procedure_args, list):
-        safe_args = [f"'{str(arg).replace(chr(39), chr(39)+chr(39))}'" for arg in procedure_args]
-        args_str = ", ".join(safe_args)
-    else:
-        args_str = ""
+    args_str = ", ".join(arguments) if arguments else ""
     query = f"CALL {procedure_name}({args_str})"
     return handle_call_tool("call_hg_procedure", query, serverless=False)
 
@@ -651,19 +647,19 @@ def _list_dynamic_tables(schema_name=""):
                 query = """
                     SELECT
                         schema_name,
-                        dynamic_table_name,
-                        last_refresh_status,
+                        table_name,
+                        status,
                         freshness,
-                        last_refresh_start_time,
-                        lag,
-                        auto_refresh_enable
+                        last_refresh_time,
+                        last_refresh_duration_ms,
+                        last_refresh_rows
                     FROM hologres.hg_dynamic_table_status
                 """
                 params = []
                 if schema_name:
                     query += " WHERE schema_name = %s"
                     params.append(schema_name)
-                query += " ORDER BY schema_name, dynamic_table_name"
+                query += " ORDER BY schema_name, table_name"
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
 
@@ -671,7 +667,7 @@ def _list_dynamic_tables(schema_name=""):
                     return "No Dynamic Tables found."
 
                 parts = ["## Dynamic Tables", ""]
-                parts.append("Schema\tTable\tStatus\tFreshness\tLast Refresh\tLag\tAuto Refresh")
+                parts.append("Schema\tTable\tStatus\tFreshness\tLast Refresh\tDuration(ms)\tRows")
                 for row in rows:
                     parts.append("\t".join(str(v) if v is not None else "" for v in row))
                 parts.append(f"\nTotal: {len(rows)} Dynamic Tables")
@@ -688,16 +684,16 @@ def _get_dynamic_table_refresh_history(schema_name, table_name, limit=10):
                 cursor.execute(
                     """
                     SELECT
-                        query_id,
+                        refresh_id,
                         status,
-                        refresh_start,
-                        refresh_end,
-                        duration,
-                        refresh_latency,
-                        refresh_mode
+                        start_time,
+                        end_time,
+                        duration_ms,
+                        refreshed_rows,
+                        data_latency_ms
                     FROM hologres.hg_dynamic_table_refresh_history
-                    WHERE schema_name = %s AND dynamic_table_name = %s
-                    ORDER BY refresh_start DESC
+                    WHERE schema_name = %s AND table_name = %s
+                    ORDER BY start_time DESC
                     LIMIT %s
                     """,
                     [schema_name, table_name, limit],
@@ -708,7 +704,7 @@ def _get_dynamic_table_refresh_history(schema_name, table_name, limit=10):
                     return f"No refresh history found for {schema_name}.{table_name}."
 
                 parts = [f"## Refresh History: {schema_name}.{table_name}", ""]
-                parts.append("QueryID\tStatus\tStart\tEnd\tDuration(ms)\tLatency\tMode")
+                parts.append("ID\tStatus\tStart\tEnd\tDuration(ms)\tRows\tLatency(ms)")
                 for row in rows:
                     parts.append("\t".join(str(v) if v is not None else "" for v in row))
                 return "\n".join(parts)
@@ -727,9 +723,8 @@ def _list_recyclebin():
                         table_id,
                         schema_name,
                         table_name,
-                        table_owner,
-                        dropby,
-                        drop_time
+                        drop_time,
+                        remaining_time
                     FROM hologres.hg_recyclebin
                     ORDER BY drop_time DESC
                     """
@@ -740,7 +735,7 @@ def _list_recyclebin():
                     return "Recycle bin is empty."
 
                 parts = ["## Recycle Bin", ""]
-                parts.append("Table ID\tSchema\tTable Name\tOwner\tDropped By\tDrop Time")
+                parts.append("Table ID\tSchema\tTable Name\tDrop Time\tRemaining Time")
                 for row in rows:
                     parts.append("\t".join(str(v) if v is not None else "" for v in row))
                 parts.append(f"\nTotal: {len(rows)} tables in recycle bin")
@@ -754,15 +749,6 @@ def _restore_from_recyclebin(schema_name, table_name):
     try:
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
-                # Check if recyclebin GUC is enabled
-                cursor.execute("SHOW hg_enable_recyclebin")
-                guc_value = cursor.fetchone()[0]
-                if guc_value.lower() not in ("on", "true", "1"):
-                    return (
-                        "Error: Recycle bin is not enabled. "
-                        "Please enable it first with: ALTER DATABASE <db_name> SET hg_enable_recyclebin = ON;"
-                    )
-
                 # Find the table in recyclebin
                 cursor.execute(
                     """
@@ -804,8 +790,8 @@ def _list_warehouses():
                         warehouse_id,
                         warehouse_name,
                         cpu,
-                        mem,
-                        started_clusters,
+                        memory,
+                        cluster_count,
                         status,
                         is_default
                     FROM hologres.hg_warehouses
@@ -821,7 +807,7 @@ def _list_warehouses():
                     "## Computing Groups (Warehouses)",
                     f"Current: {current}",
                     "",
-                    "ID\tName\tCPU\tMemory(MB)\tClusters\tStatus\tDefault",
+                    "ID\tName\tCPU\tMemory\tClusters\tStatus\tDefault",
                 ]
                 for row in rows:
                     wh_id, name, cpu, mem, clusters, status, is_default = row
@@ -867,38 +853,39 @@ def _get_table_storage_size(schema_name, table):
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
                 full_name = f'"{schema_name}"."{table}"'
+                # Total size
+                cursor.execute(f"SELECT pg_total_relation_size('{full_name}')")
+                total = cursor.fetchone()[0]
+                # Relation size (data only)
+                cursor.execute(f"SELECT pg_relation_size('{full_name}')")
+                data_size = cursor.fetchone()[0]
 
                 parts = [f"## Storage Size: {schema_name}.{table}", ""]
+                parts.append(f"- **Total**: {_format_bytes(total)}")
+                parts.append(f"- **Data**: {_format_bytes(data_size)}")
+                parts.append(f"- **Index + Meta**: {_format_bytes(total - data_size)}")
 
-                # Try hologres.hg_relation_size for detailed breakdown first
+                # Try hologres.hg_relation_size for detailed breakdown
                 try:
                     cursor.execute(
                         f"SELECT hologres.hg_relation_size('{full_name}', 'data')"
                     )
-                    hg_data = cursor.fetchone()[0] or 0
+                    hg_data = cursor.fetchone()[0]
                     cursor.execute(
                         f"SELECT hologres.hg_relation_size('{full_name}', 'index')"
                     )
-                    hg_index = cursor.fetchone()[0] or 0
+                    hg_index = cursor.fetchone()[0]
                     cursor.execute(
                         f"SELECT hologres.hg_relation_size('{full_name}', 'meta')"
                     )
-                    hg_meta = cursor.fetchone()[0] or 0
-                    hg_total = hg_data + hg_index + hg_meta
-                    parts.append(f"- **Total**: {_format_bytes(hg_total)}")
-                    parts.append(f"- **Data**: {_format_bytes(hg_data)}")
-                    parts.append(f"- **Index**: {_format_bytes(hg_index)}")
-                    parts.append(f"- **Meta**: {_format_bytes(hg_meta)}")
+                    hg_meta = cursor.fetchone()[0]
+                    parts.append("")
+                    parts.append("### Detailed Breakdown (hg_relation_size)")
+                    parts.append(f"- Data: {_format_bytes(hg_data)}")
+                    parts.append(f"- Index: {_format_bytes(hg_index)}")
+                    parts.append(f"- Meta: {_format_bytes(hg_meta)}")
                 except Exception:
-                    # Fallback to pg functions if hg_relation_size not available
-                    cursor.execute(f"SELECT pg_total_relation_size('{full_name}')")
-                    total = cursor.fetchone()[0] or 0
-                    cursor.execute(f"SELECT pg_relation_size('{full_name}')")
-                    data_size = cursor.fetchone()[0] or 0
-                    index_meta = max(total - data_size, 0)
-                    parts.append(f"- **Total**: {_format_bytes(total)}")
-                    parts.append(f"- **Data**: {_format_bytes(data_size)}")
-                    parts.append(f"- **Index + Meta**: {_format_bytes(index_meta)}")
+                    pass  # hg_relation_size not available in older versions
 
                 return "\n".join(parts)
     except Exception as e:
@@ -978,7 +965,7 @@ def _list_query_queues():
                     """
                     SELECT *
                     FROM hologres.hg_query_queues
-                    ORDER BY query_queue_name
+                    ORDER BY queue_name
                     """
                 )
                 queue_rows = cursor.fetchall()
@@ -1031,7 +1018,7 @@ def _get_table_properties(schema_name, table):
                     """
                     SELECT property_key, property_value
                     FROM hologres.hg_table_properties
-                    WHERE table_namespace = %s AND table_name = %s
+                    WHERE schema_name = %s AND table_name = %s
                     ORDER BY property_key
                     """,
                     [schema_name, table],
@@ -1059,7 +1046,7 @@ def _get_table_shard_info(schema_name, table):
                     """
                     SELECT property_value
                     FROM hologres.hg_table_properties
-                    WHERE table_namespace = %s AND table_name = %s
+                    WHERE schema_name = %s AND table_name = %s
                       AND property_key = 'table_group'
                     """,
                     [schema_name, table],
@@ -1200,18 +1187,18 @@ def _get_table_info_trend(schema_name, table, days=7):
                 cursor.execute(
                     """
                     SELECT
-                        collect_time,
+                        collect_date,
                         hot_storage_size,
                         cold_storage_size,
                         hot_file_count,
                         row_count,
-                        read_sql_count_1d,
-                        write_sql_count_1d
+                        read_sql_count,
+                        write_sql_count
                     FROM hologres.hg_table_info
                     WHERE schema_name = %s
                       AND table_name = %s
-                      AND collect_time >= CURRENT_DATE - %s
-                    ORDER BY collect_time DESC
+                      AND collect_date >= CURRENT_DATE - %s
+                    ORDER BY collect_date DESC
                     """,
                     [schema_name, table, days],
                 )
@@ -1221,11 +1208,11 @@ def _get_table_info_trend(schema_name, table, days=7):
                     return f"No hg_table_info data found for {schema_name}.{table} in the last {days} days."
 
                 parts = [f"## Storage Trend: {schema_name}.{table} (last {days} days)", ""]
-                parts.append("Collect Time\tHot Storage\tCold Storage\tFiles\tRows\tRead SQL(1d)\tWrite SQL(1d)")
+                parts.append("Date\tHot Storage\tCold Storage\tFiles\tRows\tRead SQL\tWrite SQL")
                 for row in rows:
-                    ctime, hot, cold, files, row_count, reads, writes = row
+                    date, hot, cold, files, row_count, reads, writes = row
                     parts.append(
-                        f"{ctime}\t{_format_bytes(hot or 0)}\t{_format_bytes(cold or 0)}\t"
+                        f"{date}\t{_format_bytes(hot or 0)}\t{_format_bytes(cold or 0)}\t"
                         f"{files or 0}\t{row_count or 0}\t{reads or 0}\t{writes or 0}"
                     )
                 return "\n".join(parts)
@@ -1293,9 +1280,6 @@ def _set_query_queue_property(target, queue_name, property_key, property_value, 
         safe_queue = queue_name.replace("'", "''")
         safe_key = property_key.replace("'", "''")
         safe_value = property_value.replace("'", "''")
-        # For user_name condition, wrap value in double quotes to preserve case
-        if property_key.lower() == "user_name" and not safe_value.startswith('"'):
-            safe_value = f'"{safe_value}"'
 
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
@@ -1391,7 +1375,7 @@ def _get_warehouse_status(warehouse_name):
                 try:
                     cursor.execute(
                         """
-                        SELECT warehouse_id, cpu, mem, started_clusters, status, is_default
+                        SELECT warehouse_id, cpu, memory, cluster_count, status, is_default
                         FROM hologres.hg_warehouses
                         WHERE warehouse_name = %s
                         """,
