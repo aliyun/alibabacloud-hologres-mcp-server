@@ -172,6 +172,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `action` (string: "create", "drop", "clear"), `queue_name` (string), `max_concurrency` (int, for create), `max_queue_size` (int, for create)
 * `manage_hg_classifier`: Create or drop a classifier for a Query Queue. Requires V3.0+.
   - Parameters: `action` (string: "create", "drop"), `queue_name` (string), `classifier_name` (string), `priority` (int, for create)
+* `set_hg_query_queue_property`: Set or remove properties on a Query Queue or classifier. Requires V3.0+.
+  - Parameters: `target` (string: "queue", "classifier"), `queue_name` (string), `property_key` (string), `property_value` (string), `classifier_name` (string, for classifier), `action` (string: "set", "remove")
 
 ### Resources
 

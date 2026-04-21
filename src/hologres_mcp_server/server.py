@@ -340,6 +340,19 @@ def manage_hg_classifier(
     return _manage_classifier(action, queue_name, classifier_name, priority)
 
 
+@app.tool(tags={"admin"})
+def set_hg_query_queue_property(
+    target: Annotated[str, "Target type: 'queue' or 'classifier'"],
+    queue_name: Annotated[str, "Name of the query queue"],
+    property_key: Annotated[str, "Property key to set (e.g. 'max_concurrency', 'query_timeout_ms' for queue; 'condition_name' for classifier rule)"],
+    property_value: Annotated[str, "Property value to set"],
+    classifier_name: Annotated[str, "Classifier name (required when target='classifier')"] = "",
+    action: Annotated[str, "Action: 'set' to add/update, 'remove' to delete the property (default 'set')"] = "set",
+) -> str:
+    """Set or remove properties on a Query Queue or classifier. For classifier rules, use property_key as condition_name and property_value as condition_value. Requires Hologres V3.0+."""
+    return _set_query_queue_property(target, queue_name, property_key, property_value, classifier_name, action)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1204,6 +1217,52 @@ def _manage_classifier(action, queue_name, classifier_name, priority=0):
                     return f"Unknown action '{action}'. Supported: 'create', 'drop'."
     except Exception as e:
         return f"Error managing classifier: {str(e)}"
+
+
+def _set_query_queue_property(target, queue_name, property_key, property_value, classifier_name="", action="set"):
+    """Set or remove a property on a query queue or classifier."""
+    try:
+        target = target.lower().strip()
+        action = action.lower().strip()
+        safe_queue = queue_name.replace("'", "''")
+        safe_key = property_key.replace("'", "''")
+        safe_value = property_value.replace("'", "''")
+
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                if target == "queue":
+                    if action == "set":
+                        cursor.execute(
+                            f"CALL hg_set_query_queue_property('{safe_queue}', '{safe_key}', '{safe_value}')"
+                        )
+                        return f"Successfully set queue '{queue_name}' property '{property_key}' = '{property_value}'."
+                    elif action == "remove":
+                        cursor.execute(
+                            f"CALL hg_remove_query_queue_property('{safe_queue}', '{safe_key}')"
+                        )
+                        return f"Successfully removed property '{property_key}' from queue '{queue_name}'."
+                    else:
+                        return f"Unknown action '{action}'. Supported: 'set', 'remove'."
+                elif target == "classifier":
+                    if not classifier_name:
+                        return "Error: classifier_name is required when target='classifier'."
+                    safe_classifier = classifier_name.replace("'", "''")
+                    if action == "set":
+                        cursor.execute(
+                            f"CALL hg_set_classifier_rule_condition_value('{safe_queue}', '{safe_classifier}', '{safe_key}', '{safe_value}')"
+                        )
+                        return f"Successfully set classifier '{classifier_name}' rule: {property_key} = '{property_value}'."
+                    elif action == "remove":
+                        cursor.execute(
+                            f"CALL hg_remove_classifier_rule_condition_value('{safe_queue}', '{safe_classifier}', '{safe_key}', '{safe_value}')"
+                        )
+                        return f"Successfully removed classifier '{classifier_name}' rule: {property_key} = '{property_value}'."
+                    else:
+                        return f"Unknown action '{action}'. Supported: 'set', 'remove'."
+                else:
+                    return f"Unknown target '{target}'. Supported: 'queue', 'classifier'."
+    except Exception as e:
+        return f"Error setting property: {str(e)}"
 
 
 # ============================================================================

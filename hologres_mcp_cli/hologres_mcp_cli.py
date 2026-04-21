@@ -505,5 +505,19 @@ async def manage_hg_classifier(
     await _call_tool("manage_hg_classifier", {"action": action, "queue_name": queue_name, "classifier_name": classifier_name, "priority": priority})
 
 
+@call_tool_app.command(name="set_hg_query_queue_property")
+async def set_hg_query_queue_property(
+    *,
+    target: Annotated[str, cyclopts.Parameter(help="Target type: 'queue' or 'classifier'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    property_key: Annotated[str, cyclopts.Parameter(help="Property key to set")],
+    property_value: Annotated[str, cyclopts.Parameter(help="Property value to set")],
+    classifier_name: Annotated[str, cyclopts.Parameter(help="Classifier name (required when target='classifier')")] = "",
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'set' or 'remove'")] = "set",
+) -> None:
+    """Set or remove properties on a Query Queue or classifier."""
+    await _call_tool("set_hg_query_queue_property", {"target": target, "queue_name": queue_name, "property_key": property_key, "property_value": property_value, "classifier_name": classifier_name, "action": action})
+
+
 if __name__ == "__main__":
     app()
