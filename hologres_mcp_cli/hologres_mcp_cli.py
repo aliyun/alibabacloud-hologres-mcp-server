@@ -458,5 +458,11 @@ async def get_hg_table_shard_info(
     await _call_tool("get_hg_table_shard_info", {"schema_name": schema_name, "table": table})
 
 
+@call_tool_app.command(name="list_hg_external_databases")
+async def list_hg_external_databases() -> None:
+    """List all External Databases (federated databases for Lakehouse acceleration)."""
+    await _call_tool("list_hg_external_databases", {})
+
+
 if __name__ == "__main__":
     app()

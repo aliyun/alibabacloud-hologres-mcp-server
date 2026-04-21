@@ -296,6 +296,12 @@ def get_hg_table_shard_info(
     return _get_table_shard_info(schema_name, table)
 
 
+@app.tool(tags={"schema"})
+def list_hg_external_databases() -> str:
+    """List all External Databases (federated databases for Lakehouse acceleration). Requires Hologres V3.0+."""
+    return _list_external_databases()
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -968,6 +974,61 @@ def _get_table_shard_info(schema_name, table):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting shard info: {str(e)}"
+
+
+def _list_external_databases():
+    """List all External Databases."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        d.datname AS database_name,
+                        d.datdba::regrole AS owner,
+                        pg_catalog.shobj_description(d.oid, 'pg_database') AS description
+                    FROM pg_database d
+                    WHERE d.datname LIKE 'external_%'
+                       OR d.oid IN (
+                           SELECT oid FROM pg_database
+                           WHERE datistemplate = false
+                             AND datallowconn = false
+                       )
+                    ORDER BY d.datname
+                    """
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    # Try alternative: look for foreign servers
+                    cursor.execute(
+                        """
+                        SELECT
+                            s.srvname AS server_name,
+                            s.srvtype AS server_type,
+                            s.srvoptions AS options
+                        FROM pg_foreign_server s
+                        ORDER BY s.srvname
+                        """
+                    )
+                    srv_rows = cursor.fetchall()
+                    if not srv_rows:
+                        return "No External Databases or Foreign Servers found."
+
+                    parts = ["## Foreign Servers", ""]
+                    parts.append("Name\tType\tOptions")
+                    for row in srv_rows:
+                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                    return "\n".join(parts)
+
+                parts = ["## External Databases", ""]
+                parts.append("Database\tOwner\tDescription")
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                parts.append(f"\nTotal: {len(rows)} external databases")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing external databases: {str(e)}"
 
 
 # ============================================================================
