@@ -167,6 +167,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`action`（字符串："create"/"drop"），`queue_name`（字符串），`classifier_name`（字符串），`priority`（整数，创建时需要）
 - `set_hg_query_queue_property` ：设置或移除查询队列或分类器的属性，需 V3.0+
   - 参数：`target`（字符串："queue"/"classifier"），`queue_name`（字符串），`property_key`（字符串），`property_value`（字符串），`classifier_name`（字符串，分类器时需要），`action`（字符串："set"/"remove"）
+- `manage_hg_warehouse` ：管理计算组：暂停、恢复、重启、重命名或扩缩容，需超级用户权限
+  - 参数：`action`（字符串："suspend"/"resume"/"restart"/"rename"/"resize"），`warehouse_name`（字符串），`cu`（整数，扩缩容时需要），`new_name`（字符串，重命名时需要）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

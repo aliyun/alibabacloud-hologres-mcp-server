@@ -353,6 +353,17 @@ def set_hg_query_queue_property(
     return _set_query_queue_property(target, queue_name, property_key, property_value, classifier_name, action)
 
 
+@app.tool(tags={"admin"})
+def manage_hg_warehouse(
+    action: Annotated[str, "Action: 'suspend', 'resume', 'restart', 'rename', or 'resize'"],
+    warehouse_name: Annotated[str, "Name of the warehouse (computing group)"],
+    cu: Annotated[int, "CU count for resize action"] = 0,
+    new_name: Annotated[str, "New name for rename action"] = "",
+) -> str:
+    """Manage a computing group (warehouse): suspend, resume, restart, rename, or resize. Requires superuser privileges."""
+    return _manage_warehouse(action, warehouse_name, cu, new_name)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1263,6 +1274,39 @@ def _set_query_queue_property(target, queue_name, property_key, property_value, 
                     return f"Unknown target '{target}'. Supported: 'queue', 'classifier'."
     except Exception as e:
         return f"Error setting property: {str(e)}"
+
+
+def _manage_warehouse(action, warehouse_name, cu=0, new_name=""):
+    """Manage a computing group: suspend, resume, restart, rename, or resize."""
+    try:
+        action = action.lower().strip()
+        safe_name = warehouse_name.replace("'", "''")
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                if action == "suspend":
+                    cursor.execute(f"CALL hg_suspend_warehouse('{safe_name}')")
+                    return f"Successfully suspended warehouse '{warehouse_name}'."
+                elif action == "resume":
+                    cursor.execute(f"CALL hg_resume_warehouse('{safe_name}')")
+                    return f"Successfully resumed warehouse '{warehouse_name}'."
+                elif action == "restart":
+                    cursor.execute(f"CALL hg_restart_warehouse('{safe_name}')")
+                    return f"Successfully restarted warehouse '{warehouse_name}'."
+                elif action == "rename":
+                    if not new_name:
+                        return "Error: new_name is required for 'rename' action."
+                    safe_new = new_name.replace("'", "''")
+                    cursor.execute(f"CALL hg_rename_warehouse('{safe_name}', '{safe_new}')")
+                    return f"Successfully renamed warehouse '{warehouse_name}' to '{new_name}'."
+                elif action == "resize":
+                    if cu <= 0:
+                        return "Error: cu must be a positive integer for 'resize' action."
+                    cursor.execute(f"CALL hg_alter_warehouse('{safe_name}', {int(cu)})")
+                    return f"Successfully resized warehouse '{warehouse_name}' to {cu} CU."
+                else:
+                    return f"Unknown action '{action}'. Supported: 'suspend', 'resume', 'restart', 'rename', 'resize'."
+    except Exception as e:
+        return f"Error managing warehouse: {str(e)}"
 
 
 # ============================================================================

@@ -174,6 +174,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `action` (string: "create", "drop"), `queue_name` (string), `classifier_name` (string), `priority` (int, for create)
 * `set_hg_query_queue_property`: Set or remove properties on a Query Queue or classifier. Requires V3.0+.
   - Parameters: `target` (string: "queue", "classifier"), `queue_name` (string), `property_key` (string), `property_value` (string), `classifier_name` (string, for classifier), `action` (string: "set", "remove")
+* `manage_hg_warehouse`: Manage a computing group: suspend, resume, restart, rename, or resize. Requires superuser.
+  - Parameters: `action` (string: "suspend", "resume", "restart", "rename", "resize"), `warehouse_name` (string), `cu` (int, for resize), `new_name` (string, for rename)
 
 ### Resources
 

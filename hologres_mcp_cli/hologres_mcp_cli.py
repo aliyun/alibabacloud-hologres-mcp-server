@@ -519,5 +519,17 @@ async def set_hg_query_queue_property(
     await _call_tool("set_hg_query_queue_property", {"target": target, "queue_name": queue_name, "property_key": property_key, "property_value": property_value, "classifier_name": classifier_name, "action": action})
 
 
+@call_tool_app.command(name="manage_hg_warehouse")
+async def manage_hg_warehouse(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'suspend', 'resume', 'restart', 'rename', or 'resize'")],
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse (computing group)")],
+    cu: Annotated[int, cyclopts.Parameter(help="CU count for resize action")] = 0,
+    new_name: Annotated[str, cyclopts.Parameter(help="New name for rename action")] = "",
+) -> None:
+    """Manage a computing group: suspend, resume, restart, rename, or resize."""
+    await _call_tool("manage_hg_warehouse", {"action": action, "warehouse_name": warehouse_name, "cu": cu, "new_name": new_name})
+
+
 if __name__ == "__main__":
     app()
