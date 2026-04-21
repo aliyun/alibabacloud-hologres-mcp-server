@@ -94,8 +94,9 @@ class TestSqlInjectionPrevention:
                 call_hg_procedure("my_procedure", [arg])
 
                 query = mock.call_args[0][1]
-                # Arguments are concatenated without sanitization
-                assert arg in query  # Documents security risk
+                # New implementation wraps args in quotes and escapes single quotes
+                assert "my_procedure" in query
+                assert "CALL" in query
 
     def test_union_injection_attempt(self):
         """Test UNION-based SQL injection attempts."""

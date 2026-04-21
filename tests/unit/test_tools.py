@@ -303,7 +303,7 @@ class TestCallHgProcedure:
             assert result == "done"
 
             query = mock.call_args[0][1]
-            assert query == "CALL my_procedure(arg1, arg2)"
+            assert query == "CALL my_procedure('arg1', 'arg2')"
 
     def test_procedure_with_single_arg(self):
         """Test calling procedure with single argument."""
@@ -311,7 +311,7 @@ class TestCallHgProcedure:
             call_hg_procedure("my_procedure", ["value1"])
 
             query = mock.call_args[0][1]
-            assert query == "CALL my_procedure(value1)"
+            assert query == "CALL my_procedure('value1')"
 
     def test_procedure_name_with_schema(self):
         """Test calling procedure with schema prefix."""
@@ -597,13 +597,14 @@ class TestToolBoundaryConditions:
     def test_call_procedure_with_none_arguments(self):
         """测试 call_hg_procedure 参数为 None。
 
-        当前实现不支持参数列表中包含 None 值，
-        会抛出 TypeError。这记录了边界条件行为。
+        新实现会将 None 转为字符串 'None' 并包裹在引号中。
         """
-        # 当前行为：None 参数会导致 TypeError
-        # 如果需要支持 None，需要在实现中添加类型转换
-        with pytest.raises(TypeError):
+        with patch("hologres_mcp_server.server.handle_call_tool", return_value="done") as mock:
             call_hg_procedure("my_procedure", [None, "valid_arg"])
+            query = mock.call_args[0][1]
+            assert "my_procedure" in query
+            assert "'None'" in query
+            assert "'valid_arg'" in query
 
     def test_maxcompute_foreign_table_none_tables(self):
         """测试 maxcompute_tables 为 None 时的行为。
