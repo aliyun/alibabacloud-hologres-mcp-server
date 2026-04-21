@@ -448,5 +448,15 @@ async def get_hg_table_properties(
     await _call_tool("get_hg_table_properties", {"schema_name": schema_name, "table": table})
 
 
+@call_tool_app.command(name="get_hg_table_shard_info")
+async def get_hg_table_shard_info(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get table's Table Group and shard count info."""
+    await _call_tool("get_hg_table_shard_info", {"schema_name": schema_name, "table": table})
+
+
 if __name__ == "__main__":
     app()

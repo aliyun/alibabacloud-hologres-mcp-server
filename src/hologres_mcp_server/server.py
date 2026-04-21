@@ -287,6 +287,15 @@ def get_hg_table_properties(
     return _get_table_properties(schema_name, table)
 
 
+@app.tool(tags={"analysis"})
+def get_hg_table_shard_info(
+    schema_name: Annotated[str, "Schema name in Hologres database"],
+    table: Annotated[str, "Table name in Hologres database"],
+) -> str:
+    """Get table's Table Group and shard count info. Useful for diagnosing data skew and shard configuration."""
+    return _get_table_shard_info(schema_name, table)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -915,6 +924,50 @@ def _get_table_properties(schema_name, table):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting table properties: {str(e)}"
+
+
+def _get_table_shard_info(schema_name, table):
+    """Get Table Group and shard info for a table."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                # Get table group from hg_table_properties
+                cursor.execute(
+                    """
+                    SELECT property_value
+                    FROM hologres.hg_table_properties
+                    WHERE schema_name = %s AND table_name = %s
+                      AND property_key = 'table_group'
+                    """,
+                    [schema_name, table],
+                )
+                tg_row = cursor.fetchone()
+                table_group = tg_row[0] if tg_row else "unknown"
+
+                # Get table group properties (shard_count)
+                parts = [f"## Shard Info: {schema_name}.{table}", ""]
+                parts.append(f"- **Table Group**: {table_group}")
+
+                if table_group and table_group != "unknown":
+                    cursor.execute(
+                        """
+                        SELECT property_key, property_value
+                        FROM hologres.hg_table_group_properties
+                        WHERE tablegroup_name = %s
+                        ORDER BY property_key
+                        """,
+                        [table_group],
+                    )
+                    tg_props = cursor.fetchall()
+                    if tg_props:
+                        parts.append("")
+                        parts.append("### Table Group Properties")
+                        for key, value in tg_props:
+                            parts.append(f"- **{key}**: {value}")
+
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting shard info: {str(e)}"
 
 
 # ============================================================================

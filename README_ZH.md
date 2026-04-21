@@ -155,6 +155,8 @@ claude mcp add hologres-mcp-server \
 - `list_hg_query_queues` ：列出所有查询队列及分类器（并发上限、路由规则），需 V3.0+
 - `get_hg_table_properties` ：查看表属性配置（distribution_key、clustering_key、segment_key、bitmap_columns、binlog 等）
   - 参数：`schema_name`（字符串），`table`（字符串）
+- `get_hg_table_shard_info` ：查看表的 Table Group 和 Shard 配置，用于诊断数据倾斜
+  - 参数：`schema_name`（字符串），`table`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板
