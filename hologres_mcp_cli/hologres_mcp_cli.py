@@ -352,5 +352,25 @@ async def get_hg_slow_queries(
     await _call_tool("get_hg_slow_queries", {"min_duration_ms": min_duration_ms, "limit": limit})
 
 
+@call_tool_app.command(name="list_hg_dynamic_tables")
+async def list_hg_dynamic_tables(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name to filter (empty for all schemas)")] = "",
+) -> None:
+    """List all Dynamic Tables with their status, freshness settings, and last refresh info."""
+    await _call_tool("list_hg_dynamic_tables", {"schema_name": schema_name})
+
+
+@call_tool_app.command(name="get_hg_dynamic_table_refresh_history")
+async def get_hg_dynamic_table_refresh_history(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name of the dynamic table")],
+    table_name: Annotated[str, cyclopts.Parameter(help="Dynamic table name")],
+    limit: Annotated[int, cyclopts.Parameter(help="Maximum number of history records")] = 10,
+) -> None:
+    """Get refresh history for a specific Dynamic Table."""
+    await _call_tool("get_hg_dynamic_table_refresh_history", {"schema_name": schema_name, "table_name": table_name, "limit": limit})
+
+
 if __name__ == "__main__":
     app()

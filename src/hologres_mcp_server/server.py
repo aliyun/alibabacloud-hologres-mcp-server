@@ -199,6 +199,24 @@ def get_hg_slow_queries(
     return _get_slow_queries(min_duration_ms, limit)
 
 
+@app.tool(tags={"admin"})
+def list_hg_dynamic_tables(
+    schema_name: Annotated[str, "Schema name to filter (empty for all schemas)"] = "",
+) -> str:
+    """List all Dynamic Tables with their status, freshness settings, and last refresh info."""
+    return _list_dynamic_tables(schema_name)
+
+
+@app.tool(tags={"admin"})
+def get_hg_dynamic_table_refresh_history(
+    schema_name: Annotated[str, "Schema name of the dynamic table"],
+    table_name: Annotated[str, "Dynamic table name"],
+    limit: Annotated[int, "Maximum number of history records (default 10)"] = 10,
+) -> str:
+    """Get refresh history for a specific Dynamic Table, including duration, status, and latency."""
+    return _get_dynamic_table_refresh_history(schema_name, table_name, limit)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -430,6 +448,79 @@ def _format_bytes(bytes_val):
             return f"{bytes_val:.1f} {unit}"
         bytes_val /= 1024.0
     return f"{bytes_val:.1f} PB"
+
+
+def _list_dynamic_tables(schema_name=""):
+    """List all Dynamic Tables with status and refresh info."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT
+                        schema_name,
+                        table_name,
+                        status,
+                        freshness,
+                        last_refresh_time,
+                        last_refresh_duration_ms,
+                        last_refresh_rows
+                    FROM hologres.hg_dynamic_table_status
+                """
+                params = []
+                if schema_name:
+                    query += " WHERE schema_name = %s"
+                    params.append(schema_name)
+                query += " ORDER BY schema_name, table_name"
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return "No Dynamic Tables found."
+
+                parts = ["## Dynamic Tables", ""]
+                parts.append("Schema\tTable\tStatus\tFreshness\tLast Refresh\tDuration(ms)\tRows")
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                parts.append(f"\nTotal: {len(rows)} Dynamic Tables")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing dynamic tables: {str(e)}"
+
+
+def _get_dynamic_table_refresh_history(schema_name, table_name, limit=10):
+    """Get refresh history for a specific Dynamic Table."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        refresh_id,
+                        status,
+                        start_time,
+                        end_time,
+                        duration_ms,
+                        refreshed_rows,
+                        data_latency_ms
+                    FROM hologres.hg_dynamic_table_refresh_history
+                    WHERE schema_name = %s AND table_name = %s
+                    ORDER BY start_time DESC
+                    LIMIT %s
+                    """,
+                    [schema_name, table_name, limit],
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return f"No refresh history found for {schema_name}.{table_name}."
+
+                parts = [f"## Refresh History: {schema_name}.{table_name}", ""]
+                parts.append("ID\tStatus\tStart\tEnd\tDuration(ms)\tRows\tLatency(ms)")
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting refresh history: {str(e)}"
 
 
 # ============================================================================

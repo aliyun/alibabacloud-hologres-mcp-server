@@ -136,6 +136,10 @@ claude mcp add hologres-mcp-server \
   - 参数：`query_id`（字符串）
 - `get_hg_slow_queries` ：按耗时排序列出慢查询
   - 参数：`min_duration_ms`（整数，默认 1000），`limit`（整数，默认 20）
+- `list_hg_dynamic_tables` ：列出所有 Dynamic Table 及其状态、刷新设置、最近刷新信息
+  - 参数：`schema_name`（字符串，可选）
+- `get_hg_dynamic_table_refresh_history` ：查看指定 Dynamic Table 的刷新历史
+  - 参数：`schema_name`（字符串），`table_name`（字符串），`limit`（整数，默认 10）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

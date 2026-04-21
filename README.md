@@ -143,6 +143,10 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `query_id` (string)
 * `get_hg_slow_queries`: Get slow queries from hg_query_log ordered by duration.
   - Parameters: `min_duration_ms` (int, default 1000), `limit` (int, default 20)
+* `list_hg_dynamic_tables`: List all Dynamic Tables with their status, freshness settings, and last refresh info.
+  - Parameters: `schema_name` (string, optional)
+* `get_hg_dynamic_table_refresh_history`: Get refresh history for a specific Dynamic Table, including duration, status, and latency.
+  - Parameters: `schema_name` (string), `table_name` (string), `limit` (int, default 10)
 
 ### Resources
 
