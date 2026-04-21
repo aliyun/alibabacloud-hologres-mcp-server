@@ -470,5 +470,16 @@ async def get_hg_lock_diagnostics() -> None:
     await _call_tool("get_hg_lock_diagnostics", {})
 
 
+@call_tool_app.command(name="get_hg_table_info_trend")
+async def get_hg_table_info_trend(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+    days: Annotated[int, cyclopts.Parameter(help="Number of days to look back")] = 7,
+) -> None:
+    """Get table storage trend from hg_table_info."""
+    await _call_tool("get_hg_table_info_trend", {"schema_name": schema_name, "table": table, "days": days})
+
+
 if __name__ == "__main__":
     app()

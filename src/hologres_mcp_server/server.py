@@ -308,6 +308,16 @@ def get_hg_lock_diagnostics() -> str:
     return _get_lock_diagnostics()
 
 
+@app.tool(tags={"analysis"})
+def get_hg_table_info_trend(
+    schema_name: Annotated[str, "Schema name in Hologres database"],
+    table: Annotated[str, "Table name in Hologres database"],
+    days: Annotated[int, "Number of days to look back (default 7)"] = 7,
+) -> str:
+    """Get table storage trend from hg_table_info, showing daily storage size, file count, and row count changes. Data is T+1, retained for 30 days."""
+    return _get_table_info_trend(schema_name, table, days)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1079,6 +1089,49 @@ def _get_lock_diagnostics():
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting lock diagnostics: {str(e)}"
+
+
+def _get_table_info_trend(schema_name, table, days=7):
+    """Get table storage trend from hologres.hg_table_info."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        collect_date,
+                        hot_storage_size,
+                        cold_storage_size,
+                        hot_file_count,
+                        row_count,
+                        read_sql_count,
+                        write_sql_count
+                    FROM hologres.hg_table_info
+                    WHERE schema_name = %s
+                      AND table_name = %s
+                      AND collect_date >= CURRENT_DATE - %s
+                    ORDER BY collect_date DESC
+                    """,
+                    [schema_name, table, days],
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return f"No hg_table_info data found for {schema_name}.{table} in the last {days} days."
+
+                parts = [f"## Storage Trend: {schema_name}.{table} (last {days} days)", ""]
+                parts.append("Date\tHot Storage\tCold Storage\tFiles\tRows\tRead SQL\tWrite SQL")
+                for row in rows:
+                    date, hot, cold, files, row_count, reads, writes = row
+                    parts.append(
+                        f"{date}\t{_format_bytes(hot or 0)}\t{_format_bytes(cold or 0)}\t"
+                        f"{files or 0}\t{row_count or 0}\t{reads or 0}\t{writes or 0}"
+                    )
+                return "\n".join(parts)
+    except Exception as e:
+        if "does not exist" in str(e):
+            return "hg_table_info not available. Requires Hologres V1.3+."
+        return f"Error getting table info trend: {str(e)}"
 
 
 # ============================================================================
