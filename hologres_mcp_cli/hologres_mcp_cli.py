@@ -432,5 +432,11 @@ async def list_hg_active_queries(
     await _call_tool("list_hg_active_queries", {"state": state})
 
 
+@call_tool_app.command(name="list_hg_query_queues")
+async def list_hg_query_queues() -> None:
+    """List all Query Queues and their classifiers."""
+    await _call_tool("list_hg_query_queues", {})
+
+
 if __name__ == "__main__":
     app()

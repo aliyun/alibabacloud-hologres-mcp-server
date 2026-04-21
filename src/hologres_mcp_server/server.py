@@ -272,6 +272,12 @@ def list_hg_active_queries(
     return _list_active_queries(state)
 
 
+@app.tool(tags={"admin"})
+def list_hg_query_queues() -> str:
+    """List all Query Queues and their classifiers, showing concurrency limits, queue sizes, and routing rules. Requires Hologres V3.0+."""
+    return _list_query_queues()
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -819,6 +825,60 @@ def _list_active_queries(state="active"):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error listing active queries: {str(e)}"
+
+
+def _list_query_queues():
+    """List all Query Queues and classifiers."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                # Get query queues
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM hologres.hg_query_queues
+                    ORDER BY queue_name
+                    """
+                )
+                queue_rows = cursor.fetchall()
+                queue_headers = [desc[0] for desc in cursor.description] if cursor.description else []
+
+                # Get classifiers
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM hologres.hg_classifiers
+                    ORDER BY classifier_name
+                    """
+                )
+                classifier_rows = cursor.fetchall()
+                classifier_headers = [desc[0] for desc in cursor.description] if cursor.description else []
+
+                parts = ["## Query Queues"]
+
+                if not queue_rows:
+                    parts.append("No query queues configured.")
+                else:
+                    parts.append(f"\nTotal queues: {len(queue_rows)}")
+                    parts.append("\t".join(queue_headers))
+                    for row in queue_rows:
+                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
+
+                parts.append("")
+                parts.append("## Classifiers")
+                if not classifier_rows:
+                    parts.append("No classifiers configured.")
+                else:
+                    parts.append(f"\nTotal classifiers: {len(classifier_rows)}")
+                    parts.append("\t".join(classifier_headers))
+                    for row in classifier_rows:
+                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
+
+                return "\n".join(parts)
+    except Exception as e:
+        if "does not exist" in str(e):
+            return "Query Queue feature not available. Requires Hologres V3.0+."
+        return f"Error listing query queues: {str(e)}"
 
 
 # ============================================================================
