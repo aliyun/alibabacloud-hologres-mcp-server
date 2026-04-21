@@ -2,6 +2,7 @@
 Hologres MCP Server - FastMCP v3 Implementation
 """
 
+import base64
 from typing import Annotated
 
 from fastmcp import FastMCP
@@ -168,6 +169,19 @@ def show_hg_table_ddl(
     return result
 
 
+@app.tool(tags={"query", "visualization"})
+def query_and_plotly_chart(
+    query: Annotated[str, "The SELECT SQL query to execute"],
+    chart_type: Annotated[str, "Chart type: 'bar', 'line', 'scatter', 'pie', 'histogram', 'area'"] = "bar",
+    x_column: Annotated[str, "Column name for X axis (uses first column if not specified)"] = "",
+    y_column: Annotated[str, "Column name for Y axis (uses second column if not specified)"] = "",
+    title: Annotated[str, "Chart title"] = "",
+) -> str:
+    """Execute a SELECT SQL query and generate a chart from the results. Returns both the query result data and a base64-encoded PNG image of the chart."""
+    validate_select_query(query)
+    return _query_and_chart(query, chart_type, x_column, y_column, title)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -204,6 +218,103 @@ def _build_view_ddl_with_comments(schema, table, raw_ddl):
     view_content = raw_ddl.replace("\n\nEND;", "")
     comments = try_infer_view_comments(schema, table)
     return view_content + comments + "\n\nEND;"
+
+
+def _query_and_chart(query, chart_type, x_column, y_column, title):
+    """Execute SQL query and generate a chart, returning data + base64 PNG."""
+    try:
+        import io
+
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                headers = [desc[0] for desc in cursor.description]
+
+        if not rows:
+            return "Query returned no data."
+
+        # Determine columns
+        x_col = x_column if x_column else headers[0]
+        y_col = y_column if y_column else (headers[1] if len(headers) > 1 else headers[0])
+        x_idx = headers.index(x_col) if x_col in headers else 0
+        y_idx = headers.index(y_col) if y_col in headers else (1 if len(headers) > 1 else 0)
+
+        x_data = [row[x_idx] for row in rows]
+        y_data = [row[y_idx] for row in rows]
+
+        # Try to convert y to numeric
+        try:
+            y_data = [float(v) if v is not None else 0 for v in y_data]
+        except (ValueError, TypeError):
+            pass
+
+        # Generate chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        chart_title = title if title else f"{chart_type.capitalize()} Chart: {y_col} by {x_col}"
+
+        if chart_type == "bar":
+            ax.bar(range(len(x_data)), y_data, tick_label=[str(x) for x in x_data])
+            plt.xticks(rotation=45, ha="right")
+        elif chart_type == "line":
+            ax.plot(range(len(x_data)), y_data, marker="o")
+            ax.set_xticks(range(len(x_data)))
+            ax.set_xticklabels([str(x) for x in x_data], rotation=45, ha="right")
+        elif chart_type == "scatter":
+            try:
+                x_numeric = [float(v) if v is not None else 0 for v in x_data]
+                ax.scatter(x_numeric, y_data)
+                ax.set_xlabel(x_col)
+            except (ValueError, TypeError):
+                ax.scatter(range(len(x_data)), y_data)
+        elif chart_type == "pie":
+            ax.pie(y_data, labels=[str(x) for x in x_data], autopct="%1.1f%%")
+        elif chart_type == "histogram":
+            ax.hist(y_data, bins="auto", edgecolor="black")
+        elif chart_type == "area":
+            ax.fill_between(range(len(x_data)), y_data, alpha=0.4)
+            ax.plot(range(len(x_data)), y_data)
+            ax.set_xticks(range(len(x_data)))
+            ax.set_xticklabels([str(x) for x in x_data], rotation=45, ha="right")
+        else:
+            plt.close(fig)
+            return f"Unsupported chart type: {chart_type}. Supported: bar, line, scatter, pie, histogram, area"
+
+        ax.set_title(chart_title)
+        if chart_type != "pie":
+            ax.set_xlabel(x_col)
+            ax.set_ylabel(y_col)
+        plt.tight_layout()
+
+        # Convert to base64
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=100, bbox_inches="tight")
+        plt.close(fig)
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+
+        # Format data table
+        data_parts = ["\t".join(headers)]
+        for row in rows[:50]:  # Limit to 50 rows in output
+            data_parts.append("\t".join(str(v) if v is not None else "NULL" for v in row))
+
+        result_parts = [
+            "## Query Results",
+            f"Rows: {len(rows)}",
+            "",
+            "\n".join(data_parts),
+            "",
+            "## Chart",
+            f"![{chart_title}](data:image/png;base64,{img_base64})",
+        ]
+        return "\n".join(result_parts)
+
+    except Exception as e:
+        return f"Error generating chart: {str(e)}"
 
 
 # ============================================================================

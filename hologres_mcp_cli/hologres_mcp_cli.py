@@ -320,5 +320,18 @@ async def show_hg_table_ddl(
     await _call_tool("show_hg_table_ddl", {"schema_name": schema_name, "table": table})
 
 
+@call_tool_app.command(name="query_and_plotly_chart")
+async def query_and_plotly_chart(
+    *,
+    query: Annotated[str, cyclopts.Parameter(help="The SELECT SQL query to execute")],
+    chart_type: Annotated[str, cyclopts.Parameter(help="Chart type: 'bar', 'line', 'scatter', 'pie', 'histogram', 'area'")] = "bar",
+    x_column: Annotated[str, cyclopts.Parameter(help="Column name for X axis (uses first column if not specified)")] = "",
+    y_column: Annotated[str, cyclopts.Parameter(help="Column name for Y axis (uses second column if not specified)")] = "",
+    title: Annotated[str, cyclopts.Parameter(help="Chart title")] = "",
+) -> None:
+    """Execute a SELECT SQL query and generate a chart from the results."""
+    await _call_tool("query_and_plotly_chart", {"query": query, "chart_type": chart_type, "x_column": x_column, "y_column": y_column, "title": title})
+
+
 if __name__ == "__main__":
     app()

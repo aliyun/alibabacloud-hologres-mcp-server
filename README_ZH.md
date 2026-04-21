@@ -130,6 +130,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串）
 - `show_hg_table_ddl` ：显示 Hologres 数据库中表、视图或外部表的 DDL 脚本
   - 参数：`schema_name`（字符串），`table`（字符串）
+- `query_and_plotly_chart` ：执行 SELECT 查询并生成图表（bar/line/scatter/pie/histogram/area），返回查询结果和 base64 编码的 PNG 图片
+  - 参数：`query`（字符串），`chart_type`（字符串，默认 "bar"），`x_column`（字符串），`y_column`（字符串），`title`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

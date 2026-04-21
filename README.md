@@ -137,6 +137,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string)
 * `show_hg_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
   - Parameters: `schema_name` (string), `table` (string)
+* `query_and_plotly_chart`: Execute a SELECT SQL query and generate a chart (bar, line, scatter, pie, histogram, area). Returns query results and a base64-encoded PNG image.
+  - Parameters: `query` (string), `chart_type` (string, default "bar"), `x_column` (string), `y_column` (string), `title` (string)
 
 ### Resources
 
