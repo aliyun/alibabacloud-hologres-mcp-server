@@ -386,6 +386,18 @@ def list_hg_data_masking_rules() -> str:
     return _list_data_masking_rules()
 
 
+@app.tool(tags={"query"})
+def query_hg_external_files(
+    path: Annotated[str, "OSS path, e.g. 'oss://bucket/path/to/files'"],
+    format: Annotated[str, "File format: 'csv', 'parquet', or 'orc'"],
+    columns: Annotated[str, "Optional column definitions for AS clause, e.g. 'id int, name text'. Leave empty for auto schema inference."] = "",
+    oss_endpoint: Annotated[str, "OSS endpoint (internal), e.g. 'oss-cn-hangzhou-internal.aliyuncs.com'. Leave empty if already configured."] = "",
+    role_arn: Annotated[str, "RAM role ARN for accessing OSS. Leave empty if already configured."] = "",
+) -> str:
+    """Query files directly from OSS using EXTERNAL_FILES function without creating foreign tables. Requires Hologres V4.1+. Supports CSV, Parquet, ORC formats."""
+    return _query_external_files(path, format, columns, oss_endpoint, role_arn)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1470,6 +1482,46 @@ def _list_data_masking_rules():
                 return "\n".join(parts)
     except Exception as e:
         return f"Error listing data masking rules: {str(e)}"
+
+
+def _query_external_files(path, format, columns="", oss_endpoint="", role_arn=""):
+    """Query files directly from OSS using EXTERNAL_FILES function."""
+    try:
+        # Build function parameters
+        params = [f"path = '{path}'", f"format = '{format}'"]
+        if oss_endpoint:
+            params.append(f"oss_endpoint = '{oss_endpoint}'")
+        if role_arn:
+            params.append(f"role_arn = '{role_arn}'")
+        params_str = ", ".join(params)
+
+        # Build query
+        query = f"SELECT * FROM EXTERNAL_FILES({params_str})"
+        if columns:
+            query += f" AS ({columns})"
+        query += " LIMIT 1000"
+
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                headers = [desc[0] for desc in cursor.description]
+
+                if not rows:
+                    return "Query returned no data from external files."
+
+                parts = ["## External Files Query", f"Path: {path}", f"Format: {format}", ""]
+                parts.append("\t".join(headers))
+                for row in rows[:100]:  # Limit display to 100 rows
+                    parts.append("\t".join(str(v) if v is not None else "NULL" for v in row))
+                if len(rows) > 100:
+                    parts.append(f"\n... and {len(rows) - 100} more rows (showing first 100)")
+                parts.append(f"\nTotal rows fetched: {len(rows)}")
+                return "\n".join(parts)
+    except Exception as e:
+        if "EXTERNAL_FILES" in str(e) and "does not exist" in str(e):
+            return "EXTERNAL_FILES function not available. Requires Hologres V4.1+."
+        return f"Error querying external files: {str(e)}"
 
 
 # ============================================================================

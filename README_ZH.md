@@ -174,6 +174,8 @@ claude mcp add hologres-mcp-server \
 - `rebalance_hg_warehouse` ：触发计算组分片均衡，消除节点间数据倾斜
   - 参数：`warehouse_name`（字符串）
 - `list_hg_data_masking_rules` ：列出所有通过 hg_anon 扩展配置的数据脱敏规则（列级和用户级）
+- `query_hg_external_files` ：使用 EXTERNAL_FILES 函数免建外表直读 OSS 文件，需 V4.1+
+  - 参数：`path`（字符串），`format`（字符串："csv"/"parquet"/"orc"），`columns`（字符串，可选），`oss_endpoint`（字符串，可选），`role_arn`（字符串，可选）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

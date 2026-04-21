@@ -555,5 +555,18 @@ async def list_hg_data_masking_rules() -> None:
     await _call_tool("list_hg_data_masking_rules", {})
 
 
+@call_tool_app.command(name="query_hg_external_files")
+async def query_hg_external_files(
+    *,
+    path: Annotated[str, cyclopts.Parameter(help="OSS path, e.g. 'oss://bucket/path/to/files'")],
+    format: Annotated[str, cyclopts.Parameter(help="File format: 'csv', 'parquet', or 'orc'")],
+    columns: Annotated[str, cyclopts.Parameter(help="Optional column definitions for AS clause")] = "",
+    oss_endpoint: Annotated[str, cyclopts.Parameter(help="OSS endpoint (internal)")] = "",
+    role_arn: Annotated[str, cyclopts.Parameter(help="RAM role ARN for accessing OSS")] = "",
+) -> None:
+    """Query files directly from OSS using EXTERNAL_FILES function."""
+    await _call_tool("query_hg_external_files", {"path": path, "format": format, "columns": columns, "oss_endpoint": oss_endpoint, "role_arn": role_arn})
+
+
 if __name__ == "__main__":
     app()

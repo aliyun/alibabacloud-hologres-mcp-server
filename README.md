@@ -181,6 +181,8 @@ Since some Agents do not support resources and resource templates, the following
 * `rebalance_hg_warehouse`: Trigger shard rebalancing for a computing group to eliminate data skew.
   - Parameters: `warehouse_name` (string)
 * `list_hg_data_masking_rules`: List all data masking rules configured via hg_anon extension (column-level and user-level).
+* `query_hg_external_files`: Query files directly from OSS using EXTERNAL_FILES function without creating foreign tables. Requires V4.1+.
+  - Parameters: `path` (string), `format` (string: "csv", "parquet", "orc"), `columns` (string, optional), `oss_endpoint` (string, optional), `role_arn` (string, optional)
 
 ### Resources
 
