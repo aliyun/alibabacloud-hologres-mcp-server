@@ -130,6 +130,54 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串）
 - `show_hg_table_ddl` ：显示 Hologres 数据库中表、视图或外部表的 DDL 脚本
   - 参数：`schema_name`（字符串），`table`（字符串）
+- `query_and_plotly_chart` ：执行 SELECT 查询并生成图表（bar/line/scatter/pie/histogram/area），返回查询结果和 base64 编码的 PNG 图片
+  - 参数：`query`（字符串），`chart_type`（字符串，默认 "bar"），`x_column`（字符串），`y_column`（字符串），`title`（字符串）
+- `analyze_hg_query_by_id` ：通过 query_id 分析查询性能画像，返回耗时、内存、CPU、读写等详细指标
+  - 参数：`query_id`（字符串）
+- `get_hg_slow_queries` ：按耗时排序列出慢查询
+  - 参数：`min_duration_ms`（整数，默认 1000），`limit`（整数，默认 20）
+- `list_hg_dynamic_tables` ：列出所有 Dynamic Table 及其状态、刷新设置、最近刷新信息
+  - 参数：`schema_name`（字符串，可选）
+- `get_hg_dynamic_table_refresh_history` ：查看指定 Dynamic Table 的刷新历史
+  - 参数：`schema_name`（字符串），`table_name`（字符串），`limit`（整数，默认 10）
+- `list_hg_recyclebin` ：列出回收站中可恢复的已删除表
+- `restore_hg_table_from_recyclebin` ：从回收站恢复已删除的表
+  - 参数：`table_name`（字符串），`schema_name`（字符串，默认 "public"）
+- `list_hg_warehouses` ：列出所有计算组（warehouse），包含 CPU、内存、集群数、状态
+- `switch_hg_warehouse` ：切换当前会话的计算组
+  - 参数：`warehouse_name`（字符串）
+- `get_hg_table_storage_size` ：查看表的存储大小明细，包含总量、数据、索引、元数据
+  - 参数：`schema_name`（字符串），`table`（字符串）
+- `cancel_hg_query` ：取消或终止正在运行的查询
+  - 参数：`pid`（整数），`terminate`（布尔值，默认 false）
+- `list_hg_active_queries` ：列出当前活跃查询和连接（pg_stat_activity）
+  - 参数：`state`（字符串："active"/"idle"/"all"，默认 "active"）
+- `list_hg_query_queues` ：列出所有查询队列及分类器（并发上限、路由规则），需 V3.0+
+- `get_hg_table_properties` ：查看表属性配置（distribution_key、clustering_key、segment_key、bitmap_columns、binlog 等）
+  - 参数：`schema_name`（字符串），`table`（字符串）
+- `get_hg_table_shard_info` ：查看表的 Table Group 和 Shard 配置，用于诊断数据倾斜
+  - 参数：`schema_name`（字符串），`table`（字符串）
+- `list_hg_external_databases` ：列出所有外部数据库和 Foreign Server（Lakehouse 加速），需 V3.0+
+- `get_hg_lock_diagnostics` ：锁诊断，展示阻塞和等待中的查询关系
+- `get_hg_table_info_trend` ：查看表存储趋势（每日存储量、文件数、行数变化），数据 T+1
+  - 参数：`schema_name`（字符串），`table`（字符串），`days`（整数，默认 7）
+- `manage_hg_query_queue` ：创建、删除或清空查询队列，需 V3.0+ 和超级用户权限
+  - 参数：`action`（字符串："create"/"drop"/"clear"），`queue_name`（字符串），`max_concurrency`（整数，创建时需要），`max_queue_size`（整数，创建时需要）
+- `manage_hg_classifier` ：创建或删除查询队列的分类器，需 V3.0+
+  - 参数：`action`（字符串："create"/"drop"），`queue_name`（字符串），`classifier_name`（字符串），`priority`（整数，创建时需要）
+- `set_hg_query_queue_property` ：设置或移除查询队列或分类器的属性，需 V3.0+
+  - 参数：`target`（字符串："queue"/"classifier"），`queue_name`（字符串），`property_key`（字符串），`property_value`（字符串），`classifier_name`（字符串，分类器时需要），`action`（字符串："set"/"remove"）
+- `manage_hg_warehouse` ：管理计算组：暂停、恢复、重启、重命名或扩缩容，需超级用户权限
+  - 参数：`action`（字符串："suspend"/"resume"/"restart"/"rename"/"resize"），`warehouse_name`（字符串），`cu`（整数，扩缩容时需要），`new_name`（字符串，重命名时需要）
+- `get_hg_warehouse_status` ：查看计算组的详细运行状态和扩缩容进度
+  - 参数：`warehouse_name`（字符串）
+- `rebalance_hg_warehouse` ：触发计算组分片均衡，消除节点间数据倾斜
+  - 参数：`warehouse_name`（字符串）
+- `list_hg_data_masking_rules` ：列出所有通过 hg_anon 扩展配置的数据脱敏规则（列级和用户级）
+- `query_hg_external_files` ：使用 EXTERNAL_FILES 函数免建外表直读 OSS 文件，需 V4.1+
+  - 参数：`path`（字符串），`format`（字符串："csv"/"parquet"/"orc"），`columns`（字符串，可选），`oss_endpoint`（字符串，可选），`role_arn`（字符串，可选）
+- `get_hg_guc_config` ：查看 GUC（统一配置）参数的当前值
+  - 参数：`guc_name`（字符串）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

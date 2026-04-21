@@ -23,9 +23,58 @@ SYSTEM_SCHEMAS_EXCLUDED = "', '".join(SYSTEM_SCHEMAS)
 DEFAULT_RETRY_COUNT = 3
 DEFAULT_RETRY_DELAY = 5  # seconds
 
+# ============================================================================
+# Connection Pool
+# ============================================================================
+
+_connection_pool = None
+_pool_init_attempted = False
+
+
+def _get_pool():
+    """Get or create the connection pool (lazy singleton)."""
+    global _connection_pool, _pool_init_attempted
+    if _pool_init_attempted:
+        return _connection_pool
+    _pool_init_attempted = True
+    try:
+        from psycopg_pool import ConnectionPool
+
+        config = get_db_config()
+        conninfo = psycopg.conninfo.make_conninfo(**config)
+        _connection_pool = ConnectionPool(
+            conninfo=conninfo,
+            min_size=0,
+            max_size=5,
+            max_idle=300,
+            open=False,
+        )
+        _connection_pool.open(wait=False)
+    except Exception as e:
+        print(f"Connection pool initialization failed, falling back to direct connections: {e}")
+        _connection_pool = None
+    return _connection_pool
+
+
+def reset_pool():
+    """Reset the pool state (for testing)."""
+    global _connection_pool, _pool_init_attempted
+    _connection_pool = None
+    _pool_init_attempted = False
+
 
 def connect_with_retry(retries=DEFAULT_RETRY_COUNT):
-    config = get_db_config()  # Fetch config once before retry loop
+    """Get a connection from pool or fall back to direct connection."""
+    pool = _get_pool()
+    if pool:
+        try:
+            conn = pool.getconn(timeout=5)
+            conn.autocommit = True
+            return conn
+        except Exception:
+            pass
+    # Fallback to direct connection
+    config = get_db_config()
     attempt = 0
     err_msg = ""
     while attempt <= retries:
