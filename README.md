@@ -165,6 +165,7 @@ Since some Agents do not support resources and resource templates, the following
 * `get_hg_table_shard_info`: Get table's Table Group and shard count info for diagnosing data skew.
   - Parameters: `schema_name` (string), `table` (string)
 * `list_hg_external_databases`: List all External Databases and Foreign Servers for Lakehouse acceleration. Requires V3.0+.
+* `get_hg_lock_diagnostics`: Diagnose lock contention by showing blocking and waiting queries.
 
 ### Resources
 

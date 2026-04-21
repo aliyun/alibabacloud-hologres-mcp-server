@@ -158,6 +158,7 @@ claude mcp add hologres-mcp-server \
 - `get_hg_table_shard_info` ：查看表的 Table Group 和 Shard 配置，用于诊断数据倾斜
   - 参数：`schema_name`（字符串），`table`（字符串）
 - `list_hg_external_databases` ：列出所有外部数据库和 Foreign Server（Lakehouse 加速），需 V3.0+
+- `get_hg_lock_diagnostics` ：锁诊断，展示阻塞和等待中的查询关系
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

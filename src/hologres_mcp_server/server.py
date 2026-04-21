@@ -302,6 +302,12 @@ def list_hg_external_databases() -> str:
     return _list_external_databases()
 
 
+@app.tool(tags={"analysis"})
+def get_hg_lock_diagnostics() -> str:
+    """Diagnose lock contention by showing blocking and waiting queries. Useful for identifying lock waits that cause query hangs."""
+    return _get_lock_diagnostics()
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1029,6 +1035,50 @@ def _list_external_databases():
                 return "\n".join(parts)
     except Exception as e:
         return f"Error listing external databases: {str(e)}"
+
+
+def _get_lock_diagnostics():
+    """Diagnose lock contention by joining pg_locks with pg_stat_activity."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        blocked.pid AS blocked_pid,
+                        blocked.usename AS blocked_user,
+                        blocking.pid AS blocking_pid,
+                        blocking.usename AS blocking_user,
+                        blocked.state AS blocked_state,
+                        blocked.wait_event_type,
+                        blocked.wait_event,
+                        NOW() - blocked.query_start AS blocked_duration,
+                        LEFT(blocked.query, 150) AS blocked_query,
+                        LEFT(blocking.query, 150) AS blocking_query
+                    FROM pg_stat_activity blocked
+                    JOIN pg_locks blocked_locks ON blocked.pid = blocked_locks.pid
+                    JOIN pg_locks blocking_locks ON blocked_locks.locktype = blocking_locks.locktype
+                        AND blocked_locks.relation = blocking_locks.relation
+                        AND blocked_locks.pid != blocking_locks.pid
+                    JOIN pg_stat_activity blocking ON blocking_locks.pid = blocking.pid
+                    WHERE NOT blocked_locks.granted
+                      AND blocking_locks.granted
+                    ORDER BY blocked_duration DESC
+                    """
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return "No lock contention detected."
+
+                headers = [desc[0] for desc in cursor.description]
+                parts = ["## Lock Diagnostics", f"Blocked queries: {len(rows)}", ""]
+                parts.append("\t".join(headers))
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting lock diagnostics: {str(e)}"
 
 
 # ============================================================================

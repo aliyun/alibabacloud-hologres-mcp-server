@@ -464,5 +464,11 @@ async def list_hg_external_databases() -> None:
     await _call_tool("list_hg_external_databases", {})
 
 
+@call_tool_app.command(name="get_hg_lock_diagnostics")
+async def get_hg_lock_diagnostics() -> None:
+    """Diagnose lock contention by showing blocking and waiting queries."""
+    await _call_tool("get_hg_lock_diagnostics", {})
+
+
 if __name__ == "__main__":
     app()
