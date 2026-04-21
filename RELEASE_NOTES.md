@@ -3,10 +3,71 @@
 ## Version 1.0.2
 
 ### New Features
-- **REFRESH DYNAMIC TABLE Support**: Added support for `REFRESH DYNAMIC TABLE` SQL statement in the `execute_hg_dml_sql` tool
+
+#### Data Visualization
+- **query_and_plotly_chart**: Execute SQL query and generate charts (bar/line/scatter/pie/histogram/area), returns base64-encoded PNG image
+  - Uses matplotlib for chart generation, no Chrome/browser dependency
+
+#### Query Performance Analysis
+- **analyze_hg_query_by_id**: Analyze a query's full performance profile (48 columns) from `hg_query_log` by query_id
+- **get_hg_slow_queries**: List slow queries ordered by duration with configurable threshold
+
+#### Dynamic Table Management (V3.0+)
+- **list_hg_dynamic_tables**: List all Dynamic Tables with status, freshness settings, and last refresh info
+- **get_hg_dynamic_table_refresh_history**: View refresh history for a specific Dynamic Table
+
+#### Recycle Bin Management (V3.1+)
+- **list_hg_recyclebin**: List dropped tables that can be restored from recycle bin
+- **restore_hg_table_from_recyclebin**: Restore a dropped table using `RECOVER TABLE ... WITH (table_id = N)` syntax
+
+#### Computing Group (Warehouse) Management (V3.0+)
+- **list_hg_warehouses**: List all computing groups with CPU, memory, cluster count, and status
+- **switch_hg_warehouse**: Switch session's computing resource via `CALL hg_set_default_warehouse()`
+- **manage_hg_warehouse**: Suspend, resume, restart, rename, or resize a computing group (V3.1+)
+- **get_hg_warehouse_status**: Get detailed running status and scaling progress via `hg_get_warehouse_status()`
+- **rebalance_hg_warehouse**: Trigger shard rebalancing via `hg_rebalance_warehouse()` to eliminate data skew
+
+#### Query Queue Management (V3.0+)
+- **list_hg_query_queues**: View all Query Queue configurations and classifier rules
+- **manage_hg_query_queue**: Create, drop, or clear a Query Queue via stored procedures
+- **manage_hg_classifier**: Create or drop classifiers for Query Queue routing
+- **set_hg_query_queue_property**: Set or remove properties on queues (concurrency, timeout) and classifiers (routing rules)
+
+#### Query Monitoring & Control
+- **list_hg_active_queries**: List active/idle/all connections from `pg_stat_activity` with state filter
+- **cancel_hg_query**: Cancel or terminate running queries via `pg_cancel_backend()` / `pg_terminate_backend()`
+- **get_hg_lock_diagnostics**: Diagnose lock contention by joining `pg_locks` with `pg_stat_activity`
+
+#### Table Analysis & Schema
+- **get_hg_table_storage_size**: View table storage breakdown (total/data/index/meta) via `pg_relation_size` and `hg_relation_size`
+- **get_hg_table_properties**: View table properties (distribution_key, clustering_key, segment_key, etc.) from `hg_table_properties`
+- **get_hg_table_shard_info**: View Table Group and shard_count configuration for data skew diagnosis
+- **get_hg_table_info_trend**: View daily storage/file/row count trends from `hg_table_info` (T+1 data, 30-day retention)
+
+#### External Data & Lake (V3.0+/V4.1+)
+- **list_hg_external_databases**: List External Databases and Foreign Servers for Lakehouse federation
+- **query_hg_external_files**: Query OSS files directly using `EXTERNAL_FILES()` function without creating foreign tables (V4.1+, supports CSV/Parquet/ORC)
+
+#### Security & Configuration
+- **list_hg_data_masking_rules**: List column-level and user-level data masking rules from `hg_anon` extension (V3.1+)
+- **get_hg_guc_config**: Get current value of any GUC parameter via `SHOW`
+
+#### REFRESH DYNAMIC TABLE Support
+- Added support for `REFRESH DYNAMIC TABLE` SQL statement in `execute_hg_dml_sql`
   - Supports all REFRESH variants including `REFRESH OVERWRITE`, `PARTITION`, and `WITH` clauses
-  - Enables AI Agents to trigger Dynamic Table refresh operations
-  - See [Hologres REFRESH DYNAMIC TABLE Documentation](https://help.aliyun.com/zh/hologres/user-guide/refresh-dynamic-table) for more details
+
+### Infrastructure
+- **Connection Pool**: Added `psycopg_pool` connection pool (min=0, max=5, idle=300s) with automatic fallback to direct connection when pool is unavailable
+- **CLI Commands**: All 27 new tools have corresponding CLI commands via `cyclopts`
+
+### Dependencies
+- Added `matplotlib>=3.5.0` for chart generation
+- Added `psycopg-pool>=3.0.0` for connection pooling (optional, graceful fallback)
+
+### Testing
+- Unit tests: 336 passed, ruff lint clean
+- Integration tests verified for Dynamic Table, Recycle Bin, Warehouse management
+- Total MCP tools: **39** (up from 12)
 
 ## Version 1.0.1
 
