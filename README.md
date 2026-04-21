@@ -176,6 +176,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `target` (string: "queue", "classifier"), `queue_name` (string), `property_key` (string), `property_value` (string), `classifier_name` (string, for classifier), `action` (string: "set", "remove")
 * `manage_hg_warehouse`: Manage a computing group: suspend, resume, restart, rename, or resize. Requires superuser.
   - Parameters: `action` (string: "suspend", "resume", "restart", "rename", "resize"), `warehouse_name` (string), `cu` (int, for resize), `new_name` (string, for rename)
+* `get_hg_warehouse_status`: Get detailed running status and scaling progress of a computing group.
+  - Parameters: `warehouse_name` (string)
 
 ### Resources
 

@@ -364,6 +364,14 @@ def manage_hg_warehouse(
     return _manage_warehouse(action, warehouse_name, cu, new_name)
 
 
+@app.tool(tags={"admin"})
+def get_hg_warehouse_status(
+    warehouse_name: Annotated[str, "Name of the warehouse (computing group)"],
+) -> str:
+    """Get detailed running status and scaling progress of a computing group (warehouse)."""
+    return _get_warehouse_status(warehouse_name)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1307,6 +1315,55 @@ def _manage_warehouse(action, warehouse_name, cu=0, new_name=""):
                     return f"Unknown action '{action}'. Supported: 'suspend', 'resume', 'restart', 'rename', 'resize'."
     except Exception as e:
         return f"Error managing warehouse: {str(e)}"
+
+
+def _get_warehouse_status(warehouse_name):
+    """Get warehouse running status."""
+    try:
+        safe_name = warehouse_name.replace("'", "''")
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(f"SELECT hg_get_warehouse_status('{safe_name}')")
+                status = cursor.fetchone()[0]
+
+                parts = [f"## Warehouse Status: {warehouse_name}", ""]
+                parts.append(f"**Status**: {status}")
+
+                # Also get rebalance status
+                try:
+                    cursor.execute(f"SELECT hg_get_rebalance_warehouse_status('{safe_name}')")
+                    rebalance = cursor.fetchone()[0]
+                    parts.append(f"**Rebalance Status**: {rebalance}")
+                except Exception:
+                    pass
+
+                # Get current warehouse info from hg_warehouses
+                try:
+                    cursor.execute(
+                        """
+                        SELECT warehouse_id, cpu, memory, cluster_count, status, is_default
+                        FROM hologres.hg_warehouses
+                        WHERE warehouse_name = %s
+                        """,
+                        [warehouse_name],
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        wh_id, cpu, mem, clusters, db_status, is_default = row
+                        parts.append("")
+                        parts.append("### Configuration")
+                        parts.append(f"- **ID**: {wh_id}")
+                        parts.append(f"- **CPU**: {cpu}")
+                        parts.append(f"- **Memory**: {mem}")
+                        parts.append(f"- **Clusters**: {clusters}")
+                        parts.append(f"- **DB Status**: {db_status}")
+                        parts.append(f"- **Default**: {'Yes' if is_default else 'No'}")
+                except Exception:
+                    pass
+
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting warehouse status: {str(e)}"
 
 
 # ============================================================================

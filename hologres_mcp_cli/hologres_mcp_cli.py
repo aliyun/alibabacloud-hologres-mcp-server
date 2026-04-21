@@ -531,5 +531,14 @@ async def manage_hg_warehouse(
     await _call_tool("manage_hg_warehouse", {"action": action, "warehouse_name": warehouse_name, "cu": cu, "new_name": new_name})
 
 
+@call_tool_app.command(name="get_hg_warehouse_status")
+async def get_hg_warehouse_status(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse (computing group)")],
+) -> None:
+    """Get detailed running status of a computing group."""
+    await _call_tool("get_hg_warehouse_status", {"warehouse_name": warehouse_name})
+
+
 if __name__ == "__main__":
     app()
