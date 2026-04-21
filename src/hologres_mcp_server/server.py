@@ -329,6 +329,17 @@ def manage_hg_query_queue(
     return _manage_query_queue(action, queue_name, max_concurrency, max_queue_size)
 
 
+@app.tool(tags={"admin"})
+def manage_hg_classifier(
+    action: Annotated[str, "Action: 'create' or 'drop'"],
+    queue_name: Annotated[str, "Name of the query queue the classifier belongs to"],
+    classifier_name: Annotated[str, "Name of the classifier"],
+    priority: Annotated[int, "Priority for the classifier (required for 'create', higher = matched first)"] = 0,
+) -> str:
+    """Create or drop a classifier for a Query Queue. Use set_hg_query_queue_property to configure classifier rules after creation. Requires Hologres V3.0+."""
+    return _manage_classifier(action, queue_name, classifier_name, priority)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -1169,6 +1180,30 @@ def _manage_query_queue(action, queue_name, max_concurrency=0, max_queue_size=0)
                     return f"Unknown action '{action}'. Supported: 'create', 'drop', 'clear'."
     except Exception as e:
         return f"Error managing query queue: {str(e)}"
+
+
+def _manage_classifier(action, queue_name, classifier_name, priority=0):
+    """Create or drop a classifier."""
+    try:
+        action = action.lower().strip()
+        safe_queue = queue_name.replace("'", "''")
+        safe_classifier = classifier_name.replace("'", "''")
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                if action == "create":
+                    cursor.execute(
+                        f"CALL hg_create_classifier('{safe_queue}', '{safe_classifier}', {int(priority)})"
+                    )
+                    return f"Successfully created classifier '{classifier_name}' in queue '{queue_name}' (priority={priority})."
+                elif action == "drop":
+                    cursor.execute(
+                        f"CALL hg_drop_classifier('{safe_queue}', '{safe_classifier}')"
+                    )
+                    return f"Successfully dropped classifier '{classifier_name}' from queue '{queue_name}'."
+                else:
+                    return f"Unknown action '{action}'. Supported: 'create', 'drop'."
+    except Exception as e:
+        return f"Error managing classifier: {str(e)}"
 
 
 # ============================================================================

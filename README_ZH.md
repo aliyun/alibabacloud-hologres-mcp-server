@@ -163,6 +163,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串），`table`（字符串），`days`（整数，默认 7）
 - `manage_hg_query_queue` ：创建、删除或清空查询队列，需 V3.0+ 和超级用户权限
   - 参数：`action`（字符串："create"/"drop"/"clear"），`queue_name`（字符串），`max_concurrency`（整数，创建时需要），`max_queue_size`（整数，创建时需要）
+- `manage_hg_classifier` ：创建或删除查询队列的分类器，需 V3.0+
+  - 参数：`action`（字符串："create"/"drop"），`queue_name`（字符串），`classifier_name`（字符串），`priority`（整数，创建时需要）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

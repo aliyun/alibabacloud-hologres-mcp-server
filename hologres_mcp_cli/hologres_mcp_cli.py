@@ -493,5 +493,17 @@ async def manage_hg_query_queue(
     await _call_tool("manage_hg_query_queue", {"action": action, "queue_name": queue_name, "max_concurrency": max_concurrency, "max_queue_size": max_queue_size})
 
 
+@call_tool_app.command(name="manage_hg_classifier")
+async def manage_hg_classifier(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'create' or 'drop'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    classifier_name: Annotated[str, cyclopts.Parameter(help="Name of the classifier")],
+    priority: Annotated[int, cyclopts.Parameter(help="Priority for the classifier (required for 'create')")] = 0,
+) -> None:
+    """Create or drop a classifier for a Query Queue."""
+    await _call_tool("manage_hg_classifier", {"action": action, "queue_name": queue_name, "classifier_name": classifier_name, "priority": priority})
+
+
 if __name__ == "__main__":
     app()

@@ -170,6 +170,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string), `table` (string), `days` (int, default 7)
 * `manage_hg_query_queue`: Create, drop, or clear a Query Queue. Requires V3.0+ and superuser privileges.
   - Parameters: `action` (string: "create", "drop", "clear"), `queue_name` (string), `max_concurrency` (int, for create), `max_queue_size` (int, for create)
+* `manage_hg_classifier`: Create or drop a classifier for a Query Queue. Requires V3.0+.
+  - Parameters: `action` (string: "create", "drop"), `queue_name` (string), `classifier_name` (string), `priority` (int, for create)
 
 ### Resources
 
