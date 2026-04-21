@@ -157,6 +157,8 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string), `table` (string)
 * `cancel_hg_query`: Cancel or terminate a running query by its process ID.
   - Parameters: `pid` (int), `terminate` (bool, default false)
+* `list_hg_active_queries`: List currently active queries and connections from pg_stat_activity.
+  - Parameters: `state` (string: "active", "idle", or "all", default "active")
 
 ### Resources
 

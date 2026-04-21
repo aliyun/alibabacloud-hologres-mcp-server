@@ -423,5 +423,14 @@ async def cancel_hg_query(
     await _call_tool("cancel_hg_query", {"pid": pid, "terminate": terminate})
 
 
+@call_tool_app.command(name="list_hg_active_queries")
+async def list_hg_active_queries(
+    *,
+    state: Annotated[str, cyclopts.Parameter(help="Filter by state: 'active', 'idle', 'all'")] = "active",
+) -> None:
+    """List currently active queries and connections."""
+    await _call_tool("list_hg_active_queries", {"state": state})
+
+
 if __name__ == "__main__":
     app()

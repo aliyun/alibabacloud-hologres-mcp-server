@@ -150,6 +150,8 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串），`table`（字符串）
 - `cancel_hg_query` ：取消或终止正在运行的查询
   - 参数：`pid`（整数），`terminate`（布尔值，默认 false）
+- `list_hg_active_queries` ：列出当前活跃查询和连接（pg_stat_activity）
+  - 参数：`state`（字符串："active"/"idle"/"all"，默认 "active"）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板

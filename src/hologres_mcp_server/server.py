@@ -264,6 +264,14 @@ def cancel_hg_query(
     return _cancel_query(pid, terminate)
 
 
+@app.tool(tags={"analysis"})
+def list_hg_active_queries(
+    state: Annotated[str, "Filter by state: 'active', 'idle', 'all' (default 'active')"] = "active",
+) -> str:
+    """List currently active queries and connections from pg_stat_activity. Useful for monitoring running queries and finding PIDs to cancel."""
+    return _list_active_queries(state)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -771,6 +779,46 @@ def _cancel_query(pid, terminate=False):
                         return f"Failed to cancel query (pid={pid}). Process may not exist or already finished."
     except Exception as e:
         return f"Error cancelling query: {str(e)}"
+
+
+def _list_active_queries(state="active"):
+    """List active queries from pg_stat_activity."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT
+                        pid,
+                        usename,
+                        datname,
+                        state,
+                        application_name,
+                        query_start,
+                        NOW() - query_start AS duration,
+                        LEFT(query, 200) AS query_preview
+                    FROM pg_stat_activity
+                    WHERE pid != pg_backend_pid()
+                """
+                if state == "active":
+                    query += " AND state = 'active'"
+                elif state == "idle":
+                    query += " AND state LIKE 'idle%'"
+                # 'all' - no extra filter
+                query += " ORDER BY query_start ASC"
+                cursor.execute(query)
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return f"No {state} queries found."
+
+                headers = [desc[0] for desc in cursor.description]
+                parts = [f"## Active Queries (state={state})", f"Total: {len(rows)}", ""]
+                parts.append("\t".join(headers))
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing active queries: {str(e)}"
 
 
 # ============================================================================
