@@ -1,6 +1,6 @@
 # Release Notes
 
-## Version 1.0.2
+## Version 1.0.3
 
 ### New Features
 
@@ -52,10 +52,6 @@
 - **list_hg_data_masking_rules**: List column-level and user-level data masking rules from `hg_anon` extension (V3.1+)
 - **get_hg_guc_config**: Get current value of any GUC parameter via `SHOW`
 
-#### REFRESH DYNAMIC TABLE Support
-- Added support for `REFRESH DYNAMIC TABLE` SQL statement in `execute_hg_dml_sql`
-  - Supports all REFRESH variants including `REFRESH OVERWRITE`, `PARTITION`, and `WITH` clauses
-
 ### Infrastructure
 - **Connection Pool**: Added `psycopg_pool` connection pool (min=0, max=5, idle=300s) with automatic fallback to direct connection when pool is unavailable
 - **CLI Commands**: All 27 new tools have corresponding CLI commands via `cyclopts`
@@ -68,6 +64,14 @@
 - Unit tests: 336 passed, ruff lint clean
 - Integration tests verified for Dynamic Table, Recycle Bin, Warehouse management
 - Total MCP tools: **39** (up from 12)
+
+## Version 1.0.2
+
+### New Features
+- **REFRESH DYNAMIC TABLE Support**: Added support for `REFRESH DYNAMIC TABLE` SQL statement in the `execute_hg_dml_sql` tool
+  - Supports all REFRESH variants including `REFRESH OVERWRITE`, `PARTITION`, and `WITH` clauses
+  - Enables AI Agents to trigger Dynamic Table refresh operations
+  - See [Hologres REFRESH DYNAMIC TABLE Documentation](https://help.aliyun.com/zh/hologres/user-guide/refresh-dynamic-table) for more details
 
 ## Version 1.0.1
 
