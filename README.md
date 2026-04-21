@@ -160,6 +160,8 @@ Since some Agents do not support resources and resource templates, the following
 * `list_hg_active_queries`: List currently active queries and connections from pg_stat_activity.
   - Parameters: `state` (string: "active", "idle", or "all", default "active")
 * `list_hg_query_queues`: List all Query Queues and their classifiers (concurrency limits, routing rules). Requires V3.0+.
+* `get_hg_table_properties`: Get table properties including distribution_key, clustering_key, segment_key, bitmap_columns, binlog settings, etc.
+  - Parameters: `schema_name` (string), `table` (string)
 
 ### Resources
 

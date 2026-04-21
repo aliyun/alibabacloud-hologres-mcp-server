@@ -278,6 +278,15 @@ def list_hg_query_queues() -> str:
     return _list_query_queues()
 
 
+@app.tool(tags={"schema"})
+def get_hg_table_properties(
+    schema_name: Annotated[str, "Schema name in Hologres database"],
+    table: Annotated[str, "Table name in Hologres database"],
+) -> str:
+    """Get table properties including distribution_key, clustering_key, segment_key, bitmap_columns, dictionary_columns, binlog settings, etc."""
+    return _get_table_properties(schema_name, table)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -879,6 +888,33 @@ def _list_query_queues():
         if "does not exist" in str(e):
             return "Query Queue feature not available. Requires Hologres V3.0+."
         return f"Error listing query queues: {str(e)}"
+
+
+def _get_table_properties(schema_name, table):
+    """Get table properties from hologres.hg_table_properties."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT property_key, property_value
+                    FROM hologres.hg_table_properties
+                    WHERE schema_name = %s AND table_name = %s
+                    ORDER BY property_key
+                    """,
+                    [schema_name, table],
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return f"No properties found for {schema_name}.{table}."
+
+                parts = [f"## Table Properties: {schema_name}.{table}", ""]
+                for key, value in rows:
+                    parts.append(f"- **{key}**: {value}")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error getting table properties: {str(e)}"
 
 
 # ============================================================================

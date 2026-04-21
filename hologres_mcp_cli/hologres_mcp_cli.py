@@ -438,5 +438,15 @@ async def list_hg_query_queues() -> None:
     await _call_tool("list_hg_query_queues", {})
 
 
+@call_tool_app.command(name="get_hg_table_properties")
+async def get_hg_table_properties(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get table properties (distribution_key, clustering_key, segment_key, etc.)."""
+    await _call_tool("get_hg_table_properties", {"schema_name": schema_name, "table": table})
+
+
 if __name__ == "__main__":
     app()
