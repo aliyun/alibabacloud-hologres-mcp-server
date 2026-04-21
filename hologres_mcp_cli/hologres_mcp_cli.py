@@ -372,5 +372,21 @@ async def get_hg_dynamic_table_refresh_history(
     await _call_tool("get_hg_dynamic_table_refresh_history", {"schema_name": schema_name, "table_name": table_name, "limit": limit})
 
 
+@call_tool_app.command(name="list_hg_recyclebin")
+async def list_hg_recyclebin() -> None:
+    """List all tables in the Hologres recycle bin (dropped tables that can be restored)."""
+    await _call_tool("list_hg_recyclebin", {})
+
+
+@call_tool_app.command(name="restore_hg_table_from_recyclebin")
+async def restore_hg_table_from_recyclebin(
+    *,
+    table_name: Annotated[str, cyclopts.Parameter(help="The original table name to restore from recycle bin")],
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name of the table")] = "public",
+) -> None:
+    """Restore a dropped table from the Hologres recycle bin."""
+    await _call_tool("restore_hg_table_from_recyclebin", {"table_name": table_name, "schema_name": schema_name})
+
+
 if __name__ == "__main__":
     app()

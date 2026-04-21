@@ -147,6 +147,9 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string, optional)
 * `get_hg_dynamic_table_refresh_history`: Get refresh history for a specific Dynamic Table, including duration, status, and latency.
   - Parameters: `schema_name` (string), `table_name` (string), `limit` (int, default 10)
+* `list_hg_recyclebin`: List all tables in the Hologres recycle bin (dropped tables that can be restored).
+* `restore_hg_table_from_recyclebin`: Restore a dropped table from the Hologres recycle bin.
+  - Parameters: `table_name` (string), `schema_name` (string, default "public")
 
 ### Resources
 

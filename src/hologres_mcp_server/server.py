@@ -217,6 +217,21 @@ def get_hg_dynamic_table_refresh_history(
     return _get_dynamic_table_refresh_history(schema_name, table_name, limit)
 
 
+@app.tool(tags={"admin"})
+def list_hg_recyclebin() -> str:
+    """List all tables in the Hologres recycle bin (dropped tables that can be restored)."""
+    return _list_recyclebin()
+
+
+@app.tool(tags={"admin"})
+def restore_hg_table_from_recyclebin(
+    table_name: Annotated[str, "The original table name to restore from recycle bin"],
+    schema_name: Annotated[str, "Schema name of the table (default 'public')"] = "public",
+) -> str:
+    """Restore a dropped table from the Hologres recycle bin. Only works if the table is still in the recycle bin."""
+    return _restore_from_recyclebin(schema_name, table_name)
+
+
 # ============================================================================
 # RESOURCES - Helpers
 # ============================================================================
@@ -521,6 +536,68 @@ def _get_dynamic_table_refresh_history(schema_name, table_name, limit=10):
                 return "\n".join(parts)
     except Exception as e:
         return f"Error getting refresh history: {str(e)}"
+
+
+def _list_recyclebin():
+    """List tables in the Hologres recycle bin."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        table_id,
+                        schema_name,
+                        table_name,
+                        drop_time,
+                        remaining_time
+                    FROM hologres.hg_recyclebin
+                    ORDER BY drop_time DESC
+                    """
+                )
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return "Recycle bin is empty."
+
+                parts = ["## Recycle Bin", ""]
+                parts.append("Table ID\tSchema\tTable Name\tDrop Time\tRemaining Time")
+                for row in rows:
+                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                parts.append(f"\nTotal: {len(rows)} tables in recycle bin")
+                return "\n".join(parts)
+    except Exception as e:
+        return f"Error listing recycle bin: {str(e)}"
+
+
+def _restore_from_recyclebin(schema_name, table_name):
+    """Restore a table from the recycle bin."""
+    try:
+        with connect_with_retry() as conn:
+            with conn.cursor() as cursor:
+                # Find the table in recyclebin
+                cursor.execute(
+                    """
+                    SELECT table_id, table_name
+                    FROM hologres.hg_recyclebin
+                    WHERE schema_name = %s AND table_name = %s
+                    ORDER BY drop_time DESC
+                    LIMIT 1
+                    """,
+                    [schema_name, table_name],
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return f"Table '{schema_name}.{table_name}' not found in recycle bin."
+
+                table_id = row[0]
+                # Use RECOVER TABLE syntax
+                cursor.execute(
+                    f'RECOVER TABLE "{schema_name}"."{table_name}" WITH (table_id = {int(table_id)})'
+                )
+                return f"Successfully restored table '{schema_name}.{table_name}' (table_id={table_id}) from recycle bin."
+    except Exception as e:
+        return f"Error restoring table: {str(e)}"
 
 
 # ============================================================================

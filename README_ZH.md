@@ -140,6 +140,9 @@ claude mcp add hologres-mcp-server \
   - 参数：`schema_name`（字符串，可选）
 - `get_hg_dynamic_table_refresh_history` ：查看指定 Dynamic Table 的刷新历史
   - 参数：`schema_name`（字符串），`table_name`（字符串），`limit`（整数，默认 10）
+- `list_hg_recyclebin` ：列出回收站中可恢复的已删除表
+- `restore_hg_table_from_recyclebin` ：从回收站恢复已删除的表
+  - 参数：`table_name`（字符串），`schema_name`（字符串，默认 "public"）
 
 ### 资源 内置资源
 - `hologres:///schemas` ：获取 Hologres 数据库中的所有模式 资源模板
