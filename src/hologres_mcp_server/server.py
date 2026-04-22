@@ -258,7 +258,9 @@ def get_hg_table_storage_size(
 @app.tool(tags={"admin"})
 def cancel_hg_query(
     pid: Annotated[int, "The process ID (pid) of the query to cancel"],
-    terminate: Annotated[bool, "If True, forcefully terminate the backend process (default False, just cancel the query)"] = False,
+    terminate: Annotated[
+        bool, "If True, forcefully terminate the backend process (default False, just cancel the query)"
+    ] = False,
 ) -> str:
     """Cancel or terminate a running query by its process ID. Use list_hg_active_queries to find the pid first."""
     return _cancel_query(pid, terminate)
@@ -344,7 +346,10 @@ def manage_hg_classifier(
 def set_hg_query_queue_property(
     target: Annotated[str, "Target type: 'queue' or 'classifier'"],
     queue_name: Annotated[str, "Name of the query queue"],
-    property_key: Annotated[str, "Property key to set (e.g. 'max_concurrency', 'query_timeout_ms' for queue; 'condition_name' for classifier rule)"],
+    property_key: Annotated[
+        str,
+        "Property key to set (e.g. 'max_concurrency', 'query_timeout_ms' for queue; 'condition_name' for classifier rule)",
+    ],
     property_value: Annotated[str, "Property value to set"],
     classifier_name: Annotated[str, "Classifier name (required when target='classifier')"] = "",
     action: Annotated[str, "Action: 'set' to add/update, 'remove' to delete the property (default 'set')"] = "set",
@@ -390,8 +395,13 @@ def list_hg_data_masking_rules() -> str:
 def query_hg_external_files(
     path: Annotated[str, "OSS path, e.g. 'oss://bucket/path/to/files'"],
     format: Annotated[str, "File format: 'csv', 'parquet', or 'orc'"],
-    columns: Annotated[str, "Optional column definitions for AS clause, e.g. 'id int, name text'. Leave empty for auto schema inference."] = "",
-    oss_endpoint: Annotated[str, "OSS endpoint (internal), e.g. 'oss-cn-hangzhou-internal.aliyuncs.com'. Leave empty if already configured."] = "",
+    columns: Annotated[
+        str,
+        "Optional column definitions for AS clause, e.g. 'id int, name text'. Leave empty for auto schema inference.",
+    ] = "",
+    oss_endpoint: Annotated[
+        str, "OSS endpoint (internal), e.g. 'oss-cn-hangzhou-internal.aliyuncs.com'. Leave empty if already configured."
+    ] = "",
     role_arn: Annotated[str, "RAM role ARN for accessing OSS. Leave empty if already configured."] = "",
 ) -> str:
     """Query files directly from OSS using EXTERNAL_FILES function without creating foreign tables. Requires Hologres V4.1+. Supports CSV, Parquet, ORC formats."""
@@ -400,7 +410,10 @@ def query_hg_external_files(
 
 @app.tool(tags={"admin"})
 def get_hg_guc_config(
-    guc_name: Annotated[str, "The GUC parameter name to query, e.g. 'hg_computing_resource', 'statement_timeout', 'hg_experimental_enable_fixed_dispatcher'"],
+    guc_name: Annotated[
+        str,
+        "The GUC parameter name to query, e.g. 'hg_computing_resource', 'statement_timeout', 'hg_experimental_enable_fixed_dispatcher'",
+    ],
 ) -> str:
     """Get the current value of a GUC (Grand Unified Configuration) parameter."""
     return _get_guc_config(guc_name)
@@ -450,6 +463,7 @@ def _query_and_chart(query, chart_type, x_column, y_column, title):
         import io
 
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
@@ -766,10 +780,10 @@ def _restore_from_recyclebin(schema_name, table_name):
 
                 table_id = row[0]
                 # Use RECOVER TABLE syntax
-                cursor.execute(
-                    f'RECOVER TABLE "{schema_name}"."{table_name}" WITH (table_id = {int(table_id)})'
+                cursor.execute(f'RECOVER TABLE "{schema_name}"."{table_name}" WITH (table_id = {int(table_id)})')
+                return (
+                    f"Successfully restored table '{schema_name}.{table_name}' (table_id={table_id}) from recycle bin."
                 )
-                return f"Successfully restored table '{schema_name}.{table_name}' (table_id={table_id}) from recycle bin."
     except Exception as e:
         return f"Error restoring table: {str(e)}"
 
@@ -867,17 +881,11 @@ def _get_table_storage_size(schema_name, table):
 
                 # Try hologres.hg_relation_size for detailed breakdown
                 try:
-                    cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'data')"
-                    )
+                    cursor.execute(f"SELECT hologres.hg_relation_size('{full_name}', 'data')")
                     hg_data = cursor.fetchone()[0]
-                    cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'index')"
-                    )
+                    cursor.execute(f"SELECT hologres.hg_relation_size('{full_name}', 'index')")
                     hg_index = cursor.fetchone()[0]
-                    cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'meta')"
-                    )
+                    cursor.execute(f"SELECT hologres.hg_relation_size('{full_name}', 'meta')")
                     hg_meta = cursor.fetchone()[0]
                     parts.append("")
                     parts.append("### Detailed Breakdown (hg_relation_size)")
@@ -1231,7 +1239,9 @@ def _manage_query_queue(action, queue_name, max_concurrency=0, max_queue_size=0)
             with conn.cursor() as cursor:
                 if action == "create":
                     if max_concurrency <= 0 or max_queue_size <= 0:
-                        return "Error: max_concurrency and max_queue_size must be positive integers for 'create' action."
+                        return (
+                            "Error: max_concurrency and max_queue_size must be positive integers for 'create' action."
+                        )
                     cursor.execute(
                         f"CALL hg_create_query_queue('{safe_name}', {int(max_concurrency)}, {int(max_queue_size)})"
                     )
@@ -1257,14 +1267,10 @@ def _manage_classifier(action, queue_name, classifier_name, priority=0):
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
                 if action == "create":
-                    cursor.execute(
-                        f"CALL hg_create_classifier('{safe_queue}', '{safe_classifier}', {int(priority)})"
-                    )
+                    cursor.execute(f"CALL hg_create_classifier('{safe_queue}', '{safe_classifier}', {int(priority)})")
                     return f"Successfully created classifier '{classifier_name}' in queue '{queue_name}' (priority={priority})."
                 elif action == "drop":
-                    cursor.execute(
-                        f"CALL hg_drop_classifier('{safe_queue}', '{safe_classifier}')"
-                    )
+                    cursor.execute(f"CALL hg_drop_classifier('{safe_queue}', '{safe_classifier}')")
                     return f"Successfully dropped classifier '{classifier_name}' from queue '{queue_name}'."
                 else:
                     return f"Unknown action '{action}'. Supported: 'create', 'drop'."
@@ -1290,9 +1296,7 @@ def _set_query_queue_property(target, queue_name, property_key, property_value, 
                         )
                         return f"Successfully set queue '{queue_name}' property '{property_key}' = '{property_value}'."
                     elif action == "remove":
-                        cursor.execute(
-                            f"CALL hg_remove_query_queue_property('{safe_queue}', '{safe_key}')"
-                        )
+                        cursor.execute(f"CALL hg_remove_query_queue_property('{safe_queue}', '{safe_key}')")
                         return f"Successfully removed property '{property_key}' from queue '{queue_name}'."
                     else:
                         return f"Unknown action '{action}'. Supported: 'set', 'remove'."
@@ -1755,7 +1759,32 @@ def explore_schema(schema: str = "public") -> str:
 
 def main():
     """Main entry point to run the MCP server."""
-    app.run()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Hologres MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "streamable-http", "sse"],
+        default="stdio",
+        help="Transport type (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to, only used for HTTP transports (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to listen on, only used for HTTP transports (default: 8000)",
+    )
+    args = parser.parse_args()
+
+    if args.transport == "stdio":
+        app.run(transport="stdio")
+    else:
+        app.run(transport=args.transport, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

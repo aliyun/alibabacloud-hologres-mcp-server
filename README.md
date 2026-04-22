@@ -103,6 +103,44 @@ Use uvx mode
 }
 ```
 
+### Mode 3: Using Streamable HTTP Transport
+
+The server supports Streamable HTTP transport for remote deployment scenarios where STDIO is not available.
+
+#### Start the server
+
+```bash
+# Using pip-installed package
+hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+
+# Or using uvx
+uvx hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+```
+
+The MCP endpoint will be available at `http://<host>:<port>/mcp`.
+
+#### CLI Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--transport` | `stdio` | Transport type: `stdio`, `streamable-http`, or `sse` |
+| `--host` | `127.0.0.1` | Host to bind to (HTTP transports only) |
+| `--port` | `8000` | Port to listen on (HTTP transports only) |
+
+#### MCP Integration
+
+Add the following configuration to the MCP client configuration file:
+
+```json
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "url": "http://<host>:<port>/mcp"
+        }
+    }
+}
+```
+
 ## Using with Claude Code
 
 ```bash

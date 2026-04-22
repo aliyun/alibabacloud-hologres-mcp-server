@@ -4,7 +4,7 @@ Settings module for Hologres MCP Server.
 
 import os
 
-SERVER_VERSION = "1.0.2"
+SERVER_VERSION = "1.0.3"
 
 
 def get_db_config():
