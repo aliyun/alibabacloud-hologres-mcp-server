@@ -97,6 +97,44 @@ pip install hologres-mcp-server
 }
 ```
 
+### 模式 3：使用 Streamable HTTP 传输
+
+服务器支持 Streamable HTTP 传输模式，适用于无法使用 STDIO 的远程部署场景。
+
+#### 启动服务器
+
+```bash
+# 使用 pip 安装的包
+hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+
+# 或使用 uvx
+uvx hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+```
+
+MCP 端点地址为 `http://<host>:<port>/mcp`。
+
+#### 命令行参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--transport` | `stdio` | 传输类型：`stdio`、`streamable-http` 或 `sse` |
+| `--host` | `127.0.0.1` | 绑定地址（仅 HTTP 传输模式） |
+| `--port` | `8000` | 监听端口（仅 HTTP 传输模式） |
+
+#### MCP 集成
+
+在 MCP 客户端配置文件中添加以下配置：
+
+```json
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "url": "http://<host>:<port>/mcp"
+        }
+    }
+}
+```
+
 ## 在 Claude Code 中使用
 
 ```bash
