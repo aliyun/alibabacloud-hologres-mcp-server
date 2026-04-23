@@ -62,7 +62,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/hologres_mcp_server"]
+source = ["hologres_mcp_server"]
 branch = true
 omit = [
     "*/tests/*",
