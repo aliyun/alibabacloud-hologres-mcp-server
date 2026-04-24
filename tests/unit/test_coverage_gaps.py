@@ -4,10 +4,16 @@ Tests to fill coverage gaps in server.py — targeting specific uncovered branch
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from conftest import PATCH_CONNECT, _make_mock_conn
+
 from hologres_mcp_server.server import (
     cancel_hg_query,
+    get_hg_dynamic_table_refresh_history,
+    get_hg_lock_diagnostics,
     get_hg_slow_queries,
     get_hg_table_info_trend,
+    get_hg_table_properties,
     get_hg_table_shard_info,
     get_hg_table_storage_size,
     get_hg_warehouse_status,
@@ -22,28 +28,6 @@ from hologres_mcp_server.server import (
     switch_hg_warehouse,
     validate_connection,
 )
-
-PATCH_CONNECT = "hologres_mcp_server.server.connect_with_retry"
-
-
-def _make_mock_conn(fetchone=None, fetchall=None, description=None, rowcount=0):
-    """Helper to build a mock connection with cursor."""
-    mock_cursor = MagicMock()
-    if fetchone is not None:
-        mock_cursor.fetchone.return_value = fetchone
-    if fetchall is not None:
-        mock_cursor.fetchall.return_value = fetchall
-    if description is not None:
-        mock_cursor.description = description
-    mock_cursor.rowcount = rowcount
-
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_conn, mock_cursor
-
 
 # ============================================================================
 # validate_connection lifespan
@@ -514,101 +498,21 @@ class TestSetQueryQueuePropertyBranches:
 
 
 # ============================================================================
-# _get_slow_queries — exception path
+# Consolidated exception-path tests
 # ============================================================================
 
 
-class TestSlowQueriesBranches:
-    """Tests for get_hg_slow_queries exception path."""
-
-    def test_exception(self):
-        with patch(PATCH_CONNECT, side_effect=Exception("timeout")):
-            result = get_hg_slow_queries(1000, 20)
-            assert "Error" in result
-
-
-# ============================================================================
-# _list_recyclebin — exception path
-# ============================================================================
-
-
-class TestRecyclebinBranches:
-    """Tests for list_hg_recyclebin exception path."""
-
-    def test_exception(self):
-        with patch(PATCH_CONNECT, side_effect=Exception("access denied")):
-            result = list_hg_recyclebin()
-            assert "Error" in result
-
-
-# ============================================================================
-# _restore_from_recyclebin — exception path
-# ============================================================================
-
-
-class TestRestoreRecyclebinBranches:
-    """Tests for restore_hg_table_from_recyclebin exception path."""
-
-    def test_exception(self):
-        with patch(PATCH_CONNECT, side_effect=Exception("access denied")):
-            result = restore_hg_table_from_recyclebin("test_table")
-            assert "Error" in result
-
-
-# ============================================================================
-# _list_dynamic_tables — exception path
-# ============================================================================
-
-
-class TestDynamicTablesBranches:
-    """Tests for list_hg_dynamic_tables exception path - already tested but adding for completeness."""
-
-    def test_exception(self):
-        with patch(PATCH_CONNECT, side_effect=Exception("timeout")):
-            result = list_hg_dynamic_tables()
-            assert "Error" in result
-
-
-# ============================================================================
-# get_hg_table_properties — exception path
-# ============================================================================
-
-
-class TestTablePropertiesBranches:
-    """Tests for get_hg_table_properties exception path."""
-
-    def test_exception(self):
-        with patch(PATCH_CONNECT, side_effect=Exception("access denied")):
-            from hologres_mcp_server.server import get_hg_table_properties
-            result = get_hg_table_properties("public", "test")
-            assert "Error" in result
-
-
-# ============================================================================
-# get_hg_lock_diagnostics — exception path
-# ============================================================================
-
-
-class TestLockDiagnosticsBranches:
-    """Tests for get_hg_lock_diagnostics exception path."""
-
-    def test_exception(self):
-        from hologres_mcp_server.server import get_hg_lock_diagnostics
-        with patch(PATCH_CONNECT, side_effect=Exception("denied")):
-            result = get_hg_lock_diagnostics()
-            assert "Error" in result
-
-
-# ============================================================================
-# _get_dynamic_table_refresh_history — exception path
-# ============================================================================
-
-
-class TestRefreshHistoryBranches:
-    """Tests for get_hg_dynamic_table_refresh_history exception path."""
-
-    def test_exception(self):
-        from hologres_mcp_server.server import get_hg_dynamic_table_refresh_history
-        with patch(PATCH_CONNECT, side_effect=Exception("timeout")):
-            result = get_hg_dynamic_table_refresh_history("public", "dt1")
-            assert "Error" in result
+@pytest.mark.parametrize("func,args", [
+    (get_hg_slow_queries, (1000, 20)),
+    (list_hg_recyclebin, ()),
+    (restore_hg_table_from_recyclebin, ("test_table",)),
+    (list_hg_dynamic_tables, ()),
+    (get_hg_table_properties, ("public", "test")),
+    (get_hg_lock_diagnostics, ()),
+    (get_hg_dynamic_table_refresh_history, ("public", "dt1")),
+])
+def test_exception_returns_error(func, args):
+    """Each helper should catch connection errors and return 'Error' in result."""
+    with patch(PATCH_CONNECT, side_effect=Exception("test error")):
+        result = func(*args)
+        assert "Error" in result

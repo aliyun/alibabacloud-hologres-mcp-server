@@ -137,6 +137,38 @@ def mock_env_minimal():
 
 
 # ============================================================================
+# Shared Test Utilities
+# ============================================================================
+
+PATCH_CONNECT = "hologres_mcp_server.server.connect_with_retry"
+"""Patch target for connect_with_retry in server.py (used by newer tools)."""
+
+
+def _make_mock_conn(fetchone=None, fetchall=None, description=None, rowcount=0):
+    """Factory to build a mock connection with cursor for unit tests.
+
+    Unlike the mock_cursor/mock_connection fixtures below, this function
+    accepts per-call return values, making it suitable for tests that need
+    different DB responses.
+    """
+    mock_cursor = MagicMock()
+    if fetchone is not None:
+        mock_cursor.fetchone.return_value = fetchone
+    if fetchall is not None:
+        mock_cursor.fetchall.return_value = fetchall
+    if description is not None:
+        mock_cursor.description = description
+    mock_cursor.rowcount = rowcount
+
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_conn, mock_cursor
+
+
+# ============================================================================
 # Database Connection Mocks
 # ============================================================================
 

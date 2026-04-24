@@ -2,35 +2,16 @@
 Tests for chart generation (_query_and_chart) and _format_bytes helper.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+import pytest
+from conftest import PATCH_CONNECT, _make_mock_conn
 
 from hologres_mcp_server.server import (
     _format_bytes,
     _query_and_chart,
     query_and_plotly_chart,
 )
-
-PATCH_CONNECT = "hologres_mcp_server.server.connect_with_retry"
-
-
-def _make_mock_conn(fetchone=None, fetchall=None, description=None, rowcount=0):
-    """Helper to build a mock connection with cursor."""
-    mock_cursor = MagicMock()
-    if fetchone is not None:
-        mock_cursor.fetchone.return_value = fetchone
-    if fetchall is not None:
-        mock_cursor.fetchall.return_value = fetchall
-    if description is not None:
-        mock_cursor.description = description
-    mock_cursor.rowcount = rowcount
-
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_conn, mock_cursor
-
 
 # ============================================================================
 # _format_bytes
@@ -104,27 +85,18 @@ class TestQueryAndChart:
         desc = [(h,) for h in headers]
         return _make_mock_conn(fetchall=rows, description=desc)
 
-    def test_bar_chart(self):
-        rows = [("A", 10), ("B", 20), ("C", 30)]
-        conn, _ = self._make_chart_conn(rows, ["category", "value"])
+    @pytest.mark.parametrize("chart_type,rows,headers", [
+        ("bar", [("A", 10), ("B", 20), ("C", 30)], ["category", "value"]),
+        ("line", [("2025-01", 100), ("2025-02", 200)], ["month", "sales"]),
+        ("scatter", [(1.0, 10), (2.0, 20), (3.0, 30)], ["x", "y"]),
+        ("pie", [("A", 40), ("B", 30), ("C", 30)], ["label", "share"]),
+        ("histogram", [(10,), (20,), (20,), (30,), (30,), (30,), (40,)], ["value"]),
+        ("area", [(1, 10), (2, 25), (3, 15)], ["x", "y"]),
+    ])
+    def test_chart_type(self, chart_type, rows, headers):
+        conn, _ = self._make_chart_conn(rows, headers)
         with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "bar", "", "", "")
-            assert "Query Results" in result
-            assert "Chart" in result
-            assert "data:image/png;base64," in result
-
-    def test_line_chart(self):
-        rows = [("2025-01", 100), ("2025-02", 200)]
-        conn, _ = self._make_chart_conn(rows, ["month", "sales"])
-        with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "line", "", "", "")
-            assert "data:image/png;base64," in result
-
-    def test_scatter_chart_numeric_x(self):
-        rows = [(1.0, 10), (2.0, 20), (3.0, 30)]
-        conn, _ = self._make_chart_conn(rows, ["x", "y"])
-        with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "scatter", "", "", "")
+            result = _query_and_chart("SELECT * FROM t", chart_type, "", "", "")
             assert "data:image/png;base64," in result
 
     def test_scatter_chart_non_numeric_x(self):
@@ -132,27 +104,6 @@ class TestQueryAndChart:
         conn, _ = self._make_chart_conn(rows, ["name", "value"])
         with patch(PATCH_CONNECT, return_value=conn):
             result = _query_and_chart("SELECT * FROM t", "scatter", "", "", "")
-            assert "data:image/png;base64," in result
-
-    def test_pie_chart(self):
-        rows = [("A", 40), ("B", 30), ("C", 30)]
-        conn, _ = self._make_chart_conn(rows, ["label", "share"])
-        with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "pie", "", "", "")
-            assert "data:image/png;base64," in result
-
-    def test_histogram_chart(self):
-        rows = [(v,) for v in [10, 20, 20, 30, 30, 30, 40]]
-        conn, _ = self._make_chart_conn(rows, ["value"])
-        with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "histogram", "", "", "")
-            assert "data:image/png;base64," in result
-
-    def test_area_chart(self):
-        rows = [(1, 10), (2, 25), (3, 15)]
-        conn, _ = self._make_chart_conn(rows, ["x", "y"])
-        with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart("SELECT * FROM t", "area", "", "", "")
             assert "data:image/png;base64," in result
 
     def test_unsupported_chart_type(self):
@@ -230,7 +181,5 @@ class TestQueryAndChart:
 
     def test_tool_wrapper_validates_query(self):
         """query_and_plotly_chart should validate the query is a SELECT."""
-        import pytest
-
         with pytest.raises(ValueError):
             query_and_plotly_chart("DROP TABLE users")

@@ -7,6 +7,8 @@ unlike the original 12 tools which delegate to handle_call_tool().
 
 from unittest.mock import MagicMock, patch
 
+from conftest import PATCH_CONNECT, _make_mock_conn
+
 from hologres_mcp_server.server import (
     analyze_hg_query_by_id,
     cancel_hg_query,
@@ -35,28 +37,6 @@ from hologres_mcp_server.server import (
     set_hg_query_queue_property,
     switch_hg_warehouse,
 )
-
-PATCH_CONNECT = "hologres_mcp_server.server.connect_with_retry"
-
-
-def _make_mock_conn(fetchone=None, fetchall=None, description=None, rowcount=0):
-    """Helper to build a mock connection with cursor."""
-    mock_cursor = MagicMock()
-    if fetchone is not None:
-        mock_cursor.fetchone.return_value = fetchone
-    if fetchall is not None:
-        mock_cursor.fetchall.return_value = fetchall
-    if description is not None:
-        mock_cursor.description = description
-    mock_cursor.rowcount = rowcount
-
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_conn, mock_cursor
-
 
 # ============================================================================
 # Query Performance Analysis

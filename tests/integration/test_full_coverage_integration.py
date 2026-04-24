@@ -30,68 +30,18 @@ pytestmark = pytest.mark.integration
 class TestChartTool:
     """Tests for query_and_plotly_chart — all 6 chart types and edge cases."""
 
-    async def test_bar_chart(self, mcp_session: ClientSession):
+    @pytest.mark.parametrize("chart_type,query", [
+        ("bar", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
+        ("line", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
+        ("scatter", "SELECT x, x * x AS y FROM generate_series(1, 10) AS x"),
+        ("pie", "SELECT 'Category' || x::text AS label, x * 10 AS value FROM generate_series(1, 4) AS x"),
+        ("histogram", "SELECT (random() * 100)::int AS value FROM generate_series(1, 50)"),
+        ("area", "SELECT x, x * 5 + 10 AS y FROM generate_series(1, 8) AS x"),
+    ])
+    async def test_chart_type(self, mcp_session: ClientSession, chart_type: str, query: str):
         result = await mcp_session.call_tool(
             "query_and_plotly_chart",
-            {
-                "query": "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x",
-                "chart_type": "bar",
-            },
-        )
-        text = result.content[0].text
-        assert "data:image/png;base64," in text
-
-    async def test_line_chart(self, mcp_session: ClientSession):
-        result = await mcp_session.call_tool(
-            "query_and_plotly_chart",
-            {
-                "query": "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x",
-                "chart_type": "line",
-            },
-        )
-        text = result.content[0].text
-        assert "data:image/png;base64," in text
-
-    async def test_scatter_chart(self, mcp_session: ClientSession):
-        result = await mcp_session.call_tool(
-            "query_and_plotly_chart",
-            {
-                "query": "SELECT x, x * x AS y FROM generate_series(1, 10) AS x",
-                "chart_type": "scatter",
-            },
-        )
-        text = result.content[0].text
-        assert "data:image/png;base64," in text
-
-    async def test_pie_chart(self, mcp_session: ClientSession):
-        result = await mcp_session.call_tool(
-            "query_and_plotly_chart",
-            {
-                "query": "SELECT 'Category' || x::text AS label, x * 10 AS value FROM generate_series(1, 4) AS x",
-                "chart_type": "pie",
-            },
-        )
-        text = result.content[0].text
-        assert "data:image/png;base64," in text
-
-    async def test_histogram_chart(self, mcp_session: ClientSession):
-        result = await mcp_session.call_tool(
-            "query_and_plotly_chart",
-            {
-                "query": "SELECT (random() * 100)::int AS value FROM generate_series(1, 50)",
-                "chart_type": "histogram",
-            },
-        )
-        text = result.content[0].text
-        assert "data:image/png;base64," in text
-
-    async def test_area_chart(self, mcp_session: ClientSession):
-        result = await mcp_session.call_tool(
-            "query_and_plotly_chart",
-            {
-                "query": "SELECT x, x * 5 + 10 AS y FROM generate_series(1, 8) AS x",
-                "chart_type": "area",
-            },
+            {"query": query, "chart_type": chart_type},
         )
         text = result.content[0].text
         assert "data:image/png;base64," in text
@@ -367,22 +317,15 @@ class TestQueryQueueLifecycle:
             text = result.content[0].text
             assert "successfully" in text.lower()
         finally:
-            # Cleanup: drop classifier then queue (ignore errors)
+            # Cleanup: drop queue (cascades classifier); ignore errors to
+            # avoid masking original test failures.
             try:
                 await mcp_session.call_tool(
-                    "manage_hg_classifier",
-                    {
-                        "action": "drop",
-                        "queue_name": queue_name,
-                        "classifier_name": classifier_name,
-                    },
+                    "manage_hg_query_queue",
+                    {"action": "drop", "queue_name": queue_name},
                 )
             except Exception:
                 pass
-            await mcp_session.call_tool(
-                "manage_hg_query_queue",
-                {"action": "drop", "queue_name": queue_name},
-            )
 
 
 # ============================================================================
