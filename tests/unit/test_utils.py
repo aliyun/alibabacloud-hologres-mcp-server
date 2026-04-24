@@ -1449,7 +1449,7 @@ class TestConnectionPool:
             assert utils._pool_init_attempted is True
 
     def test_connect_with_retry_pool_success(self, mock_env_basic):
-        """Test connect_with_retry() gets connection from pool."""
+        """Test connect_with_retry() gets connection from pool wrapped in _PooledConnection."""
         mock_conn = MagicMock()
         mock_pool = MagicMock()
         mock_pool.getconn.return_value = mock_conn
@@ -1458,9 +1458,13 @@ class TestConnectionPool:
         utils._connection_pool = mock_pool
 
         result = connect_with_retry(retries=1)
-        assert result is mock_conn
+        assert isinstance(result, utils._PooledConnection)
         mock_pool.getconn.assert_called_once_with(timeout=5)
         assert mock_conn.autocommit is True
+        # Context manager returns raw connection and putconn on exit
+        with result as conn:
+            assert conn is mock_conn
+        mock_pool.putconn.assert_called_once_with(mock_conn)
 
     def test_connect_with_retry_pool_failure_fallback(self, mock_env_basic):
         """Test connect_with_retry() falls back to direct connection when pool fails."""

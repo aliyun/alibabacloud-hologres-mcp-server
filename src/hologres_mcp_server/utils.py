@@ -63,6 +63,38 @@ def reset_pool():
     _pool_init_attempted = False
 
 
+class _PooledConnection:
+    """Wraps a pooled connection to return it on context exit instead of closing."""
+
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def __enter__(self):
+        return self._conn
+
+    def __exit__(self, *exc_info):
+        try:
+            self._pool.putconn(self._conn)
+        except Exception:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
+    def close(self):
+        try:
+            self._pool.putconn(self._conn)
+        except Exception:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def connect_with_retry(retries=DEFAULT_RETRY_COUNT):
     """Get a connection from pool or fall back to direct connection."""
     pool = _get_pool()
@@ -70,7 +102,7 @@ def connect_with_retry(retries=DEFAULT_RETRY_COUNT):
         try:
             conn = pool.getconn(timeout=5)
             conn.autocommit = True
-            return conn
+            return _PooledConnection(pool, conn)
         except Exception:
             pass
     # Fallback to direct connection
@@ -213,6 +245,15 @@ def try_infer_view_comments(schema_name, view_name):
 # ============================================================================
 
 
+_GUC_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*$")
+
+
+def validate_guc_name(guc_name: str) -> None:
+    """Validate that guc_name is a safe PostgreSQL GUC identifier. Raises ValueError if not."""
+    if not _GUC_NAME_PATTERN.match(guc_name):
+        raise ValueError(f"Invalid GUC name: {guc_name}")
+
+
 def validate_select_query(query: str) -> None:
     """Validate that query is SELECT or WITH...SELECT. Raises ValueError if not."""
     if not WITH_SELECT_PATTERN.match(query) and not SELECT_PATTERN.match(query):
@@ -253,12 +294,11 @@ def validate_positive_integer(value: str, param_name: str = "Row limits") -> tup
 # ============================================================================
 
 
-def format_tabular_result(rows: list, headers: list) -> str:
+def format_tabular_result(rows: list, headers: list, null_display: str = "NULL") -> str:
     """Format query results as tab-separated values with headers."""
     result = ["\t".join(headers)]
     for row in rows:
-        formatted_row = [str(val) if val is not None else "NULL" for val in row]
-        result.append("\t".join(formatted_row))
+        result.append("\t".join(str(val) if val is not None else null_display for val in row))
     return "\n".join(result)
 
 

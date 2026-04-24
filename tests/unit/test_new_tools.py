@@ -426,8 +426,8 @@ class TestGetHgTableStorageSize:
 
     def test_with_hg_relation_size(self):
         conn, cursor = _make_mock_conn()
-        # hg_relation_size calls return data, index, meta sizes
-        cursor.fetchone.side_effect = [(1048576,), (524288,), (262144,)]
+        # Combined query returns (data, index, meta) in one row
+        cursor.fetchone.return_value = (1048576, 524288, 262144)
         with patch(PATCH_CONNECT, return_value=conn):
             result = get_hg_table_storage_size("public", "users")
             assert "Storage Size" in result
@@ -811,14 +811,14 @@ class TestQueryHgExternalFiles:
             result = query_hg_external_files("oss://b/d", "csv")
             assert "V4.1" in result or "not available" in result.lower()
 
-    def test_many_rows_truncated(self):
+    def test_many_rows_output(self):
         rows = [(i, f"row{i}") for i in range(200)]
         desc = [("id",), ("name",)]
         conn, _ = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             result = query_hg_external_files("oss://b/d", "csv")
-            assert "more rows" in result
-            assert "200" in result
+            assert "Total rows fetched: 200" in result
+            assert "External Files Query" in result
 
 
 class TestGetHgGucConfig:

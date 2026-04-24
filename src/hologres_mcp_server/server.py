@@ -20,6 +20,7 @@ from hologres_mcp_server.utils import (
     try_infer_view_comments,
     validate_ddl_query,
     validate_dml_query,
+    validate_guc_name,
     validate_positive_integer,
     validate_select_query,
 )
@@ -540,15 +541,13 @@ def _query_and_chart(query, chart_type, x_column, y_column, title):
         img_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
         # Format data table
-        data_parts = ["\t".join(headers)]
-        for row in rows[:50]:  # Limit to 50 rows in output
-            data_parts.append("\t".join(str(v) if v is not None else "NULL" for v in row))
+        data_table = format_tabular_result(rows[:50], headers)
 
         result_parts = [
             "## Query Results",
             f"Rows: {len(rows)}",
             "",
-            "\n".join(data_parts),
+            data_table,
             "",
             "## Chart",
             f"![{chart_title}](data:image/png;base64,{img_base64})",
@@ -634,12 +633,8 @@ def _get_slow_queries(min_duration_ms, limit):
                     return f"No queries found with duration >= {min_duration_ms}ms."
 
                 headers = [desc[0] for desc in cursor.description]
-                parts = [f"## Slow Queries (duration >= {min_duration_ms}ms)", ""]
-                parts.append("\t".join(headers))
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                parts.append(f"\nTotal: {len(rows)} queries")
-                return "\n".join(parts)
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Slow Queries (duration >= {min_duration_ms}ms)\n\n{table}\n\nTotal: {len(rows)} queries"
     except Exception as e:
         return f"Error getting slow queries: {str(e)}"
 
@@ -684,12 +679,9 @@ def _list_dynamic_tables(schema_name=""):
                 if not rows:
                     return "No Dynamic Tables found."
 
-                parts = ["## Dynamic Tables", ""]
-                parts.append("Schema\tTable\tStatus\tFreshness\tLast Refresh\tLag\tAuto Refresh")
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                parts.append(f"\nTotal: {len(rows)} Dynamic Tables")
-                return "\n".join(parts)
+                headers = ["Schema", "Table", "Status", "Freshness", "Last Refresh", "Lag", "Auto Refresh"]
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Dynamic Tables\n\n{table}\n\nTotal: {len(rows)} Dynamic Tables"
     except Exception as e:
         return f"Error listing dynamic tables: {str(e)}"
 
@@ -721,11 +713,9 @@ def _get_dynamic_table_refresh_history(schema_name, table_name, limit=10):
                 if not rows:
                     return f"No refresh history found for {schema_name}.{table_name}."
 
-                parts = [f"## Refresh History: {schema_name}.{table_name}", ""]
-                parts.append("QueryID\tStatus\tStart\tEnd\tDuration(ms)\tLatency\tMode")
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                return "\n".join(parts)
+                headers = ["QueryID", "Status", "Start", "End", "Duration(ms)", "Latency", "Mode"]
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Refresh History: {schema_name}.{table_name}\n\n{table}"
     except Exception as e:
         return f"Error getting refresh history: {str(e)}"
 
@@ -753,12 +743,9 @@ def _list_recyclebin():
                 if not rows:
                     return "Recycle bin is empty."
 
-                parts = ["## Recycle Bin", ""]
-                parts.append("Table ID\tSchema\tTable Name\tOwner\tDropped By\tDrop Time")
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                parts.append(f"\nTotal: {len(rows)} tables in recycle bin")
-                return "\n".join(parts)
+                headers = ["Table ID", "Schema", "Table Name", "Owner", "Dropped By", "Drop Time"]
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Recycle Bin\n\n{table}\n\nTotal: {len(rows)} tables in recycle bin"
     except Exception as e:
         return f"Error listing recycle bin: {str(e)}"
 
@@ -887,17 +874,16 @@ def _get_table_storage_size(schema_name, table):
                 # Try hologres.hg_relation_size for detailed breakdown first
                 try:
                     cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'data')"
+                        f"""SELECT
+                            hologres.hg_relation_size('{full_name}', 'data'),
+                            hologres.hg_relation_size('{full_name}', 'index'),
+                            hologres.hg_relation_size('{full_name}', 'meta')
+                        """
                     )
-                    hg_data = cursor.fetchone()[0] or 0
-                    cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'index')"
-                    )
-                    hg_index = cursor.fetchone()[0] or 0
-                    cursor.execute(
-                        f"SELECT hologres.hg_relation_size('{full_name}', 'meta')"
-                    )
-                    hg_meta = cursor.fetchone()[0] or 0
+                    row = cursor.fetchone()
+                    hg_data = row[0] or 0
+                    hg_index = row[1] or 0
+                    hg_meta = row[2] or 0
                     hg_total = hg_data + hg_index + hg_meta
                     parts.append(f"- **Total**: {_format_bytes(hg_total)}")
                     parts.append(f"- **Data**: {_format_bytes(hg_data)}")
@@ -905,10 +891,12 @@ def _get_table_storage_size(schema_name, table):
                     parts.append(f"- **Meta**: {_format_bytes(hg_meta)}")
                 except Exception:
                     # Fallback to pg functions if hg_relation_size not available
-                    cursor.execute(f"SELECT pg_total_relation_size('{full_name}')")
-                    total = cursor.fetchone()[0] or 0
-                    cursor.execute(f"SELECT pg_relation_size('{full_name}')")
-                    data_size = cursor.fetchone()[0] or 0
+                    cursor.execute(
+                        f"SELECT pg_total_relation_size('{full_name}'), pg_relation_size('{full_name}')"
+                    )
+                    row = cursor.fetchone()
+                    total = row[0] or 0
+                    data_size = row[1] or 0
                     index_meta = max(total - data_size, 0)
                     parts.append(f"- **Total**: {_format_bytes(total)}")
                     parts.append(f"- **Data**: {_format_bytes(data_size)}")
@@ -973,11 +961,8 @@ def _list_active_queries(state="active"):
                     return f"No {state} queries found."
 
                 headers = [desc[0] for desc in cursor.description]
-                parts = [f"## Active Queries (state={state})", f"Total: {len(rows)}", ""]
-                parts.append("\t".join(headers))
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                return "\n".join(parts)
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Active Queries (state={state})\nTotal: {len(rows)}\n\n{table}"
     except Exception as e:
         return f"Error listing active queries: {str(e)}"
 
@@ -1015,9 +1000,7 @@ def _list_query_queues():
                     parts.append("No query queues configured.")
                 else:
                     parts.append(f"\nTotal queues: {len(queue_rows)}")
-                    parts.append("\t".join(queue_headers))
-                    for row in queue_rows:
-                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                    parts.append(format_tabular_result(queue_rows, queue_headers, null_display=""))
 
                 parts.append("")
                 parts.append("## Classifiers")
@@ -1025,9 +1008,7 @@ def _list_query_queues():
                     parts.append("No classifiers configured.")
                 else:
                     parts.append(f"\nTotal classifiers: {len(classifier_rows)}")
-                    parts.append("\t".join(classifier_headers))
-                    for row in classifier_rows:
-                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                    parts.append(format_tabular_result(classifier_rows, classifier_headers, null_display=""))
 
                 return "\n".join(parts)
     except Exception as e:
@@ -1146,18 +1127,11 @@ def _list_external_databases():
                     if not srv_rows:
                         return "No External Databases or Foreign Servers found."
 
-                    parts = ["## Foreign Servers", ""]
-                    parts.append("Name\tType\tOptions")
-                    for row in srv_rows:
-                        parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                    return "\n".join(parts)
+                    table = format_tabular_result(srv_rows, ["Name", "Type", "Options"], null_display="")
+                    return f"## Foreign Servers\n\n{table}"
 
-                parts = ["## External Databases", ""]
-                parts.append("Database\tOwner\tDescription")
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                parts.append(f"\nTotal: {len(rows)} external databases")
-                return "\n".join(parts)
+                table = format_tabular_result(rows, ["Database", "Owner", "Description"], null_display="")
+                return f"## External Databases\n\n{table}\n\nTotal: {len(rows)} external databases"
     except Exception as e:
         return f"Error listing external databases: {str(e)}"
 
@@ -1197,11 +1171,8 @@ def _get_lock_diagnostics():
                     return "No lock contention detected."
 
                 headers = [desc[0] for desc in cursor.description]
-                parts = ["## Lock Diagnostics", f"Blocked queries: {len(rows)}", ""]
-                parts.append("\t".join(headers))
-                for row in rows:
-                    parts.append("\t".join(str(v) if v is not None else "" for v in row))
-                return "\n".join(parts)
+                table = format_tabular_result(rows, headers, null_display="")
+                return f"## Lock Diagnostics\nBlocked queries: {len(rows)}\n\n{table}"
     except Exception as e:
         return f"Error getting lock diagnostics: {str(e)}"
 
@@ -1480,9 +1451,7 @@ def _list_data_masking_rules():
                     parts.append("")
                     parts.append("### Column-level Rules")
                     if col_rows:
-                        parts.append("Table\tColumn\tProvider\tLabel")
-                        for row in col_rows:
-                            parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                        parts.append(format_tabular_result(col_rows, ["Table", "Column", "Provider", "Label"], null_display=""))
                         parts.append(f"\nTotal: {len(col_rows)} column rules")
                     else:
                         parts.append("No column-level masking rules configured.")
@@ -1504,9 +1473,7 @@ def _list_data_masking_rules():
                     parts.append("")
                     parts.append("### User-level Rules")
                     if user_rows:
-                        parts.append("User\tLabel")
-                        for row in user_rows:
-                            parts.append("\t".join(str(v) if v is not None else "" for v in row))
+                        parts.append(format_tabular_result(user_rows, ["User", "Label"], null_display=""))
                         parts.append(f"\nTotal: {len(user_rows)} user rules")
                     else:
                         parts.append("No user-level masking rules configured.")
@@ -1533,7 +1500,7 @@ def _query_external_files(path, format, columns="", oss_endpoint="", role_arn=""
         query = f"SELECT * FROM EXTERNAL_FILES({params_str})"
         if columns:
             query += f" AS ({columns})"
-        query += " LIMIT 1000"
+        query += " LIMIT 100"
 
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
@@ -1544,14 +1511,8 @@ def _query_external_files(path, format, columns="", oss_endpoint="", role_arn=""
                 if not rows:
                     return "Query returned no data from external files."
 
-                parts = ["## External Files Query", f"Path: {path}", f"Format: {format}", ""]
-                parts.append("\t".join(headers))
-                for row in rows[:100]:  # Limit display to 100 rows
-                    parts.append("\t".join(str(v) if v is not None else "NULL" for v in row))
-                if len(rows) > 100:
-                    parts.append(f"\n... and {len(rows) - 100} more rows (showing first 100)")
-                parts.append(f"\nTotal rows fetched: {len(rows)}")
-                return "\n".join(parts)
+                table = format_tabular_result(rows, headers)
+                return f"## External Files Query\nPath: {path}\nFormat: {format}\n\n{table}\n\nTotal rows fetched: {len(rows)}"
     except Exception as e:
         if "EXTERNAL_FILES" in str(e) and "does not exist" in str(e):
             return "EXTERNAL_FILES function not available. Requires Hologres V4.1+."
@@ -1561,6 +1522,7 @@ def _query_external_files(path, format, columns="", oss_endpoint="", role_arn=""
 def _get_guc_config(guc_name):
     """Get the current value of a GUC parameter."""
     try:
+        validate_guc_name(guc_name)
         with connect_with_retry() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(f"SHOW {guc_name}")
@@ -1681,6 +1643,10 @@ def get_guc_value(guc_name: str) -> str:
     """Get GUC (Grand Unified Configuration) value by name."""
     if not guc_name:
         return "GUC name cannot be empty"
+    try:
+        validate_guc_name(guc_name)
+    except ValueError as e:
+        return str(e)
     query = f"SHOW {guc_name};"
     rows = handle_read_resource("get_guc_value", query)
     if not rows:
