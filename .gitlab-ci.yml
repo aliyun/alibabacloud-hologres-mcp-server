@@ -1,0 +1,32 @@
+stages:
+  - test
+
+unit_tests:
+  stage: test
+  image: python:3.11-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"
+  
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv sync --dev
+  
+  script:
+    - echo "Running linter (ruff)..."
+    - uv run ruff check src/ tests/
+    - echo "Running unit tests..."
+    - uv run pytest tests/unit/ -v --cov=src/hologres_mcp_server --cov-report=xml --cov-report=term-missing
+  
+  coverage: '/TOTAL.*\s+(\d+%)/'
+  
+  artifacts:
+    when: always
+    paths:
+      - coverage.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

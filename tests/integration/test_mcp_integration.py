@@ -558,7 +558,7 @@ class TestMCPProcedureTools:
 
         try:
             result = await mcp_session.call_tool(
-                "call_hg_procedure", {"procedure_name": f"public.{procedure_name}", "arguments": ["1", "'test_name'"]}
+                "call_hg_procedure", {"procedure_name": f"public.{procedure_name}", "procedure_args": ["1", "'test_name'"]}
             )
 
             assert result is not None

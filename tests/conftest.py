@@ -20,6 +20,24 @@ pytest_plugins = ("pytest_asyncio",)
 
 
 # ============================================================================
+# Pool Reset (prevent pool from interfering with unit tests)
+# ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _reset_connection_pool():
+    """Disable the connection pool in unit tests to prevent threading issues."""
+    from hologres_mcp_server import utils
+    original_init_attempted = utils._pool_init_attempted
+    utils._pool_init_attempted = True
+    original_pool = utils._connection_pool
+    utils._connection_pool = None
+    yield
+    utils._pool_init_attempted = original_init_attempted
+    utils._connection_pool = original_pool
+
+
+# ============================================================================
 # Environment Fixtures (for Unit Tests)
 # ============================================================================
 
@@ -116,6 +134,38 @@ def mock_env_minimal():
     }
     with patch.dict(os.environ, env, clear=True):
         yield env
+
+
+# ============================================================================
+# Shared Test Utilities
+# ============================================================================
+
+PATCH_CONNECT = "hologres_mcp_server.server.connect_with_retry"
+"""Patch target for connect_with_retry in server.py (used by newer tools)."""
+
+
+def _make_mock_conn(fetchone=None, fetchall=None, description=None, rowcount=0):
+    """Factory to build a mock connection with cursor for unit tests.
+
+    Unlike the mock_cursor/mock_connection fixtures below, this function
+    accepts per-call return values, making it suitable for tests that need
+    different DB responses.
+    """
+    mock_cursor = MagicMock()
+    if fetchone is not None:
+        mock_cursor.fetchone.return_value = fetchone
+    if fetchall is not None:
+        mock_cursor.fetchall.return_value = fetchall
+    if description is not None:
+        mock_cursor.description = description
+    mock_cursor.rowcount = rowcount
+
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_conn, mock_cursor
 
 
 # ============================================================================

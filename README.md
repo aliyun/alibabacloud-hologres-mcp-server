@@ -103,6 +103,44 @@ Use uvx mode
 }
 ```
 
+### Mode 3: Using Streamable HTTP Transport
+
+The server supports Streamable HTTP transport for remote deployment scenarios where STDIO is not available.
+
+#### Start the server
+
+```bash
+# Using pip-installed package
+hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+
+# Or using uvx
+uvx hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+```
+
+The MCP endpoint will be available at `http://<host>:<port>/mcp`.
+
+#### CLI Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--transport` | `stdio` | Transport type: `stdio`, `streamable-http`, or `sse` |
+| `--host` | `127.0.0.1` | Host to bind to (HTTP transports only) |
+| `--port` | `8000` | Port to listen on (HTTP transports only) |
+
+#### MCP Integration
+
+Add the following configuration to the MCP client configuration file:
+
+```json
+{
+    "mcpServers": {
+        "hologres-mcp-server": {
+            "url": "http://<host>:<port>/mcp"
+        }
+    }
+}
+```
+
 ## Using with Claude Code
 
 ```bash
@@ -137,6 +175,54 @@ Since some Agents do not support resources and resource templates, the following
   - Parameters: `schema_name` (string)
 * `show_hg_table_ddl`: Show the DDL script of a table, view, or external table in the Hologres database.
   - Parameters: `schema_name` (string), `table` (string)
+* `query_and_plotly_chart`: Execute a SELECT SQL query and generate a chart (bar, line, scatter, pie, histogram, area). Returns query results and a base64-encoded PNG image.
+  - Parameters: `query` (string), `chart_type` (string, default "bar"), `x_column` (string), `y_column` (string), `title` (string)
+* `analyze_hg_query_by_id`: Analyze a specific query's performance profile by its query_id from hg_query_log. Returns detailed metrics including duration, memory, CPU time, read/write stats.
+  - Parameters: `query_id` (string)
+* `get_hg_slow_queries`: Get slow queries from hg_query_log ordered by duration.
+  - Parameters: `min_duration_ms` (int, default 1000), `limit` (int, default 20)
+* `list_hg_dynamic_tables`: List all Dynamic Tables with their status, freshness settings, and last refresh info.
+  - Parameters: `schema_name` (string, optional)
+* `get_hg_dynamic_table_refresh_history`: Get refresh history for a specific Dynamic Table, including duration, status, and latency.
+  - Parameters: `schema_name` (string), `table_name` (string), `limit` (int, default 10)
+* `list_hg_recyclebin`: List all tables in the Hologres recycle bin (dropped tables that can be restored).
+* `restore_hg_table_from_recyclebin`: Restore a dropped table from the Hologres recycle bin.
+  - Parameters: `table_name` (string), `schema_name` (string, default "public")
+* `list_hg_warehouses`: List all computing groups (warehouses) with their CPU, memory, cluster count, and status.
+* `switch_hg_warehouse`: Switch the current session's computing resource to a specified warehouse.
+  - Parameters: `warehouse_name` (string)
+* `get_hg_table_storage_size`: Get storage size details of a table, including total, data, index, and metadata breakdown.
+  - Parameters: `schema_name` (string), `table` (string)
+* `cancel_hg_query`: Cancel or terminate a running query by its process ID.
+  - Parameters: `pid` (int), `terminate` (bool, default false)
+* `list_hg_active_queries`: List currently active queries and connections from pg_stat_activity.
+  - Parameters: `state` (string: "active", "idle", or "all", default "active")
+* `list_hg_query_queues`: List all Query Queues and their classifiers (concurrency limits, routing rules). Requires V3.0+.
+* `get_hg_table_properties`: Get table properties including distribution_key, clustering_key, segment_key, bitmap_columns, binlog settings, etc.
+  - Parameters: `schema_name` (string), `table` (string)
+* `get_hg_table_shard_info`: Get table's Table Group and shard count info for diagnosing data skew.
+  - Parameters: `schema_name` (string), `table` (string)
+* `list_hg_external_databases`: List all External Databases and Foreign Servers for Lakehouse acceleration. Requires V3.0+.
+* `get_hg_lock_diagnostics`: Diagnose lock contention by showing blocking and waiting queries.
+* `get_hg_table_info_trend`: Get table storage trend from hg_table_info, showing daily storage size, file count, and row count changes.
+  - Parameters: `schema_name` (string), `table` (string), `days` (int, default 7)
+* `manage_hg_query_queue`: Create, drop, or clear a Query Queue. Requires V3.0+ and superuser privileges.
+  - Parameters: `action` (string: "create", "drop", "clear"), `queue_name` (string), `max_concurrency` (int, for create), `max_queue_size` (int, for create)
+* `manage_hg_classifier`: Create or drop a classifier for a Query Queue. Requires V3.0+.
+  - Parameters: `action` (string: "create", "drop"), `queue_name` (string), `classifier_name` (string), `priority` (int, for create)
+* `set_hg_query_queue_property`: Set or remove properties on a Query Queue or classifier. Requires V3.0+.
+  - Parameters: `target` (string: "queue", "classifier"), `queue_name` (string), `property_key` (string), `property_value` (string), `classifier_name` (string, for classifier), `action` (string: "set", "remove")
+* `manage_hg_warehouse`: Manage a computing group: suspend, resume, restart, rename, or resize. Requires superuser.
+  - Parameters: `action` (string: "suspend", "resume", "restart", "rename", "resize"), `warehouse_name` (string), `cu` (int, for resize), `new_name` (string, for rename)
+* `get_hg_warehouse_status`: Get detailed running status and scaling progress of a computing group.
+  - Parameters: `warehouse_name` (string)
+* `rebalance_hg_warehouse`: Trigger shard rebalancing for a computing group to eliminate data skew.
+  - Parameters: `warehouse_name` (string)
+* `list_hg_data_masking_rules`: List all data masking rules configured via hg_anon extension (column-level and user-level).
+* `query_hg_external_files`: Query files directly from OSS using EXTERNAL_FILES function without creating foreign tables. Requires V4.1+.
+  - Parameters: `path` (string), `format` (string: "csv", "parquet", "orc"), `columns` (string, optional), `oss_endpoint` (string, optional), `role_arn` (string, optional)
+* `get_hg_guc_config`: Get the current value of a GUC (Grand Unified Configuration) parameter.
+  - Parameters: `guc_name` (string)
 
 ### Resources
 

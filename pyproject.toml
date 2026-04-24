@@ -1,6 +1,6 @@
 [project]
 name = "hologres-mcp-server"
-version = "1.0.2"
+version = "1.0.3"
 description = "A MCP Server for Hologres"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -12,6 +12,7 @@ classifiers = [
  "Programming Language :: Python :: 3.10",
  "Programming Language :: Python :: 3.11",
  "Programming Language :: Python :: 3.12",
+ "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "fastmcp>=3.0.0",
@@ -19,6 +20,8 @@ dependencies = [
     "psycopg>=3.1.0",
     "psycopg-binary>=3.1.0",
     "pglast>=7.5",
+    "psycopg-pool>=3.0.0",
+    "matplotlib>=3.5.0",
 ]
 [[project.authors]]
 name = "TimothyDing"
@@ -59,7 +62,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/hologres_mcp_server"]
+source = ["hologres_mcp_server"]
 branch = true
 omit = [
     "*/tests/*",

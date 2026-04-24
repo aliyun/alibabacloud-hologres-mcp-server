@@ -320,5 +320,262 @@ async def show_hg_table_ddl(
     await _call_tool("show_hg_table_ddl", {"schema_name": schema_name, "table": table})
 
 
+@call_tool_app.command(name="query_and_plotly_chart")
+async def query_and_plotly_chart(
+    *,
+    query: Annotated[str, cyclopts.Parameter(help="The SELECT SQL query to execute")],
+    chart_type: Annotated[str, cyclopts.Parameter(help="Chart type: 'bar', 'line', 'scatter', 'pie', 'histogram', 'area'")] = "bar",
+    x_column: Annotated[str, cyclopts.Parameter(help="Column name for X axis (uses first column if not specified)")] = "",
+    y_column: Annotated[str, cyclopts.Parameter(help="Column name for Y axis (uses second column if not specified)")] = "",
+    title: Annotated[str, cyclopts.Parameter(help="Chart title")] = "",
+) -> None:
+    """Execute a SELECT SQL query and generate a chart from the results."""
+    await _call_tool("query_and_plotly_chart", {"query": query, "chart_type": chart_type, "x_column": x_column, "y_column": y_column, "title": title})
+
+
+@call_tool_app.command(name="analyze_hg_query_by_id")
+async def analyze_hg_query_by_id(
+    *,
+    query_id: Annotated[str, cyclopts.Parameter(help="The query_id from hg_query_log to analyze")],
+) -> None:
+    """Analyze a specific query's performance profile by its query_id from hg_query_log."""
+    await _call_tool("analyze_hg_query_by_id", {"query_id": query_id})
+
+
+@call_tool_app.command(name="get_hg_slow_queries")
+async def get_hg_slow_queries(
+    *,
+    min_duration_ms: Annotated[int, cyclopts.Parameter(help="Minimum query duration in milliseconds to filter")] = 1000,
+    limit: Annotated[int, cyclopts.Parameter(help="Maximum number of queries to return")] = 20,
+) -> None:
+    """Get slow queries from hg_query_log ordered by duration."""
+    await _call_tool("get_hg_slow_queries", {"min_duration_ms": min_duration_ms, "limit": limit})
+
+
+@call_tool_app.command(name="list_hg_dynamic_tables")
+async def list_hg_dynamic_tables(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name to filter (empty for all schemas)")] = "",
+) -> None:
+    """List all Dynamic Tables with their status, freshness settings, and last refresh info."""
+    await _call_tool("list_hg_dynamic_tables", {"schema_name": schema_name})
+
+
+@call_tool_app.command(name="get_hg_dynamic_table_refresh_history")
+async def get_hg_dynamic_table_refresh_history(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name of the dynamic table")],
+    table_name: Annotated[str, cyclopts.Parameter(help="Dynamic table name")],
+    limit: Annotated[int, cyclopts.Parameter(help="Maximum number of history records")] = 10,
+) -> None:
+    """Get refresh history for a specific Dynamic Table."""
+    await _call_tool("get_hg_dynamic_table_refresh_history", {"schema_name": schema_name, "table_name": table_name, "limit": limit})
+
+
+@call_tool_app.command(name="list_hg_recyclebin")
+async def list_hg_recyclebin() -> None:
+    """List all tables in the Hologres recycle bin (dropped tables that can be restored)."""
+    await _call_tool("list_hg_recyclebin", {})
+
+
+@call_tool_app.command(name="restore_hg_table_from_recyclebin")
+async def restore_hg_table_from_recyclebin(
+    *,
+    table_name: Annotated[str, cyclopts.Parameter(help="The original table name to restore from recycle bin")],
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name of the table")] = "public",
+) -> None:
+    """Restore a dropped table from the Hologres recycle bin."""
+    await _call_tool("restore_hg_table_from_recyclebin", {"table_name": table_name, "schema_name": schema_name})
+
+
+@call_tool_app.command(name="list_hg_warehouses")
+async def list_hg_warehouses() -> None:
+    """List all computing groups (warehouses) in the Hologres instance."""
+    await _call_tool("list_hg_warehouses", {})
+
+
+@call_tool_app.command(name="switch_hg_warehouse")
+async def switch_hg_warehouse(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="The warehouse (computing group) name to switch to")],
+) -> None:
+    """Switch the current session's computing resource to a specified warehouse."""
+    await _call_tool("switch_hg_warehouse", {"warehouse_name": warehouse_name})
+
+
+@call_tool_app.command(name="get_hg_table_storage_size")
+async def get_hg_table_storage_size(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get storage size details of a table."""
+    await _call_tool("get_hg_table_storage_size", {"schema_name": schema_name, "table": table})
+
+
+@call_tool_app.command(name="cancel_hg_query")
+async def cancel_hg_query(
+    *,
+    pid: Annotated[int, cyclopts.Parameter(help="The process ID (pid) of the query to cancel")],
+    terminate: Annotated[bool, cyclopts.Parameter(help="Forcefully terminate the backend process")] = False,
+) -> None:
+    """Cancel or terminate a running query by its process ID."""
+    await _call_tool("cancel_hg_query", {"pid": pid, "terminate": terminate})
+
+
+@call_tool_app.command(name="list_hg_active_queries")
+async def list_hg_active_queries(
+    *,
+    state: Annotated[str, cyclopts.Parameter(help="Filter by state: 'active', 'idle', 'all'")] = "active",
+) -> None:
+    """List currently active queries and connections."""
+    await _call_tool("list_hg_active_queries", {"state": state})
+
+
+@call_tool_app.command(name="list_hg_query_queues")
+async def list_hg_query_queues() -> None:
+    """List all Query Queues and their classifiers."""
+    await _call_tool("list_hg_query_queues", {})
+
+
+@call_tool_app.command(name="get_hg_table_properties")
+async def get_hg_table_properties(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get table properties (distribution_key, clustering_key, segment_key, etc.)."""
+    await _call_tool("get_hg_table_properties", {"schema_name": schema_name, "table": table})
+
+
+@call_tool_app.command(name="get_hg_table_shard_info")
+async def get_hg_table_shard_info(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+) -> None:
+    """Get table's Table Group and shard count info."""
+    await _call_tool("get_hg_table_shard_info", {"schema_name": schema_name, "table": table})
+
+
+@call_tool_app.command(name="list_hg_external_databases")
+async def list_hg_external_databases() -> None:
+    """List all External Databases (federated databases for Lakehouse acceleration)."""
+    await _call_tool("list_hg_external_databases", {})
+
+
+@call_tool_app.command(name="get_hg_lock_diagnostics")
+async def get_hg_lock_diagnostics() -> None:
+    """Diagnose lock contention by showing blocking and waiting queries."""
+    await _call_tool("get_hg_lock_diagnostics", {})
+
+
+@call_tool_app.command(name="get_hg_table_info_trend")
+async def get_hg_table_info_trend(
+    *,
+    schema_name: Annotated[str, cyclopts.Parameter(help="Schema name in Hologres database")],
+    table: Annotated[str, cyclopts.Parameter(help="Table name in Hologres database")],
+    days: Annotated[int, cyclopts.Parameter(help="Number of days to look back")] = 7,
+) -> None:
+    """Get table storage trend from hg_table_info."""
+    await _call_tool("get_hg_table_info_trend", {"schema_name": schema_name, "table": table, "days": days})
+
+
+@call_tool_app.command(name="manage_hg_query_queue")
+async def manage_hg_query_queue(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'create', 'drop', or 'clear'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    max_concurrency: Annotated[int, cyclopts.Parameter(help="Max concurrency (required for 'create')")] = 0,
+    max_queue_size: Annotated[int, cyclopts.Parameter(help="Max queue size (required for 'create')")] = 0,
+) -> None:
+    """Create, drop, or clear a Query Queue."""
+    await _call_tool("manage_hg_query_queue", {"action": action, "queue_name": queue_name, "max_concurrency": max_concurrency, "max_queue_size": max_queue_size})
+
+
+@call_tool_app.command(name="manage_hg_classifier")
+async def manage_hg_classifier(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'create' or 'drop'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    classifier_name: Annotated[str, cyclopts.Parameter(help="Name of the classifier")],
+    priority: Annotated[int, cyclopts.Parameter(help="Priority for the classifier (required for 'create')")] = 0,
+) -> None:
+    """Create or drop a classifier for a Query Queue."""
+    await _call_tool("manage_hg_classifier", {"action": action, "queue_name": queue_name, "classifier_name": classifier_name, "priority": priority})
+
+
+@call_tool_app.command(name="set_hg_query_queue_property")
+async def set_hg_query_queue_property(
+    *,
+    target: Annotated[str, cyclopts.Parameter(help="Target type: 'queue' or 'classifier'")],
+    queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
+    property_key: Annotated[str, cyclopts.Parameter(help="Property key to set")],
+    property_value: Annotated[str, cyclopts.Parameter(help="Property value to set")],
+    classifier_name: Annotated[str, cyclopts.Parameter(help="Classifier name (required when target='classifier')")] = "",
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'set' or 'remove'")] = "set",
+) -> None:
+    """Set or remove properties on a Query Queue or classifier."""
+    await _call_tool("set_hg_query_queue_property", {"target": target, "queue_name": queue_name, "property_key": property_key, "property_value": property_value, "classifier_name": classifier_name, "action": action})
+
+
+@call_tool_app.command(name="manage_hg_warehouse")
+async def manage_hg_warehouse(
+    *,
+    action: Annotated[str, cyclopts.Parameter(help="Action: 'suspend', 'resume', 'restart', 'rename', or 'resize'")],
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse (computing group)")],
+    cu: Annotated[int, cyclopts.Parameter(help="CU count for resize action")] = 0,
+    new_name: Annotated[str, cyclopts.Parameter(help="New name for rename action")] = "",
+) -> None:
+    """Manage a computing group: suspend, resume, restart, rename, or resize."""
+    await _call_tool("manage_hg_warehouse", {"action": action, "warehouse_name": warehouse_name, "cu": cu, "new_name": new_name})
+
+
+@call_tool_app.command(name="get_hg_warehouse_status")
+async def get_hg_warehouse_status(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse (computing group)")],
+) -> None:
+    """Get detailed running status of a computing group."""
+    await _call_tool("get_hg_warehouse_status", {"warehouse_name": warehouse_name})
+
+
+@call_tool_app.command(name="rebalance_hg_warehouse")
+async def rebalance_hg_warehouse(
+    *,
+    warehouse_name: Annotated[str, cyclopts.Parameter(help="Name of the warehouse to rebalance")],
+) -> None:
+    """Trigger shard rebalancing for a computing group."""
+    await _call_tool("rebalance_hg_warehouse", {"warehouse_name": warehouse_name})
+
+
+@call_tool_app.command(name="list_hg_data_masking_rules")
+async def list_hg_data_masking_rules() -> None:
+    """List all data masking rules (column-level and user-level)."""
+    await _call_tool("list_hg_data_masking_rules", {})
+
+
+@call_tool_app.command(name="query_hg_external_files")
+async def query_hg_external_files(
+    *,
+    path: Annotated[str, cyclopts.Parameter(help="OSS path, e.g. 'oss://bucket/path/to/files'")],
+    format: Annotated[str, cyclopts.Parameter(help="File format: 'csv', 'parquet', or 'orc'")],
+    columns: Annotated[str, cyclopts.Parameter(help="Optional column definitions for AS clause")] = "",
+    oss_endpoint: Annotated[str, cyclopts.Parameter(help="OSS endpoint (internal)")] = "",
+    role_arn: Annotated[str, cyclopts.Parameter(help="RAM role ARN for accessing OSS")] = "",
+) -> None:
+    """Query files directly from OSS using EXTERNAL_FILES function."""
+    await _call_tool("query_hg_external_files", {"path": path, "format": format, "columns": columns, "oss_endpoint": oss_endpoint, "role_arn": role_arn})
+
+
+@call_tool_app.command(name="get_hg_guc_config")
+async def get_hg_guc_config(
+    *,
+    guc_name: Annotated[str, cyclopts.Parameter(help="The GUC parameter name to query")],
+) -> None:
+    """Get the current value of a GUC parameter."""
+    await _call_tool("get_hg_guc_config", {"guc_name": guc_name})
+
+
 if __name__ == "__main__":
     app()
