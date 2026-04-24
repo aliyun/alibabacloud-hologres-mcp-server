@@ -324,13 +324,22 @@ async def show_hg_table_ddl(
 async def query_and_plotly_chart(
     *,
     query: Annotated[str, cyclopts.Parameter(help="The SELECT SQL query to execute")],
-    chart_type: Annotated[str, cyclopts.Parameter(help="Chart type: 'bar', 'line', 'scatter', 'pie', 'histogram', 'area'")] = "bar",
-    x_column: Annotated[str, cyclopts.Parameter(help="Column name for X axis (uses first column if not specified)")] = "",
-    y_column: Annotated[str, cyclopts.Parameter(help="Column name for Y axis (uses second column if not specified)")] = "",
+    chart_type: Annotated[
+        str, cyclopts.Parameter(help="Chart type: 'bar', 'line', 'scatter', 'pie', 'histogram', 'area'")
+    ] = "bar",
+    x_column: Annotated[
+        str, cyclopts.Parameter(help="Column name for X axis (uses first column if not specified)")
+    ] = "",
+    y_column: Annotated[
+        str, cyclopts.Parameter(help="Column name for Y axis (uses second column if not specified)")
+    ] = "",
     title: Annotated[str, cyclopts.Parameter(help="Chart title")] = "",
 ) -> None:
     """Execute a SELECT SQL query and generate a chart from the results."""
-    await _call_tool("query_and_plotly_chart", {"query": query, "chart_type": chart_type, "x_column": x_column, "y_column": y_column, "title": title})
+    await _call_tool(
+        "query_and_plotly_chart",
+        {"query": query, "chart_type": chart_type, "x_column": x_column, "y_column": y_column, "title": title},
+    )
 
 
 @call_tool_app.command(name="analyze_hg_query_by_id")
@@ -369,7 +378,9 @@ async def get_hg_dynamic_table_refresh_history(
     limit: Annotated[int, cyclopts.Parameter(help="Maximum number of history records")] = 10,
 ) -> None:
     """Get refresh history for a specific Dynamic Table."""
-    await _call_tool("get_hg_dynamic_table_refresh_history", {"schema_name": schema_name, "table_name": table_name, "limit": limit})
+    await _call_tool(
+        "get_hg_dynamic_table_refresh_history", {"schema_name": schema_name, "table_name": table_name, "limit": limit}
+    )
 
 
 @call_tool_app.command(name="list_hg_recyclebin")
@@ -490,7 +501,15 @@ async def manage_hg_query_queue(
     max_queue_size: Annotated[int, cyclopts.Parameter(help="Max queue size (required for 'create')")] = 0,
 ) -> None:
     """Create, drop, or clear a Query Queue."""
-    await _call_tool("manage_hg_query_queue", {"action": action, "queue_name": queue_name, "max_concurrency": max_concurrency, "max_queue_size": max_queue_size})
+    await _call_tool(
+        "manage_hg_query_queue",
+        {
+            "action": action,
+            "queue_name": queue_name,
+            "max_concurrency": max_concurrency,
+            "max_queue_size": max_queue_size,
+        },
+    )
 
 
 @call_tool_app.command(name="manage_hg_classifier")
@@ -502,7 +521,10 @@ async def manage_hg_classifier(
     priority: Annotated[int, cyclopts.Parameter(help="Priority for the classifier (required for 'create')")] = 0,
 ) -> None:
     """Create or drop a classifier for a Query Queue."""
-    await _call_tool("manage_hg_classifier", {"action": action, "queue_name": queue_name, "classifier_name": classifier_name, "priority": priority})
+    await _call_tool(
+        "manage_hg_classifier",
+        {"action": action, "queue_name": queue_name, "classifier_name": classifier_name, "priority": priority},
+    )
 
 
 @call_tool_app.command(name="set_hg_query_queue_property")
@@ -512,11 +534,23 @@ async def set_hg_query_queue_property(
     queue_name: Annotated[str, cyclopts.Parameter(help="Name of the query queue")],
     property_key: Annotated[str, cyclopts.Parameter(help="Property key to set")],
     property_value: Annotated[str, cyclopts.Parameter(help="Property value to set")],
-    classifier_name: Annotated[str, cyclopts.Parameter(help="Classifier name (required when target='classifier')")] = "",
+    classifier_name: Annotated[
+        str, cyclopts.Parameter(help="Classifier name (required when target='classifier')")
+    ] = "",
     action: Annotated[str, cyclopts.Parameter(help="Action: 'set' or 'remove'")] = "set",
 ) -> None:
     """Set or remove properties on a Query Queue or classifier."""
-    await _call_tool("set_hg_query_queue_property", {"target": target, "queue_name": queue_name, "property_key": property_key, "property_value": property_value, "classifier_name": classifier_name, "action": action})
+    await _call_tool(
+        "set_hg_query_queue_property",
+        {
+            "target": target,
+            "queue_name": queue_name,
+            "property_key": property_key,
+            "property_value": property_value,
+            "classifier_name": classifier_name,
+            "action": action,
+        },
+    )
 
 
 @call_tool_app.command(name="manage_hg_warehouse")
@@ -528,7 +562,9 @@ async def manage_hg_warehouse(
     new_name: Annotated[str, cyclopts.Parameter(help="New name for rename action")] = "",
 ) -> None:
     """Manage a computing group: suspend, resume, restart, rename, or resize."""
-    await _call_tool("manage_hg_warehouse", {"action": action, "warehouse_name": warehouse_name, "cu": cu, "new_name": new_name})
+    await _call_tool(
+        "manage_hg_warehouse", {"action": action, "warehouse_name": warehouse_name, "cu": cu, "new_name": new_name}
+    )
 
 
 @call_tool_app.command(name="get_hg_warehouse_status")
@@ -565,7 +601,10 @@ async def query_hg_external_files(
     role_arn: Annotated[str, cyclopts.Parameter(help="RAM role ARN for accessing OSS")] = "",
 ) -> None:
     """Query files directly from OSS using EXTERNAL_FILES function."""
-    await _call_tool("query_hg_external_files", {"path": path, "format": format, "columns": columns, "oss_endpoint": oss_endpoint, "role_arn": role_arn})
+    await _call_tool(
+        "query_hg_external_files",
+        {"path": path, "format": format, "columns": columns, "oss_endpoint": oss_endpoint, "role_arn": role_arn},
+    )
 
 
 @call_tool_app.command(name="get_hg_guc_config")

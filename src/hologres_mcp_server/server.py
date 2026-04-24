@@ -114,11 +114,13 @@ def get_hg_execution_plan(query: Annotated[str, "The SQL query to analyze in Hol
 @app.tool(tags={"admin"})
 def call_hg_procedure(
     procedure_name: Annotated[str, "The name of the stored procedure to call in Hologres database"],
-    procedure_args: Annotated[list[str] | None, "The arguments to pass to the stored procedure in Hologres database"] = None,
+    procedure_args: Annotated[
+        list[str] | None, "The arguments to pass to the stored procedure in Hologres database"
+    ] = None,
 ) -> str:
     """Call a stored procedure in Hologres database."""
     if procedure_args and isinstance(procedure_args, list):
-        safe_args = [f"'{str(arg).replace(chr(39), chr(39)+chr(39))}'" for arg in procedure_args]
+        safe_args = [f"'{str(arg).replace(chr(39), chr(39) + chr(39))}'" for arg in procedure_args]
         args_str = ", ".join(safe_args)
     else:
         args_str = ""
@@ -891,9 +893,7 @@ def _get_table_storage_size(schema_name, table):
                     parts.append(f"- **Meta**: {_format_bytes(hg_meta)}")
                 except Exception:
                     # Fallback to pg functions if hg_relation_size not available
-                    cursor.execute(
-                        f"SELECT pg_total_relation_size('{full_name}'), pg_relation_size('{full_name}')"
-                    )
+                    cursor.execute(f"SELECT pg_total_relation_size('{full_name}'), pg_relation_size('{full_name}')")
                     row = cursor.fetchone()
                     total = row[0] or 0
                     data_size = row[1] or 0
@@ -1451,7 +1451,9 @@ def _list_data_masking_rules():
                     parts.append("")
                     parts.append("### Column-level Rules")
                     if col_rows:
-                        parts.append(format_tabular_result(col_rows, ["Table", "Column", "Provider", "Label"], null_display=""))
+                        parts.append(
+                            format_tabular_result(col_rows, ["Table", "Column", "Provider", "Label"], null_display="")
+                        )
                         parts.append(f"\nTotal: {len(col_rows)} column rules")
                     else:
                         parts.append("No column-level masking rules configured.")

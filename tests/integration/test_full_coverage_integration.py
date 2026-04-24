@@ -30,14 +30,17 @@ pytestmark = pytest.mark.integration
 class TestChartTool:
     """Tests for query_and_plotly_chart — all 6 chart types and edge cases."""
 
-    @pytest.mark.parametrize("chart_type,query", [
-        ("bar", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
-        ("line", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
-        ("scatter", "SELECT x, x * x AS y FROM generate_series(1, 10) AS x"),
-        ("pie", "SELECT 'Category' || x::text AS label, x * 10 AS value FROM generate_series(1, 4) AS x"),
-        ("histogram", "SELECT (random() * 100)::int AS value FROM generate_series(1, 50)"),
-        ("area", "SELECT x, x * 5 + 10 AS y FROM generate_series(1, 8) AS x"),
-    ])
+    @pytest.mark.parametrize(
+        "chart_type,query",
+        [
+            ("bar", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
+            ("line", "SELECT x, x * 10 AS y FROM generate_series(1, 5) AS x"),
+            ("scatter", "SELECT x, x * x AS y FROM generate_series(1, 10) AS x"),
+            ("pie", "SELECT 'Category' || x::text AS label, x * 10 AS value FROM generate_series(1, 4) AS x"),
+            ("histogram", "SELECT (random() * 100)::int AS value FROM generate_series(1, 50)"),
+            ("area", "SELECT x, x * 5 + 10 AS y FROM generate_series(1, 8) AS x"),
+        ],
+    )
     async def test_chart_type(self, mcp_session: ClientSession, chart_type: str, query: str):
         result = await mcp_session.call_tool(
             "query_and_plotly_chart",
@@ -246,9 +249,7 @@ class TestQueryQueueLifecycle:
         classifier_name = "mcp_test_classifier"
 
         # Get the current database user for classifier rule
-        user_result = await mcp_session.call_tool(
-            "execute_hg_select_sql", {"query": "SELECT current_user"}
-        )
+        user_result = await mcp_session.call_tool("execute_hg_select_sql", {"query": "SELECT current_user"})
         current_user = user_result.content[0].text.strip().split("\n")[-1].strip()
 
         try:

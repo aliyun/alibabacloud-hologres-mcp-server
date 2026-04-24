@@ -172,8 +172,16 @@ class TestListActiveQueriesBranches:
 
     def test_idle_state(self):
         rows = [(100, "user1", "db1", "idle", "app1", "2025-01-01", "00:01:00", "SELECT 1")]
-        desc = [("pid",), ("usename",), ("datname",), ("state",),
-                ("application_name",), ("query_start",), ("duration",), ("query_preview",)]
+        desc = [
+            ("pid",),
+            ("usename",),
+            ("datname",),
+            ("state",),
+            ("application_name",),
+            ("query_start",),
+            ("duration",),
+            ("query_preview",),
+        ]
         conn, cursor = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             result = list_hg_active_queries("idle")
@@ -183,8 +191,16 @@ class TestListActiveQueriesBranches:
 
     def test_all_state(self):
         rows = [(100, "user1", "db1", "active", "app1", "2025-01-01", "00:01:00", "SELECT 1")]
-        desc = [("pid",), ("usename",), ("datname",), ("state",),
-                ("application_name",), ("query_start",), ("duration",), ("query_preview",)]
+        desc = [
+            ("pid",),
+            ("usename",),
+            ("datname",),
+            ("state",),
+            ("application_name",),
+            ("query_start",),
+            ("duration",),
+            ("query_preview",),
+        ]
         conn, cursor = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             list_hg_active_queries("all")
@@ -491,8 +507,7 @@ class TestSetQueryQueuePropertyBranches:
         conn, _ = _make_mock_conn()
         with patch(PATCH_CONNECT, return_value=conn):
             result = set_hg_query_queue_property(
-                "classifier", "q1", "key", "val",
-                classifier_name="cls1", action="update"
+                "classifier", "q1", "key", "val", classifier_name="cls1", action="update"
             )
             assert "Unknown action" in result
 
@@ -502,15 +517,18 @@ class TestSetQueryQueuePropertyBranches:
 # ============================================================================
 
 
-@pytest.mark.parametrize("func,args", [
-    (get_hg_slow_queries, (1000, 20)),
-    (list_hg_recyclebin, ()),
-    (restore_hg_table_from_recyclebin, ("test_table",)),
-    (list_hg_dynamic_tables, ()),
-    (get_hg_table_properties, ("public", "test")),
-    (get_hg_lock_diagnostics, ()),
-    (get_hg_dynamic_table_refresh_history, ("public", "dt1")),
-])
+@pytest.mark.parametrize(
+    "func,args",
+    [
+        (get_hg_slow_queries, (1000, 20)),
+        (list_hg_recyclebin, ()),
+        (restore_hg_table_from_recyclebin, ("test_table",)),
+        (list_hg_dynamic_tables, ()),
+        (get_hg_table_properties, ("public", "test")),
+        (get_hg_lock_diagnostics, ()),
+        (get_hg_dynamic_table_refresh_history, ("public", "dt1")),
+    ],
+)
 def test_exception_returns_error(func, args):
     """Each helper should catch connection errors and return 'Error' in result."""
     with patch(PATCH_CONNECT, side_effect=Exception("test error")):
