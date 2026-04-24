@@ -12,16 +12,17 @@ uv run pytest tests/ -v
 uv run pytest tests/unit/ -v
 
 # Run integration tests (requires Hologres database)
-uv run pytest tests/integration/ -v
+uv run pytest tests/integration/ -v -m integration
 
 # Run specific test file
 uv run pytest tests/unit/test_tools.py -v
 
-# Run specific test class
-uv run pytest tests/integration/test_mcp_integration.py::TestMCPTools -v
+# Run specific test class or method
+uv run pytest tests/unit/test_new_tools.py::TestListDynamicTables -v
+uv run pytest tests/integration/test_mcp_integration.py::TestMCPTools::test_execute_select -v
 
 # Run with coverage
-uv run pytest tests/unit/ --cov=src/hologres_mcp_server --cov-report=html
+uv run pytest tests/unit/ --cov=hologres_mcp_server --cov-report=term-missing
 
 # Lint and format
 uv run ruff check .
@@ -41,7 +42,7 @@ Integration tests require a real Hologres connection. Configure via:
 cp tests/integration/.test_mcp_client_env_example tests/integration/.test_mcp_client_env
 ```
 
-Edit the file with your Hologres credentials. Tests will be skipped if the config file is missing or incomplete.
+Edit the file with your Hologres credentials (`HOLOGRES_HOST`, `HOLOGRES_PORT`, `HOLOGRES_USER`, `HOLOGRES_PASSWORD`, `HOLOGRES_DATABASE`). Tests will be skipped if the config file is missing or incomplete.
 
 ## Architecture
 
@@ -55,10 +56,11 @@ This is a FastMCP v3-based MCP server for Alibaba Cloud Hologres (a PostgreSQL-c
   - 3 prompts (`@app.prompt`)
   - A `@lifespan` handler that validates the DB connection on startup (warns but doesn't fail)
 
-- **`utils.py`**: Database operations layer with two key functions:
+- **`utils.py`**: Database operations layer:
   - `handle_call_tool()` / `handle_read_resource()` — used by the original tools to execute SQL and return formatted results
   - `connect_with_retry()` — opens connections via a lazy singleton `psycopg_pool.ConnectionPool` (min=0, max=5, idle=300s) with automatic fallback to direct `psycopg.connect()` if pool unavailable; retries up to 3 times with 5s delay
-  - SQL validation functions and `pglast`-based `try_infer_view_comments()` for propagating column comments from source tables to views
+  - SQL validation functions (`validate_select_query`, `validate_dml_query`, `validate_ddl_query`)
+  - `pglast`-based `try_infer_view_comments()` for propagating column comments from source tables to views
 
 - **`settings.py`**: `get_db_config()` reads environment variables. Falls back from `HOLOGRES_USER`/`HOLOGRES_PASSWORD` to `ALIBABA_CLOUD_ACCESS_KEY_ID`/`ALIBABA_CLOUD_ACCESS_KEY_SECRET` + optional STS token.
 
@@ -71,7 +73,14 @@ Tools in server.py follow two delegation patterns:
 1. **Original tools** (e.g. `execute_hg_select_sql`, `list_hg_schemas`): Build a SQL string and pass it to `handle_call_tool()` or `handle_read_resource()` from utils.py.
 2. **Newer tools** (e.g. `cancel_hg_query`, `list_hg_recyclebin`): Delegate to private `_helper()` functions in server.py that call `connect_with_retry()` directly.
 
-When adding new tools, follow pattern 2: create a private `_helper()` function with the logic, then a thin `@app.tool` wrapper that delegates to it.
+When adding new tools, follow pattern 2: create a private `_helper()` function with the logic, then a thin `@app.tool` wrapper that delegates to it. Helper functions handle their own `try/except` and return formatted strings (never raise).
+
+### Version-Gated Features
+
+Some tools require specific Hologres versions and check at runtime:
+- **V1.3+**: `get_hg_table_info_trend` (checks via error message)
+- **V3.0+**: `list_hg_query_queues`, `manage_hg_query_queue`, `manage_hg_classifier`, `set_hg_query_queue_property`, `list_hg_external_databases` (check via "does not exist" in error)
+- **V4.1+**: `query_hg_external_files` (checks `EXTERNAL_FILES` function availability)
 
 ### Key Dependencies
 
@@ -99,7 +108,7 @@ Optional for integration tests:
 
 ### Test Structure
 
-- `tests/conftest.py`: Shared fixtures for both unit and integration tests — mock DB connections, environment variables, MCP session setup
-- `tests/unit/`: 10 test files using mocked DB connections (no Hologres required)
-- `tests/integration/`: Real MCP client sessions via `StdioServerParameters`
-- `pytest-asyncio` with `asyncio_mode = "auto"` handles async test functions
+- `tests/conftest.py`: Shared fixtures — mock DB connections, environment variables, MCP session setup. The `_reset_connection_pool` autouse fixture disables the connection pool during unit tests.
+- `tests/unit/`: 13 test files using mocked DB connections (no Hologres required). Unit tests use `_make_mock_conn()` helper to build mock connections/cursors and patch `connect_with_retry`.
+- `tests/integration/`: 3 test files with real MCP client sessions via `StdioServerParameters`. Each test spawns the server as a subprocess. Integration test objects use `mcp_test_` prefix and are cleaned up in `finally` blocks.
+- `pytest-asyncio` with `asyncio_mode = "auto"` handles async test functions.

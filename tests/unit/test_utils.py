@@ -15,12 +15,15 @@ from unittest.mock import MagicMock, patch
 import psycopg
 import pytest
 
+from hologres_mcp_server import utils
 from hologres_mcp_server.utils import (
+    _get_pool,
     connect_with_retry,
     get_column_comment,
     get_view_definition,
     handle_call_tool,
     handle_read_resource,
+    reset_pool,
     try_infer_view_comments,
 )
 
@@ -1401,3 +1404,87 @@ class TestHandleReadResourceEdgeCases:
             # Should handle binary data
             assert result is not None
             assert len(result) == 2
+
+
+# ============================================================================
+# Connection Pool Tests
+# ============================================================================
+
+
+class TestConnectionPool:
+    """Tests for _get_pool() and connect_with_retry() pool paths."""
+
+    def test_get_pool_success(self, mock_env_basic):
+        """Test _get_pool() successfully creates a ConnectionPool."""
+        mock_pool_instance = MagicMock()
+        mock_psycopg_pool = MagicMock()
+        mock_psycopg_pool.ConnectionPool.return_value = mock_pool_instance
+
+        with patch.dict("sys.modules", {"psycopg_pool": mock_psycopg_pool}):
+            utils._pool_init_attempted = False
+            utils._connection_pool = None
+            pool = _get_pool()
+            assert pool is mock_pool_instance
+            mock_pool_instance.open.assert_called_once_with(wait=False)
+            assert utils._pool_init_attempted is True
+
+    def test_get_pool_already_initialized(self, mock_env_basic):
+        """Test _get_pool() returns cached pool when already initialized."""
+        sentinel = object()
+        utils._pool_init_attempted = True
+        utils._connection_pool = sentinel
+        result = _get_pool()
+        assert result is sentinel
+
+    def test_get_pool_failure_fallback(self, mock_env_basic):
+        """Test _get_pool() falls back to None when pool creation fails."""
+        utils._pool_init_attempted = False
+        utils._connection_pool = None
+
+        failing_module = MagicMock()
+        failing_module.ConnectionPool.side_effect = Exception("pool init failed")
+        with patch.dict("sys.modules", {"psycopg_pool": failing_module}):
+            pool = _get_pool()
+            assert pool is None
+            assert utils._pool_init_attempted is True
+
+    def test_connect_with_retry_pool_success(self, mock_env_basic):
+        """Test connect_with_retry() gets connection from pool."""
+        mock_conn = MagicMock()
+        mock_pool = MagicMock()
+        mock_pool.getconn.return_value = mock_conn
+
+        utils._pool_init_attempted = True
+        utils._connection_pool = mock_pool
+
+        result = connect_with_retry(retries=1)
+        assert result is mock_conn
+        mock_pool.getconn.assert_called_once_with(timeout=5)
+        assert mock_conn.autocommit is True
+
+    def test_connect_with_retry_pool_failure_fallback(self, mock_env_basic):
+        """Test connect_with_retry() falls back to direct connection when pool fails."""
+        mock_pool = MagicMock()
+        mock_pool.getconn.side_effect = Exception("pool getconn failed")
+
+        utils._pool_init_attempted = True
+        utils._connection_pool = mock_pool
+
+        mock_direct_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        mock_direct_conn.cursor.return_value = mock_cursor
+
+        with patch("psycopg.connect", return_value=mock_direct_conn):
+            result = connect_with_retry(retries=1)
+            assert result is mock_direct_conn
+
+    def test_reset_pool(self):
+        """Test reset_pool() clears pool state."""
+        utils._pool_init_attempted = True
+        utils._connection_pool = MagicMock()
+        reset_pool()
+        assert utils._pool_init_attempted is False
+        assert utils._connection_pool is None
