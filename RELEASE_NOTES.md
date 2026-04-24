@@ -2,6 +2,19 @@
 
 ## Version 1.0.3
 
+### Breaking Changes
+- **`call_hg_procedure` parameter rename**: The `arguments` parameter has been renamed to `procedure_args` to avoid conflict with the MCP protocol reserved field name. Argument values are now automatically wrapped in single quotes.
+
+MCP clients must update their tool calls:
+
+```python
+# Before 1.0.3
+await session.call_tool("call_hg_procedure", {"procedure_name": "my_proc", "arguments": ["arg1", "arg2"]})
+
+# After 1.0.3
+await session.call_tool("call_hg_procedure", {"procedure_name": "my_proc", "procedure_args": ["arg1", "arg2"]})
+```
+
 ### New Features
 
 #### Transport
@@ -9,8 +22,71 @@
 - **SSE**: Added `--transport sse` support for legacy HTTP streaming clients
 - Default transport remains `stdio` for backward compatibility
 
+#### Query Analysis & Visualization (3 tools)
+- **`query_and_plotly_chart`**: Execute a SELECT query and generate a chart (bar, line, scatter, pie, histogram, area) as base64-encoded PNG image
+- **`analyze_hg_query_by_id`**: Analyze query performance profile by query_id from `hg_query_log`
+- **`get_hg_slow_queries`**: List slow queries from `hg_query_log` ordered by duration, with configurable threshold
+
+#### Query Monitoring & Management (3 tools)
+- **`list_hg_active_queries`**: List active/idle/all connections from `pg_stat_activity`
+- **`cancel_hg_query`**: Cancel or terminate a running query by PID (supports both `pg_cancel_backend` and `pg_terminate_backend`)
+- **`get_hg_lock_diagnostics`**: Diagnose lock contention — shows blocking and waiting queries with lock types
+
+#### Dynamic Table Management (2 tools)
+- **`list_hg_dynamic_tables`**: List all Dynamic Tables with status, freshness, and refresh info
+- **`get_hg_dynamic_table_refresh_history`**: View refresh history for a specific Dynamic Table
+
+#### Recycle Bin (2 tools)
+- **`list_hg_recyclebin`**: List all recoverable deleted tables in the recycle bin
+- **`restore_hg_table_from_recyclebin`**: Restore a dropped table from recycle bin (with automatic `hg_enable_recyclebin` GUC pre-check)
+
+#### Warehouse Management (5 tools)
+- **`list_hg_warehouses`**: List all computing groups (warehouses) with CPU, memory, and status
+- **`switch_hg_warehouse`**: Switch the current session to a specified warehouse
+- **`manage_hg_warehouse`**: Suspend, resume, restart, rename, or resize a warehouse
+- **`get_hg_warehouse_status`**: Get detailed runtime status and scaling progress of a warehouse
+- **`rebalance_hg_warehouse`**: Trigger shard rebalancing for a warehouse
+
+#### Query Queue Management (4 tools, V3.0+)
+- **`list_hg_query_queues`**: List all Query Queues and classifier rules
+- **`manage_hg_query_queue`**: Create, drop, or clear a Query Queue
+- **`manage_hg_classifier`**: Create or drop a classifier for a Query Queue
+- **`set_hg_query_queue_property`**: Set or remove properties on a Query Queue or classifier
+
+#### Schema Introspection (3 tools)
+- **`get_hg_table_properties`**: Get table properties (distribution_key, clustering_key, segment_key, bitmap_columns, dictionary_encoding_columns, etc.)
+- **`get_hg_table_shard_info`**: Get Table Group and shard count info
+- **`list_hg_external_databases`**: List External Databases for Lakehouse federation (V3.0+)
+
+#### Storage Analysis (2 tools)
+- **`get_hg_table_storage_size`**: Get storage size breakdown — total, data, index, and metadata sizes in human-readable format
+- **`get_hg_table_info_trend`**: Get daily table storage, file count, and row count trends over N days from `hg_table_info`
+
+#### Security & Configuration (2 tools)
+- **`list_hg_data_masking_rules`**: Query column-level and user-level data masking rules (requires `hg_anon` extension)
+- **`get_hg_guc_config`**: Get current value of a GUC (Grand Unified Configuration) parameter
+
+#### OSS File Query (1 tool, V4.1+)
+- **`query_hg_external_files`**: Query files directly from OSS via `EXTERNAL_FILES` syntax, supporting CSV, Parquet, and ORC formats
+
+### Infrastructure
+
+- **Connection Pool**: Added `psycopg_pool.ConnectionPool` (min=0, max=5, max_idle=300s) with lazy singleton initialization and automatic fallback to direct connections if pool is unavailable
+- **GitLab CI**: Added `.gitlab-ci.yml` pipeline with ruff linting and pytest coverage (Cobertura format)
+
+### Bug Fixes
+- Fixed system table column names for Dynamic Table queries (`table_name` → `dynamic_table_name`, `status` → `last_refresh_status`)
+- Fixed warehouse status columns (`memory` → `mem`, `cluster_count` → `started_clusters`)
+- Fixed `_get_table_storage_size` to prioritize `hg_relation_size` and handle NULL/negative values
+- Fixed `_get_table_properties` / `_get_table_shard_info` column (`schema_name` → `table_namespace`)
+- Fixed `_get_table_info_trend` columns (`collect_date` → `collect_time`, `read_sql_count` → `read_sql_count_1d`)
+- Fixed `_list_query_queues` ORDER BY clause (`queue_name` → `query_queue_name`)
+- Fixed `_set_query_queue_property` to wrap `user_name` value in double quotes
+
 ### Dependencies
 
+- Added `psycopg-pool>=3.0.0` (connection pooling)
+- Added `matplotlib>=3.5.0` (chart generation for `query_and_plotly_chart`)
 - Updated `cryptography` 46.0.6 → 46.0.7 (**CVE-2026-39892**: buffer overflow fix)
 - Updated `authlib` 1.6.9 → 1.7.0 (CSRF fix, redirect_uri validation fix)
 - Updated `pytest` 9.0.2 → 9.0.3 (**CVE-2025-71176**: insecure temporary directory fix)
@@ -20,7 +96,8 @@
 
 ### Testing
 - Unit tests: 339 passed, ruff lint clean
-- Integration tests verified for Dynamic Table, Recycle Bin, Warehouse management
+- New test files: `test_new_tools.py` (85 tests), `test_server_main.py` (6 tests), `test_new_tools_integration.py` (26 tests)
+- Integration tests verified for Dynamic Table, Recycle Bin, Warehouse management, Query Queue, and more
 - Total MCP tools: **39** (up from 12)
 
 ## Version 1.0.2
