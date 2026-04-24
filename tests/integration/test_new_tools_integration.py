@@ -1,4 +1,3 @@
-
 """
 Integration tests for new tools added in V1.0.3.
 
@@ -9,10 +8,8 @@ Run with: pytest tests/integration/test_new_tools_integration.py -v -m integrati
 """
 
 import asyncio
-import os
 
 import pytest
-from mcp import ClientSession
 
 pytestmark = pytest.mark.integration
 
@@ -28,13 +25,17 @@ class TestMCPNewTableAnalysisTools:
     async def test_get_hg_table_properties(self, mcp_session, test_schema, test_table):
         if test_table is None:
             pytest.skip("No test table available")
-        result = await mcp_session.call_tool("get_hg_table_properties", {"schema_name": test_schema, "table": test_table})
+        result = await mcp_session.call_tool(
+            "get_hg_table_properties", {"schema_name": test_schema, "table": test_table}
+        )
         assert result is not None
         assert hasattr(result, "content")
         assert len(result.content[0].text.strip()) > 0
 
     async def test_get_hg_table_properties_nonexistent(self, mcp_session):
-        result = await mcp_session.call_tool("get_hg_table_properties", {"schema_name": "public", "table": "nonexistent_table_xyz_12345"})
+        result = await mcp_session.call_tool(
+            "get_hg_table_properties", {"schema_name": "public", "table": "nonexistent_table_xyz_12345"}
+        )
         assert result is not None
         text = result.content[0].text
         assert "No properties" in text or "not found" in text.lower() or "error" in text.lower()
@@ -42,7 +43,9 @@ class TestMCPNewTableAnalysisTools:
     async def test_get_hg_table_shard_info(self, mcp_session, test_schema, test_table):
         if test_table is None:
             pytest.skip("No test table available")
-        result = await mcp_session.call_tool("get_hg_table_shard_info", {"schema_name": test_schema, "table": test_table})
+        result = await mcp_session.call_tool(
+            "get_hg_table_shard_info", {"schema_name": test_schema, "table": test_table}
+        )
         assert result is not None
         text = result.content[0].text
         assert "Shard" in text or "Table Group" in text
@@ -50,7 +53,9 @@ class TestMCPNewTableAnalysisTools:
     async def test_get_hg_table_storage_size(self, mcp_session, test_schema, test_table):
         if test_table is None:
             pytest.skip("No test table available")
-        result = await mcp_session.call_tool("get_hg_table_storage_size", {"schema_name": test_schema, "table": test_table})
+        result = await mcp_session.call_tool(
+            "get_hg_table_storage_size", {"schema_name": test_schema, "table": test_table}
+        )
         assert result is not None
         text = result.content[0].text
         assert "Storage Size" in text or "Total" in text
@@ -58,7 +63,9 @@ class TestMCPNewTableAnalysisTools:
     async def test_get_hg_table_info_trend(self, mcp_session, test_schema, test_table):
         if test_table is None:
             pytest.skip("No test table available")
-        result = await mcp_session.call_tool("get_hg_table_info_trend", {"schema_name": test_schema, "table": test_table, "days": 7})
+        result = await mcp_session.call_tool(
+            "get_hg_table_info_trend", {"schema_name": test_schema, "table": test_table, "days": 7}
+        )
         assert result is not None
         text = result.content[0].text
         assert "Storage Trend" in text or "not available" in text.lower() or "No" in text
@@ -104,8 +111,9 @@ class TestMCPNewQueryMonitoringTools:
 
     async def test_cancel_hg_query(self, mcp_session, integration_env):
         # Use a separate psycopg connection to run a long query, so we can find it via MCP tools
-        import psycopg
         import threading
+
+        import psycopg
 
         # Create a direct DB connection for the sleep query
         db_config = {
@@ -197,13 +205,22 @@ class TestMCPNewRecyclebinTools:
 
     async def test_restore_hg_table_from_recyclebin(self, mcp_session, integration_test_prefix):
         table_name = f"{integration_test_prefix}recyclebin_test"
-        await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"CREATE TABLE IF NOT EXISTS public.{table_name} (id INT PRIMARY KEY)"})
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql", {"query": f"CREATE TABLE IF NOT EXISTS public.{table_name} (id INT PRIMARY KEY)"}
+        )
         try:
             await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
-            result = await mcp_session.call_tool("restore_hg_table_from_recyclebin", {"table_name": table_name, "schema_name": "public"})
+            result = await mcp_session.call_tool(
+                "restore_hg_table_from_recyclebin", {"table_name": table_name, "schema_name": "public"}
+            )
             assert result is not None
             text = result.content[0].text
-            assert "Successfully restored" in text or "not enabled" in text.lower() or "not found" in text.lower() or "Error" in text
+            assert (
+                "Successfully restored" in text
+                or "not enabled" in text.lower()
+                or "not found" in text.lower()
+                or "Error" in text
+            )
         finally:
             await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP TABLE IF EXISTS public.{table_name}"})
 
@@ -256,7 +273,10 @@ class TestMCPNewDynamicTableTools:
         assert "Dynamic Tables" in text or "No Dynamic Tables" in text or "Error" in text
 
     async def test_get_hg_dynamic_table_refresh_history_nonexistent(self, mcp_session):
-        result = await mcp_session.call_tool("get_hg_dynamic_table_refresh_history", {"schema_name": "public", "table_name": "nonexistent_dt_xyz_12345", "limit": 5})
+        result = await mcp_session.call_tool(
+            "get_hg_dynamic_table_refresh_history",
+            {"schema_name": "public", "table_name": "nonexistent_dt_xyz_12345", "limit": 5},
+        )
         assert result is not None
         text = result.content[0].text
         assert "No refresh history" in text or "not found" in text.lower() or "Error" in text
@@ -287,17 +307,32 @@ class TestMCPProcedureToolUpdated:
 
     async def test_call_procedure_with_procedure_args_param(self, mcp_session, integration_test_prefix):
         procedure_name = f"{integration_test_prefix}updated_args_proc"
-        await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"CREATE OR REPLACE PROCEDURE public.{procedure_name}(p_key TEXT, p_val TEXT) AS $$ BEGIN NULL; END; $$ LANGUAGE PLPGSQL"})
+        await mcp_session.call_tool(
+            "execute_hg_ddl_sql",
+            {
+                "query": f"CREATE OR REPLACE PROCEDURE public.{procedure_name}(p_key TEXT, p_val TEXT) AS $$ BEGIN NULL; END; $$ LANGUAGE PLPGSQL"
+            },
+        )
         try:
-            result = await mcp_session.call_tool("call_hg_procedure", {"procedure_name": f"public.{procedure_name}", "procedure_args": ["key1", "val1"]})
+            result = await mcp_session.call_tool(
+                "call_hg_procedure", {"procedure_name": f"public.{procedure_name}", "procedure_args": ["key1", "val1"]}
+            )
             assert result is not None
             text = result.content[0].text
             assert "syntax error" not in text.lower(), f"Got syntax error: {text}"
         finally:
-            await mcp_session.call_tool("execute_hg_ddl_sql", {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}(TEXT, TEXT)"})
+            await mcp_session.call_tool(
+                "execute_hg_ddl_sql", {"query": f"DROP PROCEDURE IF EXISTS public.{procedure_name}(TEXT, TEXT)"}
+            )
 
     async def test_call_procedure_hg_update_database_property(self, mcp_session):
-        result = await mcp_session.call_tool("call_hg_procedure", {"procedure_name": "hg_update_database_property", "procedure_args": ["hg_experimental_enable_fixed_dispatcher_for_multi_values_in", "on"]})
+        result = await mcp_session.call_tool(
+            "call_hg_procedure",
+            {
+                "procedure_name": "hg_update_database_property",
+                "procedure_args": ["hg_experimental_enable_fixed_dispatcher_for_multi_values_in", "on"],
+            },
+        )
         assert result is not None
         text = result.content[0].text
         assert "syntax error" not in text.lower(), f"Got syntax error: {text}"
@@ -316,16 +351,32 @@ class TestMCPNewToolListing:
         assert result is not None
         tool_names = {tool.name for tool in result.tools}
         expected_new_tools = {
-            "list_hg_dynamic_tables", "get_hg_dynamic_table_refresh_history",
-            "list_hg_recyclebin", "restore_hg_table_from_recyclebin",
-            "list_hg_warehouses", "switch_hg_warehouse", "get_hg_warehouse_status",
-            "cancel_hg_query", "list_hg_active_queries", "list_hg_query_queues",
-            "get_hg_table_properties", "get_hg_table_shard_info", "get_hg_table_storage_size",
-            "get_hg_table_info_trend", "get_hg_guc_config", "get_hg_lock_diagnostics",
-            "get_hg_slow_queries", "analyze_hg_query_by_id", "list_hg_external_databases",
-            "list_hg_data_masking_rules", "query_hg_external_files", "manage_hg_query_queue",
-            "manage_hg_classifier", "set_hg_query_queue_property",
-            "rebalance_hg_warehouse", "manage_hg_warehouse",
+            "list_hg_dynamic_tables",
+            "get_hg_dynamic_table_refresh_history",
+            "list_hg_recyclebin",
+            "restore_hg_table_from_recyclebin",
+            "list_hg_warehouses",
+            "switch_hg_warehouse",
+            "get_hg_warehouse_status",
+            "cancel_hg_query",
+            "list_hg_active_queries",
+            "list_hg_query_queues",
+            "get_hg_table_properties",
+            "get_hg_table_shard_info",
+            "get_hg_table_storage_size",
+            "get_hg_table_info_trend",
+            "get_hg_guc_config",
+            "get_hg_lock_diagnostics",
+            "get_hg_slow_queries",
+            "analyze_hg_query_by_id",
+            "list_hg_external_databases",
+            "list_hg_data_masking_rules",
+            "query_hg_external_files",
+            "manage_hg_query_queue",
+            "manage_hg_classifier",
+            "set_hg_query_queue_property",
+            "rebalance_hg_warehouse",
+            "manage_hg_warehouse",
         }
         missing = expected_new_tools - tool_names
         assert not missing, f"Missing tools: {missing}"

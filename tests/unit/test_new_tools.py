@@ -49,9 +49,17 @@ class TestAnalyzeHgQueryById:
     def test_query_found(self):
         row = ("ok", 1500, "2025-01-01 10:00:00", "user1", "app", 1024, 2048, 4096, 512, 100, "SELECT 1")
         desc = [
-            ("status",), ("duration",), ("query_start",), ("usename",),
-            ("application_name",), ("read_bytes",), ("write_bytes",),
-            ("memory_bytes",), ("shuffle_bytes",), ("cpu_time_ms",), ("query_detail",),
+            ("status",),
+            ("duration",),
+            ("query_start",),
+            ("usename",),
+            ("application_name",),
+            ("read_bytes",),
+            ("write_bytes",),
+            ("memory_bytes",),
+            ("shuffle_bytes",),
+            ("cpu_time_ms",),
+            ("query_detail",),
         ]
         conn, cursor = _make_mock_conn(fetchone=row, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
@@ -80,9 +88,17 @@ class TestGetHgSlowQueries:
 
     def test_slow_queries_found(self):
         rows = [("q1", "user1", "ok", 5000, "2025-01-01", 1024, 2048, 100, "SELECT ...")]
-        desc = [("query_id",), ("usename",), ("status",), ("duration",),
-                ("query_start",), ("read_bytes",), ("memory_bytes",),
-                ("cpu_time_ms",), ("query_preview",)]
+        desc = [
+            ("query_id",),
+            ("usename",),
+            ("status",),
+            ("duration",),
+            ("query_start",),
+            ("read_bytes",),
+            ("memory_bytes",),
+            ("cpu_time_ms",),
+            ("query_preview",),
+        ]
         conn, _ = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             result = get_hg_slow_queries(1000, 20)
@@ -319,7 +335,7 @@ class TestGetHgWarehouseStatus:
         conn, cursor = _make_mock_conn()
         cursor.fetchone.side_effect = [
             ("running",),  # hg_get_warehouse_status
-            ("idle",),     # hg_get_rebalance_warehouse_status
+            ("idle",),  # hg_get_rebalance_warehouse_status
             (1, 8, 16384, 2, "running", True),  # hg_warehouses
         ]
         with patch(PATCH_CONNECT, return_value=conn):
@@ -402,8 +418,14 @@ class TestGetHgLockDiagnostics:
 
     def test_locks_found(self):
         rows = [(100, "active", "SELECT 1", 200, "idle", "UPDATE t")]
-        desc = [("blocked_pid",), ("blocked_state",), ("blocked_query",),
-                ("blocking_pid",), ("blocking_state",), ("blocking_query",)]
+        desc = [
+            ("blocked_pid",),
+            ("blocked_state",),
+            ("blocked_query",),
+            ("blocking_pid",),
+            ("blocking_state",),
+            ("blocking_query",),
+        ]
         conn, _ = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             result = get_hg_lock_diagnostics()
@@ -492,8 +514,7 @@ class TestGetHgTableInfoTrend:
     """Tests for get_hg_table_info_trend tool."""
 
     def test_trend_data(self):
-        rows = [("2025-01-03", 1048576, 524288, 10, 1000, 50, 20),
-                ("2025-01-02", 1000000, 500000, 9, 900, 45, 18)]
+        rows = [("2025-01-03", 1048576, 524288, 10, 1000, 50, 20), ("2025-01-02", 1000000, 500000, 9, 900, 45, 18)]
         conn, _ = _make_mock_conn(fetchall=rows)
         with patch(PATCH_CONNECT, return_value=conn):
             result = get_hg_table_info_trend("public", "orders", 7)
@@ -783,9 +804,10 @@ class TestQueryHgExternalFiles:
         conn, cursor = _make_mock_conn(fetchall=rows, description=desc)
         with patch(PATCH_CONNECT, return_value=conn):
             query_hg_external_files(
-                "oss://b/d", "orc",
+                "oss://b/d",
+                "orc",
                 oss_endpoint="oss-cn-hangzhou-internal.aliyuncs.com",
-                role_arn="acs:ram::123:role/test"
+                role_arn="acs:ram::123:role/test",
             )
             sql = cursor.execute.call_args[0][0]
             assert "oss_endpoint" in sql

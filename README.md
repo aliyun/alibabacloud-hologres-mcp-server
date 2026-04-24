@@ -109,6 +109,18 @@ The server supports Streamable HTTP transport for remote deployment scenarios wh
 
 #### Start the server
 
+Before starting the server, set the Hologres connection environment variables:
+
+```bash
+export HOLOGRES_HOST="your-hologres-instance.hologres.aliyuncs.com"
+export HOLOGRES_PORT="80"
+export HOLOGRES_USER="your_access_id"
+export HOLOGRES_PASSWORD="your_access_key"
+export HOLOGRES_DATABASE="your_database"
+```
+
+Then start the server:
+
 ```bash
 # Using pip-installed package
 hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
@@ -394,8 +406,8 @@ uv build
 twine upload dist/*
 
 # 5. Tag the release
-git tag -a v1.0.2 -m "Release v1.0.2"
-git push origin v1.0.2
+git tag -a v1.0.3 -m "Release v1.0.3"
+git push origin v1.0.3
 ```
 
 ### Update CLI Feature

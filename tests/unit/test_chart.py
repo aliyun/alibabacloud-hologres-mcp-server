@@ -85,14 +85,17 @@ class TestQueryAndChart:
         desc = [(h,) for h in headers]
         return _make_mock_conn(fetchall=rows, description=desc)
 
-    @pytest.mark.parametrize("chart_type,rows,headers", [
-        ("bar", [("A", 10), ("B", 20), ("C", 30)], ["category", "value"]),
-        ("line", [("2025-01", 100), ("2025-02", 200)], ["month", "sales"]),
-        ("scatter", [(1.0, 10), (2.0, 20), (3.0, 30)], ["x", "y"]),
-        ("pie", [("A", 40), ("B", 30), ("C", 30)], ["label", "share"]),
-        ("histogram", [(10,), (20,), (20,), (30,), (30,), (30,), (40,)], ["value"]),
-        ("area", [(1, 10), (2, 25), (3, 15)], ["x", "y"]),
-    ])
+    @pytest.mark.parametrize(
+        "chart_type,rows,headers",
+        [
+            ("bar", [("A", 10), ("B", 20), ("C", 30)], ["category", "value"]),
+            ("line", [("2025-01", 100), ("2025-02", 200)], ["month", "sales"]),
+            ("scatter", [(1.0, 10), (2.0, 20), (3.0, 30)], ["x", "y"]),
+            ("pie", [("A", 40), ("B", 30), ("C", 30)], ["label", "share"]),
+            ("histogram", [(10,), (20,), (20,), (30,), (30,), (30,), (40,)], ["value"]),
+            ("area", [(1, 10), (2, 25), (3, 15)], ["x", "y"]),
+        ],
+    )
     def test_chart_type(self, chart_type, rows, headers):
         conn, _ = self._make_chart_conn(rows, headers)
         with patch(PATCH_CONNECT, return_value=conn):
@@ -124,9 +127,7 @@ class TestQueryAndChart:
         rows = [("A", 10, 100), ("B", 20, 200)]
         conn, _ = self._make_chart_conn(rows, ["name", "val1", "val2"])
         with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart(
-                "SELECT * FROM t", "bar", "name", "val2", "My Custom Title"
-            )
+            result = _query_and_chart("SELECT * FROM t", "bar", "name", "val2", "My Custom Title")
             assert "data:image/png;base64," in result
             assert "My Custom Title" in result
 
@@ -134,9 +135,7 @@ class TestQueryAndChart:
         rows = [("A", 10)]
         conn, _ = self._make_chart_conn(rows, ["x", "y"])
         with patch(PATCH_CONNECT, return_value=conn):
-            result = _query_and_chart(
-                "SELECT * FROM t", "bar", "nonexistent_x", "nonexistent_y", ""
-            )
+            result = _query_and_chart("SELECT * FROM t", "bar", "nonexistent_x", "nonexistent_y", "")
             # Should fallback to index 0 and 1
             assert "data:image/png;base64," in result
 
