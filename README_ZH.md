@@ -103,6 +103,18 @@ pip install hologres-mcp-server
 
 #### 启动服务器
 
+启动服务器前，需要先设置 Hologres 连接环境变量：
+
+```bash
+export HOLOGRES_HOST="your-hologres-instance.hologres.aliyuncs.com"
+export HOLOGRES_PORT="80"
+export HOLOGRES_USER="your_access_id"
+export HOLOGRES_PASSWORD="your_access_key"
+export HOLOGRES_DATABASE="your_database"
+```
+
+然后启动服务器：
+
 ```bash
 # 使用 pip 安装的包
 hologres-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
